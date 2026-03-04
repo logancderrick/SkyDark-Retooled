@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Skydark Family Calendar",
+        "description": "Configure your family calendar. You can link Google and Microsoft calendars later in Settings.",
+        "data": {
+          "family_name": "Family name",
+          "weather_entity": "Weather entity (optional)"
+        },
+        "data_description": {
+          "family_name": "Display name for your family (e.g. \"The Millers\").",
+          "weather_entity": "Home Assistant weather entity to show in the header."
+        }
+      }
+    },
+    "error": {
+      "invalid_family_name": "Please enter a family name."
+    },
+    "abort": {
+      "already_configured": "Skydark Calendar is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Skydark Calendar options",
+        "data": {
+          "family_name": "Family name",
+          "weather_entity": "Weather entity"
+        }
+      }
+    }
+  }
+}

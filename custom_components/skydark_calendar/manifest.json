@@ -1,0 +1,13 @@
+{
+  "domain": "skydark_calendar",
+  "name": "Skydark Family Calendar",
+  "codeowners": ["@HunterJacobs"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/HunterJacobs/SkyDark",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/HunterJacobs/SkyDark/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

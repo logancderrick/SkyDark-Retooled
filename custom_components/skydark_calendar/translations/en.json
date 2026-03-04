@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Skydark Family Calendar",
+        "description": "Configure your family calendar.",
+        "data": {
+          "family_name": "Family name",
+          "weather_entity": "Weather entity (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_family_name": "Please enter a family name."
+    },
+    "abort": {
+      "already_configured": "Skydark Calendar is already configured."
+    }
+  }
+}

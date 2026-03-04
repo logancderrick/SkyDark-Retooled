@@ -1,0 +1,89 @@
+add_event:
+  name: Add event
+  description: Add a new calendar event.
+  fields:
+    title:
+      name: Title
+      description: Event title
+      required: true
+      selector:
+        text:
+    start_time:
+      name: Start time
+      description: Event start datetime (ISO format)
+      required: true
+      selector:
+        datetime:
+    end_time:
+      name: End time
+      description: Event end datetime (ISO format)
+      selector:
+        datetime:
+    all_day:
+      name: All day
+      description: Whether the event is all-day
+      default: false
+      selector:
+        boolean:
+    calendar_id:
+      name: Calendar / family member ID
+      description: Assign to family member calendar
+      selector:
+        text:
+    description:
+      name: Description
+      selector:
+        text:
+    location:
+      name: Location
+      selector:
+        text:
+
+complete_task:
+  name: Complete task
+  description: Mark a task as complete.
+  fields:
+    task_id:
+      name: Task ID
+      description: ID of the task to complete
+      required: true
+      selector:
+        text:
+    completed_date:
+      name: Completed date
+      description: Date of completion (YYYY-MM-DD). Defaults to today.
+      selector:
+        text:
+
+add_list_item:
+  name: Add list item
+  description: Add an item to a list.
+  fields:
+    list_id:
+      name: List ID
+      description: ID of the list
+      required: true
+      selector:
+        text:
+    content:
+      name: Content
+      description: Item text
+      required: true
+      selector:
+        text:
+
+send_notification:
+  name: Send notification
+  description: Show a notification on the Skydark display.
+  fields:
+    message:
+      name: Message
+      description: Notification message
+      required: true
+      selector:
+        text:
+    title:
+      name: Title
+      description: Notification title
+      selector:
+        text:

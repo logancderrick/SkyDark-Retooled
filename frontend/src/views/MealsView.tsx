@@ -1,0 +1,381 @@
+import { useState, useEffect, useMemo } from "react";
+import { format, addDays, startOfDay } from "date-fns";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import MealModal from "../components/Meals/MealModal";
+import DraggableMealCard from "../components/Meals/DraggableMealCard";
+import DropTargetMealCell from "../components/Meals/DropTargetMealCell";
+import PinPrompt from "../components/Common/PinPrompt";
+import { usePinGate } from "../hooks/usePinGate";
+import type { MealSlot, MealRecipe } from "../types/meals";
+import type { SaveMealPayload } from "../components/Meals/MealModal";
+
+const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snacks"];
+const DAYS = 7;
+const STORAGE_MEALS = "skydark_meals";
+const STORAGE_RECIPES = "skydark_recipes";
+
+function loadMeals(): MealSlot[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_MEALS);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+function loadRecipes(): MealRecipe[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_RECIPES);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+export default function MealsView() {
+  const { runIfUnlocked, pinPromptProps } = usePinGate();
+  const weekStart = startOfDay(new Date());
+  const [meals, setMeals] = useState<MealSlot[]>(loadMeals);
+  const [recipes, setRecipes] = useState<MealRecipe[]>(loadRecipes);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_MEALS, JSON.stringify(meals));
+  }, [meals]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_RECIPES, JSON.stringify(recipes));
+  }, [recipes]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [slotForModal, setSlotForModal] = useState<{ date: string; mealType: string } | null>(null);
+  const [editSlot, setEditSlot] = useState<MealSlot | null>(null);
+  const [viewRecipe, setViewRecipe] = useState<MealRecipe | null>(null);
+
+  const openAddModal = (date: string, mealType: string) => {
+    runIfUnlocked("meals", () => {
+      setSlotForModal({ date, mealType });
+      setEditSlot(null);
+      setModalOpen(true);
+    });
+  };
+
+  const openEditModal = (slot: MealSlot) => {
+    runIfUnlocked("meals", () => {
+      setEditSlot(slot);
+      setSlotForModal(null);
+      setModalOpen(true);
+    });
+  };
+
+  const handleSaveMeal = (data: SaveMealPayload) => {
+    runIfUnlocked("meals", () => doSaveMeal(data));
+  };
+
+  const doSaveMeal = (data: SaveMealPayload) => {
+    if (data.slotId) {
+      setMeals((prev) =>
+        prev.map((m) =>
+          m.id === data.slotId
+            ? {
+                ...m,
+                name: data.name,
+                ingredients: data.ingredients.length ? data.ingredients : undefined,
+                imageUrl: data.imageUrl,
+                instructions: data.instructions,
+              }
+            : m
+        )
+      );
+      if (data.updateLibrary && editSlot?.recipeId) {
+        setRecipes((prev) =>
+          prev.map((r) =>
+            r.id === editSlot.recipeId
+              ? {
+                  ...r,
+                  name: data.name,
+                  ingredients: data.ingredients,
+                  imageUrl: data.imageUrl,
+                  instructions: data.instructions,
+                }
+              : r
+          )
+        );
+      }
+    } else if (slotForModal) {
+      const id = `${slotForModal.date}-${slotForModal.mealType}-${Date.now()}`;
+      const recipeId = data.saveToLibrary ? `recipe-${Date.now()}` : undefined;
+      setMeals((prev) => [
+        ...prev,
+        {
+          id,
+          date: slotForModal.date,
+          mealType: slotForModal.mealType,
+          name: data.name,
+          ingredients: data.ingredients.length ? data.ingredients : undefined,
+          imageUrl: data.imageUrl,
+          instructions: data.instructions,
+          recipeId,
+        },
+      ]);
+      if (data.saveToLibrary) {
+        setRecipes((prev) => [
+          ...prev,
+          {
+            id: recipeId!,
+            name: data.name,
+            ingredients: data.ingredients,
+            imageUrl: data.imageUrl,
+            instructions: data.instructions,
+          },
+        ]);
+      }
+    }
+    setModalOpen(false);
+    setSlotForModal(null);
+    setEditSlot(null);
+  };
+
+  const handleAssignFromLibrary = (recipe: MealRecipe) => {
+    if (!slotForModal) return;
+    runIfUnlocked("meals", () => doAssignFromLibrary(recipe));
+  };
+
+  const doAssignFromLibrary = (recipe: MealRecipe) => {
+    if (!slotForModal) return;
+    const id = `${slotForModal.date}-${slotForModal.mealType}-${Date.now()}`;
+    setMeals((prev) => [
+      ...prev,
+      {
+        id,
+        date: slotForModal.date,
+        mealType: slotForModal.mealType,
+        name: recipe.name,
+        ingredients: recipe.ingredients,
+        imageUrl: recipe.imageUrl,
+        instructions: recipe.instructions,
+        recipeId: recipe.id,
+      },
+    ]);
+    setModalOpen(false);
+    setSlotForModal(null);
+  };
+
+  const handleRemoveMeal = (slotId: string) => {
+    runIfUnlocked("meals", () => doRemoveMeal(slotId));
+  };
+
+  const doRemoveMeal = (slotId: string) => {
+    setMeals((prev) => prev.filter((m) => m.id !== slotId));
+    setModalOpen(false);
+    setSlotForModal(null);
+    setEditSlot(null);
+  };
+
+  const handleRemoveFromLibrary = (recipeId: string) => {
+    runIfUnlocked("meals", () => doRemoveFromLibrary(recipeId));
+  };
+
+  const doRemoveFromLibrary = (recipeId: string) => {
+    setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+    setMeals((prev) =>
+      prev.map((m) => (m.recipeId === recipeId ? { ...m, recipeId: undefined } : m))
+    );
+    setModalOpen(false);
+    setEditSlot(null);
+    setViewRecipe(null);
+  };
+
+  const handleUpdateRecipe = (recipeId: string, data: SaveMealPayload) => {
+    runIfUnlocked("meals", () => doUpdateRecipe(recipeId, data));
+  };
+
+  const doUpdateRecipe = (recipeId: string, data: SaveMealPayload) => {
+    setRecipes((prev) =>
+      prev.map((r) =>
+        r.id === recipeId
+          ? {
+              ...r,
+              name: data.name,
+              ingredients: data.ingredients,
+              imageUrl: data.imageUrl,
+              instructions: data.instructions,
+            }
+          : r
+      )
+    );
+    setMeals((prev) =>
+      prev.map((m) =>
+        m.recipeId === recipeId
+          ? {
+              ...m,
+              name: data.name,
+              ingredients: data.ingredients.length ? data.ingredients : undefined,
+              imageUrl: data.imageUrl,
+              instructions: data.instructions,
+            }
+          : m
+      )
+    );
+    setViewRecipe(null);
+  };
+
+  const handleDropFromPopular = (recipe: MealRecipe, date: string, mealType: string) => {
+    runIfUnlocked("meals", () => doDropFromPopular(recipe, date, mealType));
+  };
+
+  const doDropFromPopular = (recipe: MealRecipe, date: string, mealType: string) => {
+    const id = `${date}-${mealType}-${Date.now()}`;
+    setMeals((prev) => [
+      ...prev,
+      {
+        id,
+        date,
+        mealType,
+        name: recipe.name,
+        ingredients: recipe.ingredients,
+        imageUrl: recipe.imageUrl,
+        instructions: recipe.instructions,
+        recipeId: recipe.id,
+      },
+    ]);
+  };
+
+  const weekDates = Array.from({ length: DAYS }, (_, i) => addDays(weekStart, i));
+
+  const popularMeals = useMemo((): MealRecipe[] => {
+    const useCountByRecipeId: Record<string, number> = {};
+    recipes.forEach((r) => {
+      useCountByRecipeId[r.id] = 0;
+    });
+    meals.forEach((m) => {
+      if (m.recipeId && useCountByRecipeId[m.recipeId] !== undefined) {
+        useCountByRecipeId[m.recipeId]++;
+      } else if (m.name) {
+        const r = recipes.find((rec) => rec.name === m.name);
+        if (r) useCountByRecipeId[r.id] = (useCountByRecipeId[r.id] ?? 0) + 1;
+      }
+    });
+    return [...recipes]
+      .sort((a, b) => (useCountByRecipeId[b.id] ?? 0) - (useCountByRecipeId[a.id] ?? 0))
+      .slice(0, 14);
+  }, [meals, recipes]);
+
+  return (
+    <DndProvider backend={HTML5Backend}>
+    <div className="h-full">
+      <h2 className="text-lg font-semibold text-skydark-text mb-4">Meals</h2>
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse bg-white rounded-card shadow-skydark overflow-hidden min-w-[600px]">
+          <thead>
+            <tr className="bg-skydark-bg border-b border-gray-200">
+              <th className="text-left p-3 text-skydark-text-secondary font-medium w-24">Meal</th>
+              {weekDates.map((d) => (
+                <th
+                  key={d.toISOString()}
+                  className="p-3 text-center text-sm font-semibold text-skydark-text min-w-[120px]"
+                >
+                  {format(d, "EEE")}
+                  <br />
+                  <span className="text-skydark-text-secondary font-normal">
+                    {format(d, "MMM d")}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {MEAL_TYPES.map((mealType) => (
+              <tr key={mealType} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="p-3 text-skydark-text font-medium">{mealType}</td>
+                {weekDates.map((d) => {
+                  const dateStr = format(d, "yyyy-MM-dd");
+                  const slot = meals.find(
+                    (m) => m.date === dateStr && m.mealType === mealType
+                  );
+                  return (
+                    <td key={dateStr + mealType} className="p-2 align-top">
+                      <DropTargetMealCell
+                        date={dateStr}
+                        mealType={mealType}
+                        onDrop={handleDropFromPopular}
+                      >
+                        <button
+                          type="button"
+                          className="w-full min-h-[60px] rounded-card border-2 border-dashed border-gray-200 hover:border-skydark-accent hover:bg-skydark-accent-bg text-sm text-skydark-text-secondary hover:text-skydark-accent transition-colors text-left px-2 py-2 flex items-center gap-2"
+                          onClick={() => (slot ? openEditModal(slot) : openAddModal(dateStr, mealType))}
+                        >
+                          {slot ? (
+                            <>
+                              {slot.imageUrl && (
+                                <img
+                                  src={slot.imageUrl}
+                                  alt=""
+                                  className="w-8 h-8 rounded object-cover shrink-0"
+                                />
+                              )}
+                              <span className="text-skydark-text font-medium truncate">
+                                {slot.name}
+                              </span>
+                            </>
+                          ) : (
+                            "+ Add"
+                          )}
+                        </button>
+                      </DropTargetMealCell>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-4 text-sm text-skydark-text-secondary">
+        Add meals to plan your week. Click a cell to add or edit. Save meals to the library to
+        reuse. Use the Meal prep tab to generate a list from your planned meals.
+      </p>
+
+      <h3 className="text-base font-semibold text-skydark-text mt-6 mb-2">
+        Most popular meals
+      </h3>
+      <p className="text-sm text-skydark-text-secondary mb-2">
+        Drag a meal to a day slot above to add it to your plan.
+      </p>
+      <div className="overflow-x-auto pb-2">
+        <div className="flex gap-3 min-w-max">
+          {popularMeals.map((recipe) => (
+            <DraggableMealCard
+              key={recipe.id}
+              recipe={recipe}
+              onRecipeClick={() => setViewRecipe(recipe)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <MealModal
+        open={modalOpen || !!viewRecipe}
+        onClose={() => {
+          setModalOpen(false);
+          setSlotForModal(null);
+          setEditSlot(null);
+          setViewRecipe(null);
+        }}
+        slotForModal={slotForModal}
+        editSlot={editSlot}
+        viewRecipe={viewRecipe}
+        recipes={recipes}
+        onSave={handleSaveMeal}
+        onAssignFromLibrary={handleAssignFromLibrary}
+        onRemove={handleRemoveMeal}
+        onRemoveFromLibrary={handleRemoveFromLibrary}
+        onUpdateRecipe={handleUpdateRecipe}
+      />
+    </div>
+    <PinPrompt {...pinPromptProps} />
+    </DndProvider>
+  );
+}
