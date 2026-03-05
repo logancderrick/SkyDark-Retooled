@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from homeassistant.components.frontend import async_register_built_in_panel
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -34,11 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     www_path = Path(__path__[0]) / "www"
     if www_path.exists():
         await hass.http.async_register_static_paths(
-            [{
-                "url_path": PANEL_URL,
-                "path": str(www_path),
-                "cache_headers": False,
-            }]
+            [StaticPathConfig(PANEL_URL, str(www_path), False)]
         )
 
     # Register the panel (iframe that loads our frontend)
