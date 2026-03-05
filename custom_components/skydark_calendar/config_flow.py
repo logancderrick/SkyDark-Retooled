@@ -70,7 +70,7 @@ class SkydarkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> SkydarkOptionsFlow:
         """Get the options flow for this handler."""
-        return SkydarkOptionsFlow(config_entry)
+        return SkydarkOptionsFlow()
 
 
 class SkydarkOptionsFlow(config_entries.OptionsFlow):
