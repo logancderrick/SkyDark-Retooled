@@ -3,7 +3,7 @@
   "name": "Skydark Family Calendar",
   "codeowners": ["@HunterJacobs"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["http"],
   "documentation": "https://github.com/HunterJacobs/SkyDark",
   "integration_type": "service",
   "iot_class": "local_polling",

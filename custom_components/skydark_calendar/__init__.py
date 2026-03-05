@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import homeassistant.helpers.config_validation as cv
 from homeassistant.components.frontend import async_register_built_in_panel
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
@@ -19,6 +20,8 @@ from .websocket_api import async_register_websocket_handlers
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = [Platform.CALENDAR, Platform.SENSOR]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
