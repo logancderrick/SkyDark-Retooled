@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -53,8 +54,10 @@ class SkydarkBaseSensor(SensorEntity):
 class SkydarkTasksTodaySensor(SkydarkBaseSensor):
     """Sensor for number of tasks due today."""
 
+    _attr_translation_key = "tasks_today"
     _attr_native_unit_of_measurement = "tasks"
     _attr_native_value: int = 0
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -79,8 +82,10 @@ class SkydarkTasksTodaySensor(SkydarkBaseSensor):
 class SkydarkCompletedTasksSensor(SkydarkBaseSensor):
     """Sensor for number of completed tasks today."""
 
+    _attr_translation_key = "completed_tasks"
     _attr_native_unit_of_measurement = "tasks"
     _attr_native_value: int = 0
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -97,7 +102,7 @@ class SkydarkCompletedTasksSensor(SkydarkBaseSensor):
             return
         try:
             tasks = await self._hass.async_add_executor_job(db.get_tasks)
-            today = datetime.utcnow().date().isoformat()
+            today = dt_util.utcnow().date().isoformat()
             self._attr_native_value = sum(
                 1 for t in tasks if t.get("completed_date") == today
             )
@@ -108,6 +113,7 @@ class SkydarkCompletedTasksSensor(SkydarkBaseSensor):
 class SkydarkUpcomingEventsSensor(SkydarkBaseSensor):
     """Sensor for next upcoming event."""
 
+    _attr_translation_key = "next_event"
     _attr_native_value: str | None = None
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -125,7 +131,7 @@ class SkydarkUpcomingEventsSensor(SkydarkBaseSensor):
             return
         try:
             events = await self._hass.async_add_executor_job(db.get_events)
-            now = datetime.utcnow().isoformat()
+            now = dt_util.utcnow().isoformat()
             upcoming = [
                 e for e in events if e.get("start_time", "") >= now
             ]

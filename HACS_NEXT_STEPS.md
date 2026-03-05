@@ -2,6 +2,12 @@
 
 All required files for HACS submission are in place. Complete these steps to get listed in the default HACS store.
 
+**Checklist (do in order):**
+- [ ] Set repository description and topics on GitHub (Step 0)
+- [ ] Push and verify GitHub Actions pass (Step 1)
+- [ ] Create a GitHub release (Step 2)
+- [ ] Submit PR to hacs/default (Step 3)
+
 ## 0. Fix repository description and topics (required for HACS Action)
 
 The HACS Action fails if the repo has no **description** or **topics**. Do this first:

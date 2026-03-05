@@ -54,6 +54,87 @@ complete_task:
       description: Date of completion (YYYY-MM-DD). Defaults to today.
       selector:
         text:
+    points:
+      name: Points
+      description: Points to award for completing the task (optional).
+      default: 0
+      selector:
+        number:
+          min: 0
+          step: 1
+
+add_points:
+  name: Add points
+  description: Award points to a family member.
+  fields:
+    member_id:
+      name: Member ID
+      description: Family member ID
+      required: true
+      selector:
+        text:
+    points:
+      name: Points
+      description: Points to add (can be negative)
+      required: true
+      selector:
+        number:
+          step: 1
+    reason:
+      name: Reason
+      description: Reason for the points
+      required: true
+      selector:
+        text:
+    task_id:
+      name: Task ID
+      description: Optional linked task ID
+      selector:
+        text:
+
+redeem_reward:
+  name: Redeem reward
+  description: Deduct points and redeem a reward for a family member.
+  fields:
+    member_id:
+      name: Member ID
+      description: Family member ID
+      required: true
+      selector:
+        text:
+    reward_id:
+      name: Reward ID
+      description: Reward to redeem
+      required: true
+      selector:
+        text:
+
+create_list:
+  name: Create list
+  description: Create a new list (e.g. grocery, to-do).
+  fields:
+    name:
+      name: List name
+      description: Display name of the list
+      required: true
+      selector:
+        text:
+    color:
+      name: Color
+      description: Optional color (hex)
+      selector:
+        text:
+    owner_id:
+      name: Owner ID
+      description: Optional family member owner ID
+      selector:
+        text:
+    list_type:
+      name: List type
+      description: Type of list (e.g. general, grocery)
+      default: general
+      selector:
+        text:
 
 add_list_item:
   name: Add list item
@@ -69,6 +150,43 @@ add_list_item:
       name: Content
       description: Item text
       required: true
+      selector:
+        text:
+
+add_meal_recipe:
+  name: Add meal recipe
+  description: Add a meal recipe with optional ingredients.
+  fields:
+    name:
+      name: Recipe name
+      description: Name of the recipe
+      required: true
+      selector:
+        text:
+    ingredients:
+      name: Ingredients
+      description: List of ingredients (each with name, quantity, unit)
+      selector:
+        object:
+
+upload_photo:
+  name: Upload photo
+  description: Register a photo (file must already exist at file_path within config directory).
+  fields:
+    file_path:
+      name: File path
+      description: Path to the photo file (within Home Assistant config directory)
+      required: true
+      selector:
+        text:
+    caption:
+      name: Caption
+      description: Optional caption
+      selector:
+        text:
+    uploaded_by:
+      name: Uploaded by
+      description: Optional family member ID
       selector:
         text:
 

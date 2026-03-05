@@ -31,5 +31,23 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "tasks_today": {
+        "name": "Tasks today"
+      },
+      "completed_tasks": {
+        "name": "Completed tasks today"
+      },
+      "next_event": {
+        "name": "Next event"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Calendar"
+      }
+    }
   }
 }

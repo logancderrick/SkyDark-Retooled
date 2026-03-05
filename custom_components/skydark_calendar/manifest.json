@@ -5,7 +5,7 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/HunterJacobs/SkyDark",
-  "integration_type": "device",
+  "integration_type": "service",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/HunterJacobs/SkyDark/issues",
   "requirements": [],

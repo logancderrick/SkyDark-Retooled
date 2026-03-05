@@ -7,7 +7,7 @@ import logging
 import sqlite3
 import uuid
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator
 
@@ -219,7 +219,7 @@ class SkydarkDatabase:
         avatar_url: str | None = None,
     ) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         init = (initial or (name[0].upper() if name else "?"))
         with self._connection() as conn:
             cur = conn.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM family_members")
@@ -300,7 +300,7 @@ class SkydarkDatabase:
         external_source: str | None = None,
     ) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
                 """INSERT INTO events (id, title, description, start_time, end_time, all_day, location, calendar_id, external_id, external_source, recurrence_rule, color, created_at, updated_at)
@@ -339,7 +339,7 @@ class SkydarkDatabase:
             values.append(v)
         if not updates:
             return
-        values.append(datetime.utcnow().isoformat())
+        values.append(datetime.now(timezone.utc).isoformat())
         values.append(id_)
         updates.append("updated_at = ?")
         with self._connection() as conn:
@@ -383,7 +383,7 @@ class SkydarkDatabase:
         due_date: str | None = None,
     ) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
                 "INSERT INTO tasks (id, title, assignee_id, category, frequency, icon, points, due_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -441,7 +441,7 @@ class SkydarkDatabase:
             return dict(row) if row else None
 
     def complete_task(self, task_id: str, completed_date: datetime | None = None) -> None:
-        d = (completed_date or datetime.utcnow()).date().isoformat()
+        d = (completed_date or datetime.now(timezone.utc)).date().isoformat()
         with self._connection() as conn:
             conn.execute(
                 "UPDATE tasks SET completed_date = ? WHERE id = ?",
@@ -473,7 +473,7 @@ class SkydarkDatabase:
         list_type: str = "general",
     ) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             cur = conn.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM lists")
             sort_order = cur.fetchone()[0]
@@ -498,7 +498,7 @@ class SkydarkDatabase:
 
     def add_list_item(self, list_id: str, content: str) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             cur = conn.execute(
                 "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM list_items WHERE list_id = ?",
@@ -545,7 +545,7 @@ class SkydarkDatabase:
         meal_recipe_id: str | None = None,
     ) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
                 "INSERT INTO meals (id, name, recipe_url, ingredients, meal_date, meal_type, created_at, meal_recipe_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -584,7 +584,7 @@ class SkydarkDatabase:
 
     def add_meal_recipe(self, name: str, ingredients: list[dict] | None = None) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
                 "INSERT INTO meal_recipes (id, name, created_at) VALUES (?, ?, ?)",
@@ -650,7 +650,7 @@ class SkydarkDatabase:
         uploaded_by: str | None = None,
     ) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
                 "INSERT INTO photos (id, file_path, caption, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -678,7 +678,7 @@ class SkydarkDatabase:
 
     def add_points(self, member_id: str, points: int, reason: str, task_id: str | None = None) -> str:
         id_ = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
                 "INSERT INTO points_log (id, member_id, points, reason, task_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -731,7 +731,7 @@ class SkydarkDatabase:
 
             # Deduct points in same transaction
             id_ = str(uuid.uuid4())
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             conn.execute(
                 "INSERT INTO points_log (id, member_id, points, reason, task_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (id_, member_id, -cost, "Redeemed: " + reward_name, None, now),

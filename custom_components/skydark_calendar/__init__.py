@@ -6,12 +6,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from homeassistant.components.frontend import async_register_built_in_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import DB_NAME, DOMAIN, PANEL_ICON, PANEL_TITLE, PANEL_URL
 from .database import SkydarkDatabase
+from .websocket_api import async_register_websocket_handlers
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,7 +43,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Register the panel (iframe that loads our frontend)
     if "skydark" not in (hass.data.get("frontend_panels") or {}):
-        hass.components.frontend.async_register_built_in_panel(
+        async_register_built_in_panel(
+            hass,
             component_name="iframe",
             sidebar_title=PANEL_TITLE,
             sidebar_icon=PANEL_ICON,
@@ -61,6 +64,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["panel_url"] = PANEL_URL
     hass.data[DOMAIN]["entry_id"] = entry.entry_id
     hass.data[DOMAIN]["config"] = entry.data
+
+    # Register WebSocket API for frontend
+    await async_register_websocket_handlers(hass)
 
     # Register services
     from . import services as skydark_services

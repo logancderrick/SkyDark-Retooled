@@ -11,6 +11,7 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -31,6 +32,7 @@ class SkydarkCalendarEntity(CalendarEntity):
 
     _attr_has_entity_name = True
     _attr_name = None
+    _attr_translation_key = "calendar"
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the calendar."""
@@ -58,7 +60,7 @@ class SkydarkCalendarEntity(CalendarEntity):
             return
         try:
             events = await self._hass.async_add_executor_job(db.get_events)
-            now = datetime.utcnow().isoformat()
+            now = dt_util.utcnow().isoformat()
             upcoming = [e for e in events if e.get("start_time", "") >= now]
             if upcoming:
                 upcoming.sort(key=lambda e: e.get("start_time", ""))
