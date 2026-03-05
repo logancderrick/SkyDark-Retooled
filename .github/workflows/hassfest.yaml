@@ -13,4 +13,9 @@ jobs:
         run: |
           mkdir -p homeassistant/components
           cp -r custom_components/skydark_calendar homeassistant/components/
-      - uses: home-assistant/actions/hassfest@master
+      - name: Validate with hassfest
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/github/workspace \
+            -w /github/workspace \
+            ghcr.io/home-assistant/hassfest
