@@ -31,7 +31,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Serve frontend static files from www/
     www_path = Path(__path__[0]) / "www"
     if www_path.exists():
-        hass.http.register_static_path(PANEL_URL, str(www_path), False)
+        await hass.http.async_register_static_paths(
+            [{
+                "url_path": PANEL_URL,
+                "path": str(www_path),
+                "cache_headers": False,
+            }]
+        )
 
     # Register the panel (iframe that loads our frontend)
     if "skydark" not in (hass.data.get("frontend_panels") or {}):
