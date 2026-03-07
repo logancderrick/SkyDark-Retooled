@@ -1,8 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import ListCard, { type ListItemData } from "../components/Lists/ListCard";
 import Modal from "../components/Common/Modal";
 import PinPrompt from "../components/Common/PinPrompt";
 import { useAppContext } from "../contexts/AppContext";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
+import { usePinGate } from "../hooks/usePinGate";
+import { serviceCreateList, serviceAddListItem } from "../lib/skyDarkApi";
 import { SKYDARK_COLORS } from "../config/theme";
 
 export interface ListData {
@@ -13,151 +16,144 @@ export interface ListData {
   items: ListItemData[];
 }
 
-const INITIAL_LISTS: ListData[] = [
-  {
-    id: "l1",
-    name: "Buy for Bathroom",
-    color: "#FFD4D4",
-    owner_id: null,
-    items: [
-      { id: "i1", content: "Vanity", completed: false },
-      { id: "i2", content: "Toilet", completed: false },
-      { id: "i3", content: "Towels", completed: true },
-    ],
-  },
-  {
-    id: "l2",
-    name: "Grocery List",
-    color: "#E8D8F5",
-    owner_id: null,
-    items: [
-      { id: "i4", content: "Spicy Dill Chips", completed: false },
-      { id: "i5", content: "Pizza Rolls", completed: false },
-      { id: "i6", content: "Fruit", completed: false },
-    ],
-  },
-  {
-    id: "l3",
-    name: "To-Do",
-    color: "#FFF4D4",
-    owner_id: null,
-    items: [
-      { id: "i7", content: "Pay bills", completed: false },
-      { id: "i8", content: "Call Mom", completed: true },
-    ],
-  },
+const FALLBACK_LISTS: ListData[] = [
+  { id: "l1", name: "Grocery", color: "#E8D8F5", owner_id: null, items: [{ id: "i1", content: "Milk", completed: false }] },
 ];
 
+function buildListsFromSkydark(
+  lists: { id: string; name: string; color?: string | null; owner_id?: string | null }[],
+  listItems: Record<string, { id: string; content: string; completed: number }[]>
+): ListData[] {
+  return lists.map((list) => ({
+    id: list.id,
+    name: list.name,
+    color: list.color ?? "#C8E6F5",
+    owner_id: list.owner_id ?? null,
+    items: (listItems[list.id] ?? []).map((i) => ({
+      id: i.id,
+      content: i.content,
+      completed: Boolean(i.completed),
+    })),
+  }));
+}
+
 export default function ListsView() {
-  const { familyMembers, isFeatureLocked, verifyPin } = useAppContext();
-  const [lists, setLists] = useState<ListData[]>(INITIAL_LISTS);
+  const skydark = useSkydarkDataContext();
+  const { familyMembers } = useAppContext();
+  const { runIfUnlocked, pinPromptProps } = usePinGate();
   const [filterOwnerId, setFilterOwnerId] = useState<string>("");
   const [addListOpen, setAddListOpen] = useState(false);
+  const [listToDelete, setListToDelete] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
   const [newListColor, setNewListColor] = useState<string>(SKYDARK_COLORS[0] ?? "#C8E6F5");
   const [newListOwnerId, setNewListOwnerId] = useState<string>("");
-  const [showPinPrompt, setShowPinPrompt] = useState(false);
-  const pendingActionRef = useRef<(() => void) | null>(null);
+  const [localToggles, setLocalToggles] = useState<Set<string>>(new Set());
+  const [localDeletedItems, setLocalDeletedItems] = useState<Set<string>>(new Set());
+  const [localDeletedLists, setLocalDeletedLists] = useState<Set<string>>(new Set());
+  const [localLists, setLocalLists] = useState<ListData[]>(FALLBACK_LISTS);
 
-  const runAfterPin = (action: () => void) => {
-    pendingActionRef.current = action;
-    setShowPinPrompt(true);
-  };
+  const serverLists = useMemo(() => {
+    if (!skydark?.data?.connection || !skydark.data.lists) return [];
+    return buildListsFromSkydark(skydark.data.lists, skydark.data.listItems ?? {});
+  }, [skydark?.data?.connection, skydark?.data?.lists, skydark?.data?.listItems]);
 
-  const handlePinVerify = (pin: string): boolean => {
-    if (!verifyPin(pin)) return false;
-    pendingActionRef.current?.();
-    pendingActionRef.current = null;
-    setShowPinPrompt(false);
-    return true;
-  };
+  const lists = skydark?.data?.connection
+    ? serverLists
+        .filter((l) => !localDeletedLists.has(l.id))
+        .map((list) => ({
+          ...list,
+          items: list.items
+            .filter((i) => !localDeletedItems.has(i.id))
+            .map((i) => ({
+              ...i,
+              completed: localToggles.has(i.id) ? !i.completed : i.completed,
+            })),
+        }))
+    : localLists;
 
   const addItem = (listId: string, content: string) => {
-    if (isFeatureLocked("addItemsToLists")) {
-      runAfterPin(() => doAddItem(listId, content));
-      return;
-    }
-    doAddItem(listId, content);
+    runIfUnlocked("addItemsToLists", () => doAddItem(listId, content));
   };
 
-  const doAddItem = (listId: string, content: string) => {
-    setLists((prev) =>
+  const doAddItem = async (listId: string, content: string) => {
+    const conn = skydark?.data?.connection;
+    if (conn) {
+      try {
+        await serviceAddListItem(conn, { list_id: listId, content });
+        await skydark?.refetch();
+      } catch {
+        // leave as-is
+      }
+      return;
+    }
+    setLocalLists((prev) =>
       prev.map((list) => {
         if (list.id !== listId) return list;
-        const newItem: ListItemData = {
-          id: `i${Date.now()}`,
-          content,
-          completed: false,
-        };
-        return { ...list, items: [...list.items, newItem] };
+        return { ...list, items: [...list.items, { id: `i${Date.now()}`, content, completed: false }] };
       })
     );
   };
 
   const toggleItem = (listId: string, itemId: string) => {
-    if (isFeatureLocked("checkLists")) {
-      runAfterPin(() => doToggleItem(listId, itemId));
-      return;
-    }
-    doToggleItem(listId, itemId);
-  };
-
-  const doToggleItem = (listId: string, itemId: string) => {
-    setLists((prev) =>
-      prev.map((list) => {
-        if (list.id !== listId) return list;
-        return {
-          ...list,
-          items: list.items.map((i) =>
-            i.id === itemId ? { ...i, completed: !i.completed } : i
-          ),
-        };
-      })
-    );
+    runIfUnlocked("checkLists", () => {
+      if (skydark?.data?.connection) {
+        setLocalToggles((prev) => {
+          const next = new Set(prev);
+          if (next.has(itemId)) next.delete(itemId);
+          else next.add(itemId);
+          return next;
+        });
+      } else {
+        setLocalLists((prev) =>
+          prev.map((list) => {
+            if (list.id !== listId) return list;
+            return { ...list, items: list.items.map((i) => (i.id === itemId ? { ...i, completed: !i.completed } : i)) };
+          })
+        );
+      }
+    });
   };
 
   const deleteItem = (listId: string, itemId: string) => {
-    setLists((prev) =>
-      prev.map((list) => {
-        if (list.id !== listId) return list;
-        return {
-          ...list,
-          items: list.items.filter((i) => i.id !== itemId),
-        };
-      })
-    );
+    if (skydark?.data?.connection) setLocalDeletedItems((prev) => new Set(prev).add(itemId));
+    else setLocalLists((prev) => prev.map((list) => (list.id !== listId ? list : { ...list, items: list.items.filter((i) => i.id !== itemId) })));
   };
 
-  const deleteList = (listId: string) => {
-    if (!window.confirm("Delete this list and all its items?")) return;
-    if (isFeatureLocked("deleteLists")) {
-      runAfterPin(() => setLists((prev) => prev.filter((l) => l.id !== listId)));
-      return;
-    }
-    setLists((prev) => prev.filter((l) => l.id !== listId));
+  const requestDeleteList = (listId: string) => {
+    setListToDelete(listId);
+  };
+
+  const confirmDeleteList = () => {
+    if (!listToDelete) return;
+    runIfUnlocked("deleteLists", () => {
+      if (skydark?.data?.connection) setLocalDeletedLists((prev) => new Set(prev).add(listToDelete));
+      else setLocalLists((prev) => prev.filter((l) => l.id !== listToDelete));
+      setListToDelete(null);
+    });
   };
 
   const createList = () => {
     const name = newListName.trim();
     if (!name) return;
-    if (isFeatureLocked("createLists")) {
-      runAfterPin(() => doCreateList(name));
-      return;
-    }
-    doCreateList(name);
+    runIfUnlocked("createLists", () => doCreateList(name));
   };
 
-  const doCreateList = (name: string) => {
-    setLists((prev) => [
-      ...prev,
-      {
-        id: `l${Date.now()}`,
-        name,
-        color: newListColor,
-        owner_id: newListOwnerId || null,
-        items: [],
-      },
-    ]);
+  const doCreateList = async (name: string) => {
+    const conn = skydark?.data?.connection;
+    if (conn) {
+      try {
+        await serviceCreateList(conn, {
+          name,
+          color: newListColor,
+          owner_id: newListOwnerId || undefined,
+        });
+        await skydark?.refetch();
+      } catch {
+        // leave as-is
+      }
+    } else {
+      setLocalLists((prev) => [...prev, { id: `l${Date.now()}`, name, color: newListColor, owner_id: newListOwnerId || null, items: [] }]);
+    }
     setNewListName("");
     setNewListColor(SKYDARK_COLORS[0] ?? "#C8E6F5");
     setNewListOwnerId("");
@@ -209,7 +205,7 @@ export default function ListsView() {
             onAddItem={(content) => addItem(list.id, content)}
             onToggleItem={(itemId) => toggleItem(list.id, itemId)}
             onDeleteItem={(itemId) => deleteItem(list.id, itemId)}
-            onDeleteList={() => deleteList(list.id)}
+            onDeleteList={() => requestDeleteList(list.id)}
           />
         ))}
       </div>
@@ -274,15 +270,22 @@ export default function ListsView() {
           </div>
         </div>
       </Modal>
-      <PinPrompt
-        open={showPinPrompt}
-        onClose={() => {
-          setShowPinPrompt(false);
-          pendingActionRef.current = null;
-        }}
-        onVerify={handlePinVerify}
-        title="Enter PIN"
-      />
+      <Modal
+        open={listToDelete !== null}
+        onClose={() => setListToDelete(null)}
+        title="Delete list"
+      >
+        <p className="text-skydark-text mb-4">Delete this list and all its items?</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setListToDelete(null)} className="btn-secondary flex-1">
+            Cancel
+          </button>
+          <button type="button" onClick={confirmDeleteList} className="btn-primary flex-1 bg-red-500 hover:bg-red-600">
+            Delete
+          </button>
+        </div>
+      </Modal>
+      <PinPrompt {...pinPromptProps} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { format, addDays } from "date-fns";
 import PinPrompt from "../components/Common/PinPrompt";
 import { useAppContext } from "../contexts/AppContext";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import type { MealSlot } from "../types/meals";
 import type { ShoppingListItem } from "../types/shopping";
 
@@ -43,10 +44,22 @@ function loadChecked(): Record<string, boolean> {
   return {};
 }
 
+function skydarkMealsToSlots(rows: { id: string; name: string; meal_date: string; meal_type: string }[]): MealSlot[] {
+  return rows.map((m) => ({ id: m.id, date: m.meal_date, mealType: m.meal_type, name: m.name }));
+}
+
 export default function ShoppingView() {
   const location = useLocation();
+  const skydark = useSkydarkDataContext();
   const { isFeatureLocked, verifyPin } = useAppContext();
-  const [meals, setMeals] = useState<MealSlot[]>(loadMeals());
+  const [localMeals, setLocalMeals] = useState<MealSlot[]>(loadMeals());
+
+  const serverMeals = useMemo(() => {
+    if (!skydark?.data?.connection || !skydark.data.meals) return [];
+    return skydarkMealsToSlots(skydark.data.meals);
+  }, [skydark?.data?.connection, skydark?.data?.meals]);
+
+  const meals = skydark?.data?.connection ? serverMeals : localMeals;
   const [showPinPrompt, setShowPinPrompt] = useState(false);
   const pendingActionRef = useRef<(() => void) | null>(null);
 
@@ -74,7 +87,7 @@ export default function ShoppingView() {
   const [expandedIngredientKey, setExpandedIngredientKey] = useState<string | null>(null);
 
   useEffect(() => {
-    if (location.pathname === "/shopping") setMeals(loadMeals());
+    if (location.pathname === "/shopping" && !skydark?.data?.connection) setLocalMeals(loadMeals());
   }, [location.pathname]);
 
   useEffect(() => {

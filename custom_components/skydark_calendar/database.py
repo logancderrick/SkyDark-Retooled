@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import sqlite3
 import uuid
@@ -12,6 +11,13 @@ from pathlib import Path
 from typing import Any, Generator
 
 _LOGGER = logging.getLogger(__name__)
+
+# Whitelist for _column_exists to prevent SQL injection (PRAGMA table_info doesn't support params).
+_ALLOWED_TABLES = frozenset({
+    "family_members", "events", "tasks", "lists", "list_items",
+    "meal_recipes", "meal_ingredients", "meals", "app_settings",
+    "photos", "rewards", "points_log",
+})
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS family_members (
@@ -162,13 +168,19 @@ class SkydarkDatabase:
 
     def __init__(self, path: str | Path) -> None:
         self._path = str(path)
-        self._loop = asyncio.get_event_loop()
 
     @contextmanager
     def _connection(self) -> Generator[sqlite3.Connection, None, None]:
-        conn = sqlite3.connect(self._path)
+        conn = sqlite3.connect(
+            self._path,
+            timeout=30,
+            check_same_thread=False,
+        )
         conn.row_factory = sqlite3.Row
         try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.execute("PRAGMA busy_timeout=30000")
             yield conn
             conn.commit()
         except Exception:
@@ -177,10 +189,9 @@ class SkydarkDatabase:
         finally:
             conn.close()
 
-    def _run(self, fn: Any, *args: Any, **kwargs: Any) -> Any:
-        return self._loop.run_in_executor(None, lambda: fn(*args, **kwargs))
-
     def _column_exists(self, conn: sqlite3.Connection, table: str, column: str) -> bool:
+        if table not in _ALLOWED_TABLES:
+            return False
         cur = conn.execute("PRAGMA table_info(%s)" % table)
         return any(row[1] == column for row in cur.fetchall())
 
@@ -356,7 +367,8 @@ class SkydarkDatabase:
     def get_tasks(
         self,
         assignee_id: str | None = None,
-        date: datetime | None = None,
+        due_date: str | None = None,
+        completed_date: str | None = None,
         include_completed: bool = True,
     ) -> list[dict]:
         with self._connection() as conn:
@@ -365,9 +377,14 @@ class SkydarkDatabase:
             if assignee_id:
                 q += " AND assignee_id = ?"
                 params.append(assignee_id)
-            if date:
-                # For daily tasks, completed_date = date or null for today's pending
-                pass  # Filter in Python for frequency logic
+            if due_date is not None:
+                q += " AND (due_date = ? OR due_date IS NULL)"
+                params.append(due_date)
+            if completed_date is not None:
+                q += " AND completed_date = ?"
+                params.append(completed_date)
+            if not include_completed:
+                q += " AND completed_date IS NULL"
             q += " ORDER BY created_at"
             cur = conn.execute(q, params)
             return [dict(row) for row in cur.fetchall()]
@@ -448,6 +465,32 @@ class SkydarkDatabase:
                 (d, task_id),
             )
 
+    def complete_task_and_award_points(
+        self,
+        task_id: str,
+        completed_date: datetime | None = None,
+        points: int = 0,
+    ) -> None:
+        """Mark task complete and award points to assignee in one transaction."""
+        d = (completed_date or datetime.now(timezone.utc)).date().isoformat()
+        with self._connection() as conn:
+            cur = conn.execute("SELECT assignee_id FROM tasks WHERE id = ?", (task_id,))
+            row = cur.fetchone()
+            if not row:
+                return
+            assignee_id = row[0]
+            conn.execute(
+                "UPDATE tasks SET completed_date = ? WHERE id = ?",
+                (d, task_id),
+            )
+            if points > 0 and assignee_id:
+                id_ = str(uuid.uuid4())
+                now = datetime.now(timezone.utc).isoformat()
+                conn.execute(
+                    "INSERT INTO points_log (id, member_id, points, reason, task_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (id_, assignee_id, points, "Task completed", task_id, now),
+                )
+
     def uncomplete_task(self, task_id: str) -> None:
         with self._connection() as conn:
             conn.execute(
@@ -496,6 +539,21 @@ class SkydarkDatabase:
             )
             return [dict(row) for row in cur.fetchall()]
 
+    def get_all_list_items(self) -> dict[str, list[dict]]:
+        """Return all list items keyed by list_id (single query, avoids N+1)."""
+        with self._connection() as conn:
+            cur = conn.execute(
+                "SELECT * FROM list_items ORDER BY list_id, sort_order, created_at"
+            )
+            rows = [dict(row) for row in cur.fetchall()]
+        result: dict[str, list[dict]] = {}
+        for row in rows:
+            lid = row["list_id"]
+            if lid not in result:
+                result[lid] = []
+            result[lid].append(row)
+        return result
+
     def add_list_item(self, list_id: str, content: str) -> str:
         id_ = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
@@ -513,11 +571,10 @@ class SkydarkDatabase:
 
     def toggle_list_item(self, item_id: str) -> None:
         with self._connection() as conn:
-            cur = conn.execute("SELECT completed FROM list_items WHERE id = ?", (item_id,))
-            row = cur.fetchone()
-            if row:
-                new_val = 0 if row[0] else 1
-                conn.execute("UPDATE list_items SET completed = ? WHERE id = ?", (new_val, item_id))
+            conn.execute(
+                "UPDATE list_items SET completed = 1 - completed WHERE id = ?",
+                (item_id,),
+            )
 
     def delete_list_item(self, item_id: str) -> None:
         with self._connection() as conn:
@@ -709,7 +766,7 @@ class SkydarkDatabase:
     def redeem_reward(self, member_id: str, reward_id: str) -> bool:
         """Deduct points for reward atomically; returns True if member had enough points."""
         with self._connection() as conn:
-            # Get reward in same transaction
+            conn.execute("BEGIN EXCLUSIVE")
             cur = conn.execute(
                 "SELECT name, points_required FROM rewards WHERE id = ?", (reward_id,)
             )
@@ -719,7 +776,6 @@ class SkydarkDatabase:
             reward_name = row[0]
             cost = row[1]
 
-            # Get current points in same transaction
             cur = conn.execute(
                 "SELECT COALESCE(SUM(points), 0) FROM points_log WHERE member_id = ?",
                 (member_id,),
@@ -729,7 +785,6 @@ class SkydarkDatabase:
             if current < cost:
                 return False
 
-            # Deduct points in same transaction
             id_ = str(uuid.uuid4())
             now = datetime.now(timezone.utc).isoformat()
             conn.execute(

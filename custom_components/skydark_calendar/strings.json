@@ -49,5 +49,43 @@
         "name": "Calendar"
       }
     }
+  },
+  "services": {
+    "add_event": {
+      "name": "Add event",
+      "description": "Add a new calendar event."
+    },
+    "complete_task": {
+      "name": "Complete task",
+      "description": "Mark a task as complete."
+    },
+    "add_points": {
+      "name": "Add points",
+      "description": "Award points to a family member."
+    },
+    "redeem_reward": {
+      "name": "Redeem reward",
+      "description": "Deduct points and redeem a reward for a family member."
+    },
+    "create_list": {
+      "name": "Create list",
+      "description": "Create a new list (e.g. grocery, to-do)."
+    },
+    "add_list_item": {
+      "name": "Add list item",
+      "description": "Add an item to a list."
+    },
+    "add_meal_recipe": {
+      "name": "Add meal recipe",
+      "description": "Add a meal recipe with optional ingredients."
+    },
+    "upload_photo": {
+      "name": "Upload photo",
+      "description": "Register a photo (file must already exist at file_path within config directory)."
+    },
+    "send_notification": {
+      "name": "Send notification",
+      "description": "Show a notification on the Skydark display."
+    }
   }
 }

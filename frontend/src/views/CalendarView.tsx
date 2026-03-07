@@ -7,39 +7,23 @@ import EventModal from "../components/Calendar/EventModal";
 import FilterDropdown from "../components/Calendar/FilterDropdown";
 import { normalizeCalendarIds } from "../components/Calendar/EventColorPattern";
 import { useAppContext } from "../contexts/AppContext";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
 import { usePinGate } from "../hooks/usePinGate";
+import { serviceAddEvent } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
 
-const INITIAL_EVENTS: CalendarEvent[] = [
-  {
-    id: "1",
-    title: "Team breakfast",
-    start_time: new Date().toISOString(),
-    end_time: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-    calendar_id: ["1"],
-  },
-  {
-    id: "2",
-    title: "Pilates",
-    start_time: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-    end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-    calendar_id: ["2"],
-  },
-  {
-    id: "3",
-    title: "All day event",
-    start_time: new Date().toISOString(),
-    all_day: true,
-    calendar_id: ["3"],
-  },
-];
+const FALLBACK_EVENTS: CalendarEvent[] = [];
 
 export default function CalendarView() {
+  const skydark = useSkydarkDataContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
+  const [localOverrides, setLocalOverrides] = useState<{ events: CalendarEvent[]; deleted: Set<string> }>({
+    events: [],
+    deleted: new Set(),
+  });
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [tasksProgress, setTasksProgress] = useState(true);
@@ -49,6 +33,11 @@ export default function CalendarView() {
   const { runIfUnlocked, pinPromptProps } = usePinGate();
   const weekViewRef = useRef<WeekViewRef>(null);
   const dayViewRef = useRef<DayViewRef>(null);
+
+  const serverEvents = skydark?.data?.connection ? (skydark.data.events ?? []) : FALLBACK_EVENTS;
+  const events = serverEvents
+    .filter((e) => !localOverrides.deleted.has(e.id))
+    .map((e) => localOverrides.events.find((o) => o.id === e.id) ?? e);
 
   // When switching to week or day view, scroll to current time after the component mounts
   useEffect(() => {
@@ -78,16 +67,35 @@ export default function CalendarView() {
     runIfUnlocked(feature, () => doSaveEvent(data));
   };
 
-  const doSaveEvent = (data: Partial<CalendarEvent> & { id?: string }) => {
-    if (data.id) {
-      setEvents((prev) =>
-        prev.map((e) => (e.id === data.id ? { ...e, ...data } : e))
-      );
-    } else {
-      setEvents((prev) => [
+  const doSaveEvent = async (data: Partial<CalendarEvent> & { id?: string }) => {
+    const conn = skydark?.data?.connection;
+    const isAdd = !data.id;
+    if (isAdd && conn && data.title && data.start_time) {
+      try {
+        await serviceAddEvent(conn, {
+          title: data.title,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          all_day: data.all_day ?? false,
+          calendar_id: data.calendar_id?.[0],
+          description: data.description,
+          location: data.location,
+        });
+        await skydark?.refetchEvents();
+      } catch {
+        // fallback: optimistic local add
+        setLocalOverrides((prev) => ({
+          ...prev,
+          events: [...prev.events, { ...data, id: String(Date.now()) } as CalendarEvent],
+        }));
+      }
+    } else if (data.id) {
+      setLocalOverrides((prev) => ({
         ...prev,
-        { ...data, id: String(Date.now()) } as CalendarEvent,
-      ]);
+        events: prev.events.some((e) => e.id === data.id)
+          ? prev.events.map((e) => (e.id === data.id ? { ...e, ...data } : e))
+          : [...prev.events, { ...serverEvents.find((e) => e.id === data.id), ...data } as CalendarEvent],
+      }));
     }
     setEventModalOpen(false);
     setSelectedEvent(null);
@@ -95,17 +103,23 @@ export default function CalendarView() {
 
   const handleEventMove = (eventId: string, newStart: Date, newEnd: Date) => {
     runIfUnlocked("editDeleteEvents", () =>
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === eventId
-            ? {
-                ...e,
+      setLocalOverrides((prev) => ({
+        ...prev,
+        events: prev.events.some((e) => e.id === eventId)
+          ? prev.events.map((e) =>
+              e.id === eventId
+                ? { ...e, start_time: newStart.toISOString(), end_time: newEnd.toISOString() }
+                : e
+            )
+          : [
+              ...prev.events,
+              {
+                ...serverEvents.find((e) => e.id === eventId)!,
                 start_time: newStart.toISOString(),
                 end_time: newEnd.toISOString(),
-              }
-            : e
-        )
-      )
+              },
+            ],
+      }))
     );
   };
 
@@ -114,7 +128,7 @@ export default function CalendarView() {
   };
 
   const doDeleteEvent = (eventId: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    setLocalOverrides((prev) => ({ ...prev, deleted: new Set(prev.deleted).add(eventId) }));
     setEventModalOpen(false);
     setSelectedEvent(null);
   };

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import SettingsSidebar, { type SettingsSectionId } from "../components/Settings/SettingsSidebar";
 import SettingsSection, { SettingRow } from "../components/Settings/SettingsSection";
 import AddProfileModal from "../components/Settings/AddProfileModal";
@@ -30,7 +31,9 @@ export default function SettingsView() {
     isLocked,
     unlockApp,
   } = useAppContext();
+  const navigate = useNavigate();
   const viewportSimulator = useViewportSimulator();
+  const pendingPinActionRef = useRef<(() => void) | null>(null);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
   const [weatherEntity, setWeatherEntity] = useState("");
   const [showDisableLockPrompt, setShowDisableLockPrompt] = useState(false);
@@ -56,9 +59,10 @@ export default function SettingsView() {
     if (setPinStep === "current") {
       if (settings.pinCodeHash && hashPin(pin) !== settings.pinCodeHash) return false;
       setPinError("");
-      const pending = (window as unknown as { __pendingPinAction?: () => void }).__pendingPinAction;
+      const pending = pendingPinActionRef.current;
       if (pending) {
         pending();
+        pendingPinActionRef.current = null;
         handleSetPinClose();
         return true;
       }
@@ -80,8 +84,8 @@ export default function SettingsView() {
       setShowSetPin(false);
       setSetPinStep("current");
       setNewPinForConfirm("");
-      (window as unknown as { __pendingPinAction?: () => void }).__pendingPinAction?.();
-      delete (window as unknown as { __pendingPinAction?: () => void }).__pendingPinAction;
+      pendingPinActionRef.current?.();
+      pendingPinActionRef.current = null;
       return true;
     }
     return false;
@@ -92,7 +96,7 @@ export default function SettingsView() {
     setSetPinStep("current");
     setNewPinForConfirm("");
     setPinError("");
-    delete (window as unknown as { __pendingPinAction?: () => void }).__pendingPinAction;
+    pendingPinActionRef.current = null;
   };
 
   const handleLockEnabledChange = (checked: boolean) => {
@@ -102,7 +106,7 @@ export default function SettingsView() {
         setShowSetPin(true);
         setSetPinStep("new");
         setNewPinForConfirm("");
-        (window as unknown as { __pendingPinAction?: () => void }).__pendingPinAction = () => {
+        pendingPinActionRef.current = () => {
           setSettings({ lockEnabled: true });
           setShowSetPin(false);
         };
@@ -133,7 +137,7 @@ export default function SettingsView() {
       <div className="h-full flex bg-skydark-bg items-center justify-center p-4">
         <PinPrompt
           open
-          onClose={() => window.history.back()}
+          onClose={() => navigate(-1)}
           onVerify={(pin) => unlockApp(pin)}
           onSuccess={() => {}}
           title="Enter PIN to change settings"

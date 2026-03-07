@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
@@ -66,17 +66,22 @@ class SkydarkTasksTodaySensor(SkydarkBaseSensor):
     async def async_update(self) -> None:
         """Fetch tasks from database in executor."""
         if DOMAIN not in self._hass.data:
+            self._attr_available = False
             return
         db = self._hass.data[DOMAIN].get("db")
         if not db:
+            self._attr_available = False
             return
         try:
-            tasks = await self._hass.async_add_executor_job(db.get_tasks)
-            self._attr_native_value = sum(
-                1 for t in tasks if not t.get("completed_date")
+            today = dt_util.utcnow().date().isoformat()
+            tasks = await self._hass.async_add_executor_job(
+                lambda: db.get_tasks(due_date=today, include_completed=False)
             )
+            self._attr_native_value = len(tasks)
+            self._attr_available = True
         except Exception as e:
             _LOGGER.exception("Failed to update tasks_today sensor: %s", e)
+            self._attr_available = False
 
 
 class SkydarkCompletedTasksSensor(SkydarkBaseSensor):
@@ -96,18 +101,22 @@ class SkydarkCompletedTasksSensor(SkydarkBaseSensor):
     async def async_update(self) -> None:
         """Fetch tasks from database in executor."""
         if DOMAIN not in self._hass.data:
+            self._attr_available = False
             return
         db = self._hass.data[DOMAIN].get("db")
         if not db:
+            self._attr_available = False
             return
         try:
-            tasks = await self._hass.async_add_executor_job(db.get_tasks)
             today = dt_util.utcnow().date().isoformat()
-            self._attr_native_value = sum(
-                1 for t in tasks if t.get("completed_date") == today
+            tasks = await self._hass.async_add_executor_job(
+                lambda: db.get_tasks(completed_date=today)
             )
+            self._attr_native_value = len(tasks)
+            self._attr_available = True
         except Exception as e:
             _LOGGER.exception("Failed to update completed_tasks sensor: %s", e)
+            self._attr_available = False
 
 
 class SkydarkUpcomingEventsSensor(SkydarkBaseSensor):
@@ -125,20 +134,26 @@ class SkydarkUpcomingEventsSensor(SkydarkBaseSensor):
     async def async_update(self) -> None:
         """Fetch events from database in executor."""
         if DOMAIN not in self._hass.data:
+            self._attr_available = False
             return
         db = self._hass.data[DOMAIN].get("db")
         if not db:
+            self._attr_available = False
             return
         try:
-            events = await self._hass.async_add_executor_job(db.get_events)
-            now = dt_util.utcnow().isoformat()
-            upcoming = [
-                e for e in events if e.get("start_time", "") >= now
-            ]
+            now = dt_util.utcnow()
+            end = now + timedelta(days=30)
+            events = await self._hass.async_add_executor_job(
+                lambda: db.get_events(start=now, end=end)
+            )
+            now_iso = now.isoformat()
+            upcoming = [e for e in events if (e.get("start_time") or "") >= now_iso]
             if upcoming:
                 upcoming.sort(key=lambda e: e.get("start_time", ""))
                 self._attr_native_value = upcoming[0].get("title")
             else:
                 self._attr_native_value = None
+            self._attr_available = True
         except Exception as e:
             _LOGGER.exception("Failed to update upcoming_events sensor: %s", e)
+            self._attr_available = False

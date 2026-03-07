@@ -2,6 +2,8 @@ import { Component, type ReactNode, type ErrorInfo } from "react";
 
 interface Props {
   children: ReactNode;
+  /** Optional custom UI when an error is caught (e.g. per-view recovery). */
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -25,6 +27,9 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
       return (
         <div
           style={{
@@ -48,6 +53,12 @@ export default class ErrorBoundary extends Component<Props, State> {
           <p style={{ fontSize: "0.875rem", color: "#6B7C8F", margin: 0, maxWidth: 400 }}>
             {this.state.error?.message ?? "An unexpected error occurred."}
           </p>
+          <a
+            href="#/calendar"
+            style={{ color: "#3B9BBF", fontWeight: 600, marginTop: "0.25rem" }}
+          >
+            Go to Calendar
+          </a>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
             style={{

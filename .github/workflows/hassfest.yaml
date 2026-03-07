@@ -10,9 +10,4 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
       - name: Validate with hassfest
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}://github/workspace \
-            ghcr.io/home-assistant/hassfest \
-            --core-path=/usr/src/homeassistant \
-            --integration-path /github/workspace/custom_components/skydark_calendar
+        uses: "home-assistant/actions/hassfest@master"

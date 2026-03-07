@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import type { FamilyMember } from "../types/calendar";
+import { useSkydarkDataContext } from "./SkydarkDataContext";
 
 const STORAGE_KEY_MEMBERS = "skydark_family_members";
 const STORAGE_KEY_SETTINGS = "skydark_app_settings";
@@ -129,12 +130,33 @@ interface AppContextValue extends AppState {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+function isValidMember(m: unknown): m is FamilyMember {
+  return (
+    typeof m === "object" &&
+    m !== null &&
+    "id" in m &&
+    "name" in m &&
+    "color" in m &&
+    typeof (m as FamilyMember).id === "string" &&
+    typeof (m as FamilyMember).name === "string" &&
+    typeof (m as FamilyMember).color === "string"
+  );
+}
+
 function loadMembers(): FamilyMember[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_MEMBERS);
     if (raw) {
-      const parsed = JSON.parse(raw) as FamilyMember[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      const parsed = JSON.parse(raw) as unknown;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const valid = parsed.filter(isValidMember);
+        if (valid.length > 0) {
+          return valid.map((m) => ({
+            ...m,
+            initial: m.initial ?? String(m.name).charAt(0).toUpperCase(),
+          }));
+        }
+      }
     }
   } catch {
     // ignore
@@ -178,22 +200,48 @@ function loadAuthenticated(): boolean {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const skydark = useSkydarkDataContext();
   const [familyMembers, setFamilyMembersState] = useState<FamilyMember[]>(loadMembers);
   const [settings, setSettingsState] = useState<AppSettings>(loadSettings);
   const [isAuthenticated, setAuthenticatedState] = useState(loadAuthenticated);
   const [screensaverTriggered, setScreensaverTriggered] = useState(false);
   const [isLocked, setIsLockedState] = useState(false);
 
+  // Seed family members and family name from HA when WebSocket data is available
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(familyMembers));
+    if (!skydark?.data?.connection) return;
+    if (Array.isArray(skydark.data.familyMembers) && skydark.data.familyMembers.length > 0) {
+      const valid = skydark.data.familyMembers.filter((m) => isValidMember(m));
+      if (valid.length > 0) setFamilyMembersState(valid);
+    }
+    const familyName = skydark.data.config?.family_name;
+    if (typeof familyName === "string" && familyName.trim()) {
+      setSettingsState((prev) => ({ ...prev, familyName: familyName.trim() }));
+    }
+  }, [skydark?.data?.connection, skydark?.data?.familyMembers, skydark?.data?.config?.family_name]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_MEMBERS, JSON.stringify(familyMembers));
+    } catch {
+      // QuotaExceededError or private browsing; avoid crashing the app
+    }
   }, [familyMembers]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    try {
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    } catch {
+      // QuotaExceededError or private browsing
+    }
   }, [settings]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_AUTH, isAuthenticated ? "1" : "0");
+    try {
+      localStorage.setItem(STORAGE_KEY_AUTH, isAuthenticated ? "1" : "0");
+    } catch {
+      // QuotaExceededError or private browsing
+    }
   }, [isAuthenticated]);
 
   const setFamilyMembers = useCallback(
@@ -204,7 +252,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const addFamilyMember = useCallback((member: Omit<FamilyMember, "id">): FamilyMember => {
-    const id = String(Date.now());
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
     const newMember: FamilyMember = {
       ...member,
       id,

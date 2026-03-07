@@ -33,9 +33,14 @@ export function usePinGate(): UsePinGateResult {
   const handleVerify = useCallback(
     (pin: string): boolean => {
       if (!verifyPin(pin)) return false;
-      pendingActionRef.current?.();
+      const action = pendingActionRef.current;
       pendingActionRef.current = null;
       setShowPinPrompt(false);
+      try {
+        action?.();
+      } catch {
+        // Prevent a failed action from leaving the PIN prompt stuck
+      }
       return true;
     },
     [verifyPin]

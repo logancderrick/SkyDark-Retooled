@@ -24,6 +24,14 @@ def _get_db(hass: HomeAssistant):
     return hass.data[DOMAIN].get("db")
 
 
+def _get_lists_with_items(db: Any) -> tuple[list, dict[str, list]]:
+    """Fetch all lists and all list items in one pass (avoids N+1)."""
+    lists_data = db.get_lists()
+    items_map = db.get_all_list_items()
+    list_items_by_list = {lst["id"]: items_map.get(lst["id"], []) for lst in lists_data}
+    return lists_data, list_items_by_list
+
+
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "skydark_calendar/get_events",
@@ -65,7 +73,7 @@ async def websocket_get_events(
         connection.send_result(msg["id"], {"events": events})
     except Exception as e:
         _LOGGER.exception("websocket get_events failed: %s", e)
-        connection.send_error(msg["id"], "failed", str(e))
+        connection.send_error(msg["id"], "failed", "An error occurred loading events.")
 
 
 @websocket_api.websocket_command(
@@ -90,7 +98,7 @@ async def websocket_get_tasks(
         connection.send_result(msg["id"], {"tasks": tasks})
     except Exception as e:
         _LOGGER.exception("websocket get_tasks failed: %s", e)
-        connection.send_error(msg["id"], "failed", str(e))
+        connection.send_error(msg["id"], "failed", "An error occurred loading tasks.")
 
 
 @websocket_api.websocket_command(
@@ -111,17 +119,15 @@ async def websocket_get_lists(
         return
 
     try:
-        lists_data = await hass.async_add_executor_job(db.get_lists)
-        list_items_by_list: dict[str, list] = {}
-        for lst in lists_data:
-            items = await hass.async_add_executor_job(db.get_list_items, lst["id"])
-            list_items_by_list[lst["id"]] = items
+        lists_data, list_items_by_list = await hass.async_add_executor_job(
+            _get_lists_with_items, db
+        )
         connection.send_result(
             msg["id"], {"lists": lists_data, "list_items": list_items_by_list}
         )
     except Exception as e:
         _LOGGER.exception("websocket get_lists failed: %s", e)
-        connection.send_error(msg["id"], "failed", str(e))
+        connection.send_error(msg["id"], "failed", "An error occurred loading lists.")
 
 
 @websocket_api.websocket_command(
@@ -146,7 +152,7 @@ async def websocket_get_family_members(
         connection.send_result(msg["id"], {"family_members": members})
     except Exception as e:
         _LOGGER.exception("websocket get_family_members failed: %s", e)
-        connection.send_error(msg["id"], "failed", str(e))
+        connection.send_error(msg["id"], "failed", "An error occurred loading family members.")
 
 
 @websocket_api.websocket_command(
@@ -178,7 +184,7 @@ async def websocket_get_meals(
         connection.send_result(msg["id"], {"meals": meals})
     except Exception as e:
         _LOGGER.exception("websocket get_meals failed: %s", e)
-        connection.send_error(msg["id"], "failed", str(e))
+        connection.send_error(msg["id"], "failed", "An error occurred loading meals.")
 
 
 @websocket_api.websocket_command(
@@ -207,11 +213,70 @@ async def websocket_get_config(
     )
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "skydark_calendar/get_points",
+    }
+)
+@websocket_api.async_response
+async def websocket_get_points(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return points balance per family member (member_id -> points)."""
+    db = _get_db(hass)
+    if not db:
+        connection.send_error(msg["id"], "not_ready", "Integration not loaded")
+        return
+    try:
+        members = await hass.async_add_executor_job(db.get_family_members)
+        points_by_member = {}
+        for m in members:
+            mid = m.get("id")
+            if mid:
+                pts = await hass.async_add_executor_job(db.get_points, mid)
+                points_by_member[mid] = pts
+        connection.send_result(msg["id"], {"points_by_member": points_by_member})
+    except Exception as e:
+        _LOGGER.exception("websocket get_points failed: %s", e)
+        connection.send_error(msg["id"], "failed", "An error occurred loading points.")
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "skydark_calendar/get_rewards",
+    }
+)
+@websocket_api.async_response
+async def websocket_get_rewards(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Return rewards list."""
+    db = _get_db(hass)
+    if not db:
+        connection.send_error(msg["id"], "not_ready", "Integration not loaded")
+        return
+    try:
+        rewards = await hass.async_add_executor_job(db.get_rewards)
+        connection.send_result(msg["id"], {"rewards": rewards})
+    except Exception as e:
+        _LOGGER.exception("websocket get_rewards failed: %s", e)
+        connection.send_error(msg["id"], "failed", "An error occurred loading rewards.")
+
+
 async def async_register_websocket_handlers(hass: HomeAssistant) -> None:
-    """Register WebSocket API handlers."""
+    """Register WebSocket API handlers (skip if already registered on reload)."""
+    if hass.data.get(DOMAIN, {}).get("ws_registered"):
+        return
     websocket_api.async_register_command(hass, websocket_get_events)
     websocket_api.async_register_command(hass, websocket_get_tasks)
     websocket_api.async_register_command(hass, websocket_get_lists)
     websocket_api.async_register_command(hass, websocket_get_family_members)
     websocket_api.async_register_command(hass, websocket_get_meals)
     websocket_api.async_register_command(hass, websocket_get_config)
+    websocket_api.async_register_command(hass, websocket_get_points)
+    websocket_api.async_register_command(hass, websocket_get_rewards)
+    hass.data.setdefault(DOMAIN, {})["ws_registered"] = True

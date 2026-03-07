@@ -5,7 +5,9 @@ import FloatingActionButton from "../components/Common/FloatingActionButton";
 import Toggle from "../components/Common/Toggle";
 import PinPrompt from "../components/Common/PinPrompt";
 import { useAppContext } from "../contexts/AppContext";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { usePinGate } from "../hooks/usePinGate";
+import { serviceCompleteTask } from "../lib/skyDarkApi";
 import type { Task } from "../types/tasks";
 import { isDueToday, isLateInLastWeek, formatWeekdays, formatCustomSchedule } from "../types/tasks";
 
@@ -13,28 +15,41 @@ type ChoresTabId = "byPerson" | "allChores";
 type ViewFilterId = "all" | "daily" | "weekly" | "custom";
 
 const MOCK_TASKS: Task[] = [
-  { id: "t1", title: "Load dishwasher", assignee_id: "1", frequency: "daily", category: "chores", points: 5, due_date: new Date(Date.now() - 86400000).toISOString() },
+  { id: "t1", title: "Load dishwasher", assignee_id: "1", frequency: "daily", category: "chores", points: 5 },
   { id: "t2", title: "Litter Box", assignee_id: "1", frequency: "daily", points: 3 },
-  { id: "t3", title: "Put away laundry", assignee_id: "2", frequency: "daily", points: 10, completed_date: "2025-02-25" },
-  { id: "t4", title: "Walk Moose", assignee_id: "2", frequency: "daily", points: 5, due_date: new Date(Date.now() + 3600000).toISOString() },
-  { id: "t5", title: "Homework", assignee_id: "3", frequency: "daily", points: 15 },
-  { id: "t6", title: "Sweep kitchen", assignee_id: "4", frequency: "daily", points: 8, completed_date: "2025-02-25" },
-  { id: "t7", title: "Take out litter", assignee_id: "1", frequency: "weekly", weekdays: [2], points: 5 },
-  { id: "t8", title: "Trash day", assignee_id: "2", frequency: "weekly", weekdays: [2, 5], points: 3 },
+  { id: "t3", title: "Put away laundry", assignee_id: "2", frequency: "daily", points: 10, completed_date: new Date().toISOString().slice(0, 10) },
 ];
-
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
+function skydarkTasksToTasks(rows: { id: string; title: string; assignee_id: string; category?: string | null; frequency?: string | null; icon?: string | null; points?: number; completed_date?: string | null; due_date?: string | null; weekdays?: number[] | null }[]): Task[] {
+  return rows.map((t) => ({
+    id: t.id,
+    title: t.title,
+    assignee_id: t.assignee_id,
+    category: t.category ?? undefined,
+    frequency: t.frequency ?? "daily",
+    icon: t.icon ?? undefined,
+    points: t.points ?? 0,
+    completed_date: t.completed_date ?? null,
+    due_date: t.due_date ?? null,
+    weekdays: t.weekdays ?? undefined,
+  }));
+}
+
 export default function TasksView() {
+  const skydark = useSkydarkDataContext();
   const { familyMembers } = useAppContext();
   const { runIfUnlocked, pinPromptProps } = usePinGate();
   const [hideCompleted, setHideCompleted] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [localTasks, setLocalTasks] = useState<Task[]>(MOCK_TASKS);
   const [activeTab, setActiveTab] = useState<ChoresTabId>("byPerson");
   const [viewFilter, setViewFilter] = useState<ViewFilterId>("all");
   const [showWeeklyChores, setShowWeeklyChores] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const serverTasks = skydark?.data?.connection ? skydarkTasksToTasks(skydark.data.tasks ?? []) : [];
+  const tasks = skydark?.data?.connection ? serverTasks : localTasks;
 
   const visibleTasks = useMemo(
     () =>
@@ -66,19 +81,29 @@ export default function TasksView() {
   );
 
   const handleToggle = (taskId: string) => {
-    runIfUnlocked("completeChores", () => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? {
-                ...t,
-                completed_date: t.completed_date
-                  ? null
-                  : new Date().toISOString().slice(0, 10),
-              }
-            : t
-        )
-      );
+    runIfUnlocked("completeChores", async () => {
+      const conn = skydark?.data?.connection;
+      const task = tasks.find((t) => t.id === taskId);
+      const today = todayStr();
+      const isCompleting = !task?.completed_date;
+      if (conn && task) {
+        try {
+          await serviceCompleteTask(conn, {
+            task_id: taskId,
+            completed_date: isCompleting ? today : undefined,
+            points: isCompleting ? (task.points ?? 0) : 0,
+          });
+          await skydark?.refetch();
+        } catch {
+          // leave UI as-is; refetch could be used to revert
+        }
+      } else {
+        setLocalTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, completed_date: t.completed_date ? null : today } : t
+          )
+        );
+      }
     });
   };
 
@@ -95,7 +120,8 @@ export default function TasksView() {
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    if (skydark?.data?.connection) return; // no delete_task service yet
+    setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
     setTaskModalOpen(false);
     setEditingTask(null);
   };
@@ -105,13 +131,14 @@ export default function TasksView() {
   };
 
   const handleSaveTask = (data: Partial<Task> & { id?: string }) => {
+    if (skydark?.data?.connection) return; // no add_task/update_task service yet
     const points = typeof data.points === "number" ? data.points : 0;
     if (data.id) {
-      setTasks((prev) =>
+      setLocalTasks((prev) =>
         prev.map((t) => (t.id === data.id ? { ...t, ...data, points } : t))
       );
     } else {
-      setTasks((prev) => [
+      setLocalTasks((prev) => [
         ...prev,
         { ...data, id: `t${Date.now()}`, completed_date: null, points } as Task,
       ]);

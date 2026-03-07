@@ -38,16 +38,16 @@ ADD_EVENT_SCHEMA = vol.Schema(
         vol.Optional("description"): cv.string,
         vol.Optional("location"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 COMPLETE_TASK_SCHEMA = vol.Schema(
     {
         vol.Required("task_id"): cv.string,
         vol.Optional("completed_date"): cv.string,
-        vol.Optional("points", default=0): cv.positive_int,
+        vol.Optional("points", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 ADD_POINTS_SCHEMA = vol.Schema(
@@ -57,7 +57,7 @@ ADD_POINTS_SCHEMA = vol.Schema(
         vol.Required("reason"): cv.string,
         vol.Optional("task_id"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 REDEEM_REWARD_SCHEMA = vol.Schema(
@@ -65,7 +65,7 @@ REDEEM_REWARD_SCHEMA = vol.Schema(
         vol.Required("member_id"): cv.string,
         vol.Required("reward_id"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 CREATE_LIST_SCHEMA = vol.Schema(
@@ -75,7 +75,7 @@ CREATE_LIST_SCHEMA = vol.Schema(
         vol.Optional("owner_id"): cv.string,
         vol.Optional("list_type", default="general"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 ADD_MEAL_RECIPE_SCHEMA = vol.Schema(
@@ -94,7 +94,7 @@ ADD_MEAL_RECIPE_SCHEMA = vol.Schema(
             ],
         ),
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 UPLOAD_PHOTO_SCHEMA = vol.Schema(
@@ -103,7 +103,7 @@ UPLOAD_PHOTO_SCHEMA = vol.Schema(
         vol.Optional("caption"): cv.string,
         vol.Optional("uploaded_by"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 ADD_LIST_ITEM_SCHEMA = vol.Schema(
@@ -111,7 +111,7 @@ ADD_LIST_ITEM_SCHEMA = vol.Schema(
         vol.Required("list_id"): cv.string,
         vol.Required("content"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 SEND_NOTIFICATION_SCHEMA = vol.Schema(
@@ -119,7 +119,7 @@ SEND_NOTIFICATION_SCHEMA = vol.Schema(
         vol.Required("message"): cv.string,
         vol.Optional("title"): cv.string,
     },
-    extra=vol.ALLOW_EXTRA,
+    extra=vol.PREVENT_EXTRA,
 )
 
 
@@ -135,11 +135,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.warning("Database not ready")
             return
         start = call.data["start_time"]
-        if isinstance(start, str):
-            start = datetime.fromisoformat(start.replace("Z", "+00:00"))
         end = call.data.get("end_time")
-        if end is not None and isinstance(end, str):
-            end = datetime.fromisoformat(end.replace("Z", "+00:00"))
         try:
             event_id = await hass.async_add_executor_job(
                 partial(
@@ -161,7 +157,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.exception("add_event failed: %s", e)
 
     async def complete_task(call: ServiceCall) -> None:
-        """Mark a task complete and optionally award points."""
+        """Mark a task complete and optionally award points (atomic)."""
         if DOMAIN not in hass.data:
             return
         db = hass.data[DOMAIN].get("db")
@@ -186,20 +182,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     )
 
             await hass.async_add_executor_job(
-                partial(db.complete_task, task_id, parsed_date)
+                partial(
+                    db.complete_task_and_award_points,
+                    task_id,
+                    parsed_date,
+                    points,
+                )
             )
-            if points > 0:
-                task = await hass.async_add_executor_job(db.get_task, task_id)
-                if task:
-                    await hass.async_add_executor_job(
-                        partial(
-                            db.add_points,
-                            task["assignee_id"],
-                            points,
-                            "Task completed",
-                            task_id=task_id,
-                        )
-                    )
         except Exception as e:
             _LOGGER.exception("complete_task failed: %s", e)
 
@@ -289,15 +278,17 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         file_path = call.data["file_path"]
 
-        # Validate file_path to prevent path traversal attacks
+        config_dir = Path(hass.config.config_dir).resolve()
         try:
-            config_dir = Path(hass.config.config_dir).resolve()
             resolved_path = Path(file_path).resolve()
-            if ".." in file_path or not str(resolved_path).startswith(str(config_dir)):
+            if not resolved_path.is_relative_to(config_dir):
                 _LOGGER.warning(
                     "upload_photo: rejected file_path '%s' outside config directory",
                     file_path,
                 )
+                return
+            if not resolved_path.is_file():
+                _LOGGER.warning("upload_photo: file does not exist '%s'", file_path)
                 return
         except (ValueError, OSError) as e:
             _LOGGER.warning("upload_photo: invalid file_path '%s': %s", file_path, e)
@@ -335,12 +326,15 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         """Send notification to display."""
         title = call.data.get("title", "Skydark")
         message = call.data.get("message", "")
-        await hass.services.async_call(
-            "persistent_notification",
-            "create",
-            {"title": title, "message": message},
-            blocking=True,
-        )
+        try:
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {"title": title, "message": message},
+                blocking=True,
+            )
+        except Exception as e:
+            _LOGGER.exception("send_notification failed: %s", e)
 
     hass.services.async_register(
         DOMAIN, SERVICE_ADD_EVENT, add_event, schema=ADD_EVENT_SCHEMA

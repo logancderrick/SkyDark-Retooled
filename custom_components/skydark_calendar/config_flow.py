@@ -80,8 +80,14 @@ class SkydarkOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            try:
+                await validate_input(self.hass, user_input)
+            except ValueError as err:
+                errors["base"] = str(err)
+            else:
+                return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
             step_id="init",
@@ -89,13 +95,13 @@ class SkydarkOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_FAMILY_NAME,
-                        default=self.config_entry.data.get(
-                            CONF_FAMILY_NAME, DEFAULT_FAMILY_NAME
-                        ),
+                        default=self.config_entry.options.get(CONF_FAMILY_NAME)
+                        or self.config_entry.data.get(CONF_FAMILY_NAME, DEFAULT_FAMILY_NAME),
                     ): str,
                     vol.Optional(
                         CONF_WEATHER_ENTITY,
-                        default=self.config_entry.data.get(CONF_WEATHER_ENTITY),
+                        default=self.config_entry.options.get(CONF_WEATHER_ENTITY)
+                        or self.config_entry.data.get(CONF_WEATHER_ENTITY),
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             domain="weather",
@@ -104,4 +110,5 @@ class SkydarkOptionsFlow(config_entries.OptionsFlow):
                     ),
                 }
             ),
+            errors=errors,
         )

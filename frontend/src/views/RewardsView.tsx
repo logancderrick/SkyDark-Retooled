@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "../contexts/AppContext";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import RewardModal from "../components/Common/RewardModal";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
+import { serviceRedeemReward } from "../lib/skyDarkApi";
 import type { Reward } from "../types/rewards";
 
 const STORAGE_REWARDS = "skydark_rewards";
@@ -43,22 +45,29 @@ function loadPoints(): Record<string, number> {
 }
 
 export default function RewardsView() {
+  const skydark = useSkydarkDataContext();
   const { familyMembers, verifyPin, isFeatureLocked } = useAppContext();
-  const [rewards, setRewards] = useState<Reward[]>(loadRewards);
-  const [points, setPoints] = useState<Record<string, number>>(loadPoints);
+  const [localRewards, setLocalRewards] = useState<Reward[]>(loadRewards);
+  const [localPoints, setLocalPoints] = useState<Record<string, number>>(loadPoints);
   const [showRedeemPin, setShowRedeemPin] = useState(false);
   const [pendingRedeem, setPendingRedeem] = useState<{ memberId: string; rewardId: string; cost: number } | null>(null);
   const [showManagePin, setShowManagePin] = useState(false);
   const [pendingManageAction, setPendingManageAction] = useState<"add" | { delete: string } | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_REWARDS, JSON.stringify(rewards));
-  }, [rewards]);
+  const serverPoints = skydark?.data?.connection ? (skydark.data.pointsByMember ?? {}) : {};
+  const serverRewards: Reward[] = skydark?.data?.connection && skydark.data.rewards
+    ? skydark.data.rewards.map((r) => ({ id: r.id, name: r.name, points: r.points_required }))
+    : [];
+  const points = skydark?.data?.connection ? serverPoints : localPoints;
+  const rewards = skydark?.data?.connection ? serverRewards : localRewards;
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_POINTS, JSON.stringify(points));
-  }, [points]);
+    if (!skydark?.data?.connection) try { localStorage.setItem(STORAGE_REWARDS, JSON.stringify(localRewards)); } catch { /* ignore */ }
+  }, [skydark?.data?.connection, localRewards]);
+  useEffect(() => {
+    if (!skydark?.data?.connection) try { localStorage.setItem(STORAGE_POINTS, JSON.stringify(localPoints)); } catch { /* ignore */ }
+  }, [skydark?.data?.connection, localPoints]);
 
   const handleRedeemClick = (memberId: string, rewardId: string, cost: number) => {
     if ((points[memberId] ?? 0) < cost) return;
@@ -70,11 +79,18 @@ export default function RewardsView() {
     }
   };
 
-  const doRedeem = (memberId: string, _rewardId: string, cost: number) => {
-    setPoints((prev) => ({
-      ...prev,
-      [memberId]: Math.max(0, (prev[memberId] ?? 0) - cost),
-    }));
+  const doRedeem = async (memberId: string, rewardId: string, _cost: number) => {
+    const conn = skydark?.data?.connection;
+    if (conn) {
+      try {
+        await serviceRedeemReward(conn, { member_id: memberId, reward_id: rewardId });
+        await skydark?.refetch();
+      } catch {
+        // leave as-is
+      }
+      return;
+    }
+    setLocalPoints((prev) => ({ ...prev, [memberId]: Math.max(0, (prev[memberId] ?? 0) - _cost) }));
   };
 
   const handleRedeemPinVerify = (pin: string): boolean => {
@@ -97,7 +113,7 @@ export default function RewardsView() {
   };
 
   const handleDeleteReward = (rewardId: string) => {
-    setRewards((prev) => prev.filter((r) => r.id !== rewardId));
+    if (!skydark?.data?.connection) setLocalRewards((prev) => prev.filter((r) => r.id !== rewardId));
     setAddModalOpen(false);
   };
 
@@ -129,10 +145,7 @@ export default function RewardsView() {
   };
 
   const handleSaveReward = (data: Omit<Reward, "id">) => {
-    setRewards((prev) => [
-      ...prev,
-      { ...data, id: `r${Date.now()}` },
-    ]);
+    if (!skydark?.data?.connection) setLocalRewards((prev) => [...prev, { ...data, id: `r${Date.now()}` }]);
     setAddModalOpen(false);
   };
 

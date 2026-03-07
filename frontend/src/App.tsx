@@ -3,7 +3,37 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./components/Layout/MainLayout";
 import SimulatedViewport from "./components/dev/SimulatedViewport";
 import ViewportIndicator from "./components/dev/ViewportIndicator";
+import ErrorBoundary from "./components/Common/ErrorBoundary";
 import { useViewportSimulator } from "./contexts/ViewportSimulatorContext";
+
+function ViewErrorFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
+      <p className="text-skydark-text">This section failed to load.</p>
+      <a href="#/calendar" className="text-skydark-accent font-medium underline">
+        Go to Calendar
+      </a>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="px-4 py-2 rounded-xl bg-skydark-accent text-white font-medium"
+      >
+        Reload page
+      </button>
+    </div>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
+      <h2 className="text-lg font-semibold text-skydark-text">Page not found</h2>
+      <a href="#/calendar" className="text-skydark-accent font-medium underline">
+        Go to Calendar
+      </a>
+    </div>
+  );
+}
 
 const CalendarView = lazy(() => import("./views/CalendarView"));
 const TasksView = lazy(() => import("./views/TasksView"));
@@ -27,20 +57,22 @@ function App() {
 
   const content = (
     <MainLayout>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/calendar" replace />} />
-          <Route path="/index.html" element={<Navigate to="/calendar" replace />} />
-          <Route path="/calendar" element={<CalendarView />} />
-          <Route path="/tasks" element={<TasksView />} />
-          <Route path="/lists" element={<ListsView />} />
-          <Route path="/meals" element={<MealsView />} />
-          <Route path="/shopping" element={<ShoppingView />} />
-          <Route path="/photos" element={<PhotosView />} />
-          <Route path="/rewards" element={<RewardsView />} />
-          <Route path="/settings" element={<SettingsView />} />
-        </Routes>
-      </Suspense>
+      <ErrorBoundary fallback={<ViewErrorFallback />}>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/calendar" replace />} />
+            <Route path="/calendar" element={<CalendarView />} />
+            <Route path="/tasks" element={<TasksView />} />
+            <Route path="/lists" element={<ListsView />} />
+            <Route path="/meals" element={<MealsView />} />
+            <Route path="/shopping" element={<ShoppingView />} />
+            <Route path="/photos" element={<PhotosView />} />
+            <Route path="/rewards" element={<RewardsView />} />
+            <Route path="/settings" element={<SettingsView />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </MainLayout>
   );
 

@@ -17,7 +17,8 @@ export function useIdleDetection(idleMinutes: number, enabled: boolean) {
   }, []);
 
   useEffect(() => {
-    if (!enabled || idleMinutes <= 0) {
+    const validMinutes = Number.isFinite(idleMinutes) && idleMinutes > 0;
+    if (!enabled || !validMinutes) {
       setIsIdle(false);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
@@ -36,18 +37,28 @@ export function useIdleDetection(idleMinutes: number, enabled: boolean) {
       }, delayMs);
     };
 
+    const lastScheduledRef = { current: 0 };
+    const THROTTLE_MS = 500;
     const onActivity = () => {
       setIsIdle(false);
-      scheduleIdle();
+      const now = Date.now();
+      if (now - lastScheduledRef.current >= THROTTLE_MS) {
+        lastScheduledRef.current = now;
+        scheduleIdle();
+      }
     };
 
     scheduleIdle();
 
-    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
-    events.forEach((ev) => window.addEventListener(ev, onActivity));
+    const events: (keyof WindowEventMap)[] = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
+    events.forEach((ev) => {
+      window.addEventListener(ev, onActivity, ev === "scroll" ? { passive: true } : false);
+    });
 
     return () => {
-      events.forEach((ev) => window.removeEventListener(ev, onActivity));
+      events.forEach((ev) => {
+        window.removeEventListener(ev, onActivity);
+      });
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
