@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:custom_components/skydark_calendar/www/assets/usePinGate-DeC9RkB1.js
-import{u as f,r as t}from"./main-CH7wGs1-.js";function m(){const{isFeatureLocked:o,verifyPin:u}=f(),[l,n]=t.useState(!1),e=t.useRef(null),a=t.useCallback((s,r)=>{o(s)?(e.current=r,n(!0)):r()},[o]),c=t.useCallback(s=>{var r;return u(s)?((r=e.current)==null||r.call(e),e.current=null,n(!1),!0):!1},[u]),p=t.useCallback(()=>{n(!1),e.current=null},[]);return{runIfUnlocked:a,pinPromptProps:{open:l,onClose:p,onVerify:c,title:"Enter PIN"}}}export{m as u};
-========
-import{u as f,r as t}from"./main-gixLdV0H.js";function m(){const{isFeatureLocked:o,verifyPin:u}=f(),[l,n]=t.useState(!1),e=t.useRef(null),a=t.useCallback((s,r)=>{o(s)?(e.current=r,n(!0)):r()},[o]),c=t.useCallback(s=>{var r;return u(s)?((r=e.current)==null||r.call(e),e.current=null,n(!1),!0):!1},[u]),p=t.useCallback(()=>{n(!1),e.current=null},[]);return{runIfUnlocked:a,pinPromptProps:{open:l,onClose:p,onVerify:c,title:"Enter PIN"}}}export{m as u};
->>>>>>>> 19b032d2539e2a895f2f66c9449e19b8e71e3205:custom_components/skydark_calendar/www/assets/usePinGate-8kdwO7Aw.js
