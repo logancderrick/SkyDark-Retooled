@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.components.frontend import async_register_built_in_panel
+from homeassistant.components.frontend import async_register_built_in_panel, async_remove_panel
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -41,17 +41,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             [StaticPathConfig(PANEL_URL, str(www_path), False)]
         )
 
-    # Register the panel (iframe that loads our frontend)
-    if "skydark" not in (hass.data.get("frontend_panels") or {}):
-        async_register_built_in_panel(
-            hass,
-            component_name="iframe",
-            sidebar_title=PANEL_TITLE,
-            sidebar_icon=PANEL_ICON,
-            frontend_url_path="skydark",
-            config={"url": f"{PANEL_URL}/index.html"},
-            require_admin=False,
-        )
+    # Register the panel (iframe that loads our frontend).
+    # Always remove first to avoid duplicate-registration errors on reload.
+    async_remove_panel(hass, "skydark")
+    async_register_built_in_panel(
+        hass,
+        component_name="iframe",
+        sidebar_title=PANEL_TITLE,
+        sidebar_icon=PANEL_ICON,
+        frontend_url_path="skydark",
+        config={"url": f"{PANEL_URL}/index.html"},
+        require_admin=False,
+    )
 
     # Database
     db_path = Path(hass.config.config_dir) / DOMAIN / DB_NAME
@@ -88,4 +89,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop("panel_url", None)
         hass.data[DOMAIN].pop("entry_id", None)
         hass.data[DOMAIN].pop("config", None)
+    async_remove_panel(hass, "skydark")
     return unload_ok
