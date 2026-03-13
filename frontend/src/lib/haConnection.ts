@@ -1,6 +1,10 @@
 /**
  * Home Assistant WebSocket connection for the SkyDark panel.
- * When running inside HA's iframe (same origin), tries to reuse stored auth.
+ *
+ * Strategy (in order):
+ *  1. Reuse the parent HA window's live connection (best for same-origin iframe)
+ *  2. Fall back to stored localStorage tokens
+ *  3. Last resort: redirect-based OAuth (may cause a brief flash)
  */
 
 import {
@@ -18,7 +22,6 @@ function getHassUrl(): string {
   return window.location.origin;
 }
 
-/** AuthData shape expected by home-assistant-js-websocket */
 interface AuthDataLike {
   hassUrl: string;
   clientId: string | null;
@@ -29,8 +32,21 @@ interface AuthDataLike {
 }
 
 /**
- * Try to load auth from localStorage (HA frontend may store tokens when same-origin).
+ * Attempt to grab the live WebSocket connection from the parent HA frontend.
+ * Works when loaded inside HA's same-origin iframe panel.
  */
+function getParentConnection(): Connection | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ha = (window as any).parent?.document?.querySelector("home-assistant");
+    const conn: Connection | undefined = ha?.hass?.connection;
+    if (conn) return conn;
+  } catch {
+    // cross-origin, sandbox, or not in an iframe
+  }
+  return null;
+}
+
 async function loadStoredTokens(): Promise<AuthDataLike | null | undefined> {
   try {
     const url = localStorage.getItem(HASS_URL_KEY);
@@ -70,25 +86,25 @@ function saveTokens(data: AuthDataLike | null): void {
 
 let connectionPromise: Promise<Connection> | null = null;
 
-/**
- * Get or create the single HA WebSocket connection for the app lifecycle.
- * Uses stored tokens when in HA iframe; otherwise prompts for auth.
- */
 export async function getHAConnection(): Promise<Connection> {
   if (connectionPromise) return connectionPromise;
 
   connectionPromise = (async () => {
-    const hassUrl = getHassUrl();
+    // 1. Reuse parent HA connection (fastest, no extra auth needed)
+    const parentConn = getParentConnection();
+    if (parentConn) {
+      console.debug("[SkyDark] Reusing parent HA WebSocket connection");
+      return parentConn;
+    }
 
+    // 2. Establish own connection via stored tokens / OAuth
+    const hassUrl = getHassUrl();
     const auth = await getAuth({
       hassUrl,
       loadTokens: loadStoredTokens,
       saveTokens,
     }).catch((err) => {
-      if (err === ERR_HASS_HOST_REQUIRED) {
-        return getAuth({ hassUrl });
-      }
-      if (err === ERR_INVALID_AUTH) {
+      if (err === ERR_HASS_HOST_REQUIRED || err === ERR_INVALID_AUTH) {
         return getAuth({ hassUrl });
       }
       throw err;
@@ -96,7 +112,7 @@ export async function getHAConnection(): Promise<Connection> {
 
     const conn = await createConnection({ auth });
     conn.addEventListener("ready", () => {
-      console.debug("[SkyDark] HA WebSocket connected");
+      console.debug("[SkyDark] HA WebSocket connected (own connection)");
     });
     conn.addEventListener("disconnected", () => {
       console.debug("[SkyDark] HA WebSocket disconnected");
@@ -107,9 +123,6 @@ export async function getHAConnection(): Promise<Connection> {
   return connectionPromise;
 }
 
-/**
- * Reset the cached connection (e.g. after auth failure or logout).
- */
 export function clearHAConnection(): void {
   connectionPromise = null;
 }

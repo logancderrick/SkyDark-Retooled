@@ -8,7 +8,7 @@ from typing import Any
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.frontend import async_register_built_in_panel, async_remove_panel
-from homeassistant.components.http import HomeAssistantView, StaticPathConfig
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -22,70 +22,6 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.CALENDAR, Platform.SENSOR]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
-
-# Headers that prevent any caching of index.html so that updated asset
-# hashes in the file are always picked up — even by HA's service worker.
-_NO_CACHE_HEADERS = {
-    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-    "Pragma": "no-cache",
-}
-
-
-class SkyDarkIndexView(HomeAssistantView):
-    """Serve SkyDark index.html with strict no-cache headers.
-
-    Using a dedicated view (rather than the static-path handler) lets us set
-    response headers that HA's service worker will respect, ensuring the
-    browser always fetches the latest index.html after an update.
-    """
-
-    url = f"{PANEL_URL}/index.html"
-    name = "skydark_index"
-    requires_auth = False
-
-    def __init__(self, www_path: Path) -> None:
-        self._index = www_path / "index.html"
-
-    async def get(self, request):  # type: ignore[override]
-        from aiohttp import web
-
-        hass = request.app["hass"]
-        exists = await hass.async_add_executor_job(self._index.exists)
-        if not exists:
-            raise web.HTTPNotFound()
-        content = await hass.async_add_executor_job(self._index.read_bytes)
-        return web.Response(
-            body=content,
-            content_type="text/html",
-            charset="utf-8",
-            headers=_NO_CACHE_HEADERS,
-        )
-
-
-class SkyDarkRootView(HomeAssistantView):
-    """Serve index.html for /skydark (no trailing path) - same as index.html."""
-
-    url = PANEL_URL
-    name = "skydark_root"
-    requires_auth = False
-
-    def __init__(self, www_path: Path) -> None:
-        self._index = www_path / "index.html"
-
-    async def get(self, request):  # type: ignore[override]
-        from aiohttp import web
-
-        hass = request.app["hass"]
-        exists = await hass.async_add_executor_job(self._index.exists)
-        if not exists:
-            raise web.HTTPNotFound()
-        content = await hass.async_add_executor_job(self._index.read_bytes)
-        return web.Response(
-            body=content,
-            content_type="text/html",
-            charset="utf-8",
-            headers=_NO_CACHE_HEADERS,
-        )
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
@@ -116,11 +52,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         www_path = Path(__path__[0]) / "www"
         www_exists = await hass.async_add_executor_job(www_path.exists)
         if www_exists:
-            hass.http.register_view(SkyDarkRootView(www_path))
-            hass.http.register_view(SkyDarkIndexView(www_path))
             await hass.http.async_register_static_paths(
-                [StaticPathConfig(PANEL_URL, str(www_path), cache_headers=True)]
+                [StaticPathConfig(PANEL_URL, str(www_path), cache_headers=False)]
             )
+            _LOGGER.debug("Registered static path %s -> %s", PANEL_URL, www_path)
 
         async_remove_panel(hass, "skydark")
         async_register_built_in_panel(
