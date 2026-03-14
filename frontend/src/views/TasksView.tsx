@@ -7,7 +7,7 @@ import PinPrompt from "../components/Common/PinPrompt";
 import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { usePinGate } from "../hooks/usePinGate";
-import { serviceCompleteTask, serviceAddTask, serviceUpdateTask } from "../lib/skyDarkApi";
+import { serviceCompleteTask, serviceAddTask, serviceUpdateTask, serviceDeleteTask } from "../lib/skyDarkApi";
 import type { Task } from "../types/tasks";
 import { isDueToday, isLateInLastWeek, formatWeekdays, formatCustomSchedule } from "../types/tasks";
 
@@ -94,8 +94,8 @@ export default function TasksView() {
             points: isCompleting ? (task.points ?? 0) : 0,
           });
           await skydark?.refetch();
-        } catch {
-          // leave UI as-is; refetch could be used to revert
+        } catch (err) {
+          console.error("[SkyDark] Failed to complete task:", err);
         }
       } else {
         setLocalTasks((prev) =>
@@ -119,9 +119,18 @@ export default function TasksView() {
     });
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    if (skydark?.data?.connection) return; // no delete_task service yet
-    setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
+  const handleDeleteTask = async (taskId: string) => {
+    const conn = skydark?.data?.connection;
+    if (conn) {
+      try {
+        await serviceDeleteTask(conn, { task_id: taskId });
+        await skydark?.refetch();
+      } catch (err) {
+        console.error("[SkyDark] Failed to delete task:", err);
+      }
+    } else {
+      setLocalTasks((prev) => prev.filter((t) => t.id !== taskId));
+    }
     setTaskModalOpen(false);
     setEditingTask(null);
   };
@@ -158,8 +167,8 @@ export default function TasksView() {
           });
         }
         await skydark?.refetch();
-      } catch {
-        // leave UI as-is; refetch could revert
+      } catch (err) {
+        console.error("[SkyDark] Failed to save task:", err);
       }
     } else if (!conn) {
       if (data.id) {

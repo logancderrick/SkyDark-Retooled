@@ -266,3 +266,24 @@ export async function serviceAddMealRecipe(
     ingredients: data.ingredients ?? [],
   });
 }
+
+export async function serviceAddMeal(
+  conn: Connection,
+  data: {
+    name: string;
+    meal_date: string;
+    meal_type: string;
+    recipe_url?: string;
+    ingredients?: string;
+    meal_recipe_id?: string;
+  }
+): Promise<unknown> {
+  return callService(conn, DOMAIN, "add_meal", data);
+}
+
+export async function serviceDeleteTask(
+  conn: Connection,
+  data: { task_id: string }
+): Promise<unknown> {
+  return callService(conn, DOMAIN, "delete_task", data);
+}

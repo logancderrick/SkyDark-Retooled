@@ -28,6 +28,8 @@ SERVICE_REDEEM_REWARD = "redeem_reward"
 SERVICE_ADD_LIST_ITEM = "add_list_item"
 SERVICE_CREATE_LIST = "create_list"
 SERVICE_ADD_MEAL_RECIPE = "add_meal_recipe"
+SERVICE_ADD_MEAL = "add_meal"
+SERVICE_DELETE_TASK = "delete_task"
 SERVICE_UPLOAD_PHOTO = "upload_photo"
 SERVICE_SEND_NOTIFICATION = "send_notification"
 
@@ -133,6 +135,25 @@ ADD_MEAL_RECIPE_SCHEMA = vol.Schema(
                 )
             ],
         ),
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+ADD_MEAL_SCHEMA = vol.Schema(
+    {
+        vol.Required("name"): cv.string,
+        vol.Required("meal_date"): cv.string,
+        vol.Required("meal_type"): cv.string,
+        vol.Optional("recipe_url"): cv.string,
+        vol.Optional("ingredients"): cv.string,
+        vol.Optional("meal_recipe_id"): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+DELETE_TASK_SCHEMA = vol.Schema(
+    {
+        vol.Required("task_id"): cv.string,
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -393,6 +414,45 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except Exception as e:
             _LOGGER.exception("add_meal_recipe failed: %s", e)
 
+    async def add_meal(call: ServiceCall) -> None:
+        """Add a meal to a specific date/slot."""
+        if DOMAIN not in hass.data:
+            return
+        db = hass.data[DOMAIN].get("db")
+        if not db:
+            _LOGGER.warning("Database not ready")
+            return
+        try:
+            await hass.async_add_executor_job(
+                partial(
+                    db.add_meal,
+                    name=call.data["name"],
+                    meal_date=call.data["meal_date"],
+                    meal_type=call.data["meal_type"],
+                    recipe_url=call.data.get("recipe_url"),
+                    ingredients=call.data.get("ingredients"),
+                    meal_recipe_id=call.data.get("meal_recipe_id"),
+                )
+            )
+        except Exception as e:
+            _LOGGER.exception("add_meal failed: %s", e)
+
+    async def delete_task(call: ServiceCall) -> None:
+        """Delete a task."""
+        if DOMAIN not in hass.data:
+            return
+        db = hass.data[DOMAIN].get("db")
+        if not db:
+            _LOGGER.warning("Database not ready")
+            return
+        try:
+            await hass.async_add_executor_job(
+                db.delete_task,
+                call.data["task_id"],
+            )
+        except Exception as e:
+            _LOGGER.exception("delete_task failed: %s", e)
+
     async def upload_photo(call: ServiceCall) -> None:
         """Register a photo (file_path already stored on disk)."""
         if DOMAIN not in hass.data:
@@ -490,6 +550,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_ADD_MEAL_RECIPE, add_meal_recipe, schema=ADD_MEAL_RECIPE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_ADD_MEAL, add_meal, schema=ADD_MEAL_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DELETE_TASK, delete_task, schema=DELETE_TASK_SCHEMA
     )
     hass.services.async_register(
         DOMAIN, SERVICE_UPLOAD_PHOTO, upload_photo, schema=UPLOAD_PHOTO_SCHEMA

@@ -86,7 +86,8 @@ export default function CalendarView() {
             location: data.location,
           });
           await skydark?.refetchEvents();
-        } catch {
+        } catch (err) {
+          console.error("[SkyDark] Failed to add event:", err);
           // fallback: optimistic local add when service fails
           const newEvent: CalendarEvent = {
             id: String(Date.now()),

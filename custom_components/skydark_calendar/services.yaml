@@ -283,6 +283,55 @@ add_meal_recipe:
       selector:
         object:
 
+add_meal:
+  name: Add meal
+  description: Add a meal to a specific date and meal slot (breakfast, lunch, dinner, snacks).
+  fields:
+    name:
+      name: Meal name
+      description: Name of the meal
+      required: true
+      selector:
+        text:
+    meal_date:
+      name: Meal date
+      description: Date for the meal (YYYY-MM-DD)
+      required: true
+      selector:
+        text:
+    meal_type:
+      name: Meal type
+      description: Type of meal (Breakfast, Lunch, Dinner, Snacks)
+      required: true
+      selector:
+        text:
+    recipe_url:
+      name: Recipe URL
+      description: Optional URL to the recipe
+      selector:
+        text:
+    ingredients:
+      name: Ingredients
+      description: Optional ingredients (as text)
+      selector:
+        text:
+    meal_recipe_id:
+      name: Recipe ID
+      description: Optional ID of a saved recipe from the library
+      selector:
+        text:
+
+delete_task:
+  name: Delete task
+  description: Delete a chore/task.
+  fields:
+    task_id:
+      name: Task ID
+      description: ID of the task to delete
+      required: true
+      selector:
+        text:
+
 upload_photo:
   name: Upload photo
   description: Register a photo (file must already exist at file_path within config directory).
