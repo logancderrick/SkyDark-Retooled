@@ -12,6 +12,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
@@ -221,16 +222,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     async def add_event(call: ServiceCall) -> None:
         """Add a calendar event."""
         if DOMAIN not in hass.data:
-            return
+            raise HomeAssistantError("Skydark integration is not loaded")
         db = hass.data[DOMAIN].get("db")
         if not db:
             _LOGGER.warning("Database not ready")
-            return
+            raise HomeAssistantError("Skydark database is not ready")
         start = _parse_datetime(call.data.get("start_time"))
         end = _parse_datetime(call.data.get("end_time"))
         if start is None:
             _LOGGER.warning("add_event: invalid or missing start_time")
-            return
+            raise HomeAssistantError("Invalid or missing start_time")
         try:
             event_id = await hass.async_add_executor_job(
                 partial(
@@ -250,6 +251,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             )
         except Exception as e:
             _LOGGER.exception("add_event failed: %s", e)
+            raise HomeAssistantError(f"Failed to add event: {e}") from e
 
     async def add_task(call: ServiceCall) -> None:
         """Add a new task."""

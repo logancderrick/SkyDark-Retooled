@@ -342,6 +342,20 @@ class SkydarkDatabase:
         id_ = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
+            safe_calendar_id = calendar_id
+            if calendar_id:
+                cur = conn.execute(
+                    "SELECT 1 FROM family_members WHERE id = ? LIMIT 1",
+                    (calendar_id,),
+                )
+                # Stale/unknown profile IDs can come from local UI state.
+                # Avoid rejecting the event on FK constraint and save unassigned.
+                if cur.fetchone() is None:
+                    _LOGGER.warning(
+                        "add_event: unknown calendar_id '%s', saving event without assignment",
+                        calendar_id,
+                    )
+                    safe_calendar_id = None
             conn.execute(
                 """INSERT INTO events (id, title, description, start_time, end_time, all_day, location, calendar_id, external_id, external_source, recurrence_rule, color, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -353,7 +367,7 @@ class SkydarkDatabase:
                     end_time.isoformat() if end_time else None,
                     1 if all_day else 0,
                     location or "",
-                    calendar_id,
+                    safe_calendar_id,
                     external_id,
                     external_source,
                     recurrence_rule,
