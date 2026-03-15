@@ -1,3 +1,4 @@
+# SkyDark – ignore build artifacts, deps, and local config (see CONTRIBUTING.md for layout)
 # Frontend
 frontend/node_modules/
 frontend/dist/

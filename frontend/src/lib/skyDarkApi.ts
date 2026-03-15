@@ -236,11 +236,12 @@ export async function serviceAddPoints(
   return callService(conn, DOMAIN, "add_points", data);
 }
 
-export async function serviceDeleteReward(
-  conn: Connection,
-  data: { reward_id: string }
-): Promise<unknown> {
-  return callService(conn, DOMAIN, "delete_reward", data);
+/** Delete a reward via WebSocket (same connection as get_rewards; more reliable than callService in panels). */
+export async function deleteReward(conn: Connection, rewardId: string): Promise<void> {
+  await send<{ success: boolean }>(conn, {
+    type: "skydark_calendar/delete_reward",
+    reward_id: rewardId,
+  });
 }
 
 export async function serviceRedeemReward(

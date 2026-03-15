@@ -360,6 +360,31 @@ async def websocket_add_meal_recipe(
         connection.send_error(msg["id"], "failed", "An error occurred adding recipe.")
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "skydark_calendar/delete_reward",
+        vol.Required("reward_id"): str,
+    }
+)
+@websocket_api.async_response
+async def websocket_delete_reward(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Delete a reward by id."""
+    db = _get_db(hass)
+    if not db:
+        connection.send_error(msg["id"], "not_ready", "Integration not loaded")
+        return
+    try:
+        await hass.async_add_executor_job(db.delete_reward, msg["reward_id"])
+        connection.send_result(msg["id"], {"success": True})
+    except Exception as e:
+        _LOGGER.exception("websocket delete_reward failed: %s", e)
+        connection.send_error(msg["id"], "failed", "An error occurred deleting the reward.")
+
+
 async def async_register_websocket_handlers(hass: HomeAssistant) -> None:
     """Register WebSocket API handlers (skip if already registered on reload)."""
     if hass.data.get(DOMAIN, {}).get("ws_registered"):
@@ -372,6 +397,7 @@ async def async_register_websocket_handlers(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_get_config)
     websocket_api.async_register_command(hass, websocket_get_points)
     websocket_api.async_register_command(hass, websocket_get_rewards)
+    websocket_api.async_register_command(hass, websocket_delete_reward)
     websocket_api.async_register_command(hass, websocket_get_meal_recipes)
     websocket_api.async_register_command(hass, websocket_add_meal_recipe)
     hass.data.setdefault(DOMAIN, {})["ws_registered"] = True

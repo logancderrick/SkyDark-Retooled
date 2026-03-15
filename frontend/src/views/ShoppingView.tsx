@@ -44,8 +44,47 @@ function loadChecked(): Record<string, boolean> {
   return {};
 }
 
-function skydarkMealsToSlots(rows: { id: string; name: string; meal_date: string; meal_type: string }[]): MealSlot[] {
-  return rows.map((m) => ({ id: m.id, date: m.meal_date, mealType: m.meal_type, name: m.name }));
+function parseMealIngredients(
+  raw: string | { name: string; quantity?: string; unit?: string }[] | null | undefined
+): { name: string; quantity: string; unit: string }[] | undefined {
+  if (!raw) return undefined;
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) return undefined;
+    return raw.map((i) => ({
+      name: i.name ?? "",
+      quantity: (i.quantity as string) ?? "",
+      unit: (i.unit as string) ?? "",
+    }));
+  }
+  try {
+    const parsed = JSON.parse(raw as string);
+    if (!Array.isArray(parsed) || parsed.length === 0) return undefined;
+    return parsed.map((i: { name?: string; quantity?: string; unit?: string }) => ({
+      name: i.name ?? "",
+      quantity: (i.quantity as string) ?? "",
+      unit: (i.unit as string) ?? "",
+    }));
+  } catch {
+    return undefined;
+  }
+}
+
+function skydarkMealsToSlots(rows: {
+  id: string;
+  name: string;
+  meal_date: string;
+  meal_type: string;
+  meal_recipe_id?: string | null;
+  ingredients?: string | { name: string; quantity?: string; unit?: string }[] | null;
+}[]): MealSlot[] {
+  return rows.map((m) => ({
+    id: m.id,
+    date: m.meal_date,
+    mealType: m.meal_type,
+    name: m.name,
+    recipeId: m.meal_recipe_id ?? undefined,
+    ingredients: parseMealIngredients(m.ingredients),
+  }));
 }
 
 export default function ShoppingView() {

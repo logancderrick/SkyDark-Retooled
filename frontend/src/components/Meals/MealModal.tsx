@@ -80,9 +80,15 @@ export default function MealModal({
       setShowAddForm(false);
       if (editSlot) {
         setName(editSlot.name);
+        const slotIngredients =
+          editSlot.ingredients?.length ?
+            editSlot.ingredients
+          : editSlot.recipeId
+            ? recipes.find((r) => r.id === editSlot.recipeId)?.ingredients
+            : undefined;
         setIngredients(
-          editSlot.ingredients?.length
-            ? editSlot.ingredients.map((i) => ({ ...i }))
+          slotIngredients?.length
+            ? slotIngredients.map((i) => ({ ...i }))
             : [{ ...emptyIngredient }]
         );
         setInstructions(editSlot.instructions ?? "");
@@ -107,7 +113,7 @@ export default function MealModal({
         setUpdateLibrary(false);
       }
     }
-  }, [open, editSlot, viewRecipe]);
+  }, [open, editSlot, viewRecipe, recipes]);
 
   const addIngredient = () => {
     setIngredients((prev) => [...prev, { ...emptyIngredient }]);

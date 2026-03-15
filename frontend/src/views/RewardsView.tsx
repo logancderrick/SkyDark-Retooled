@@ -4,7 +4,7 @@ import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import RewardModal from "../components/Common/RewardModal";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
-import { serviceRedeemReward, serviceAddReward, serviceDeleteReward } from "../lib/skyDarkApi";
+import { serviceRedeemReward, serviceAddReward, deleteReward } from "../lib/skyDarkApi";
 import type { Reward } from "../types/rewards";
 
 const STORAGE_REWARDS = "skydark_rewards";
@@ -116,10 +116,10 @@ export default function RewardsView() {
     const conn = skydark?.data?.connection;
     if (conn) {
       try {
-        await serviceDeleteReward(conn, { reward_id: rewardId });
+        await deleteReward(conn, rewardId);
         await skydark?.refetch();
-      } catch {
-        // leave as-is on error
+      } catch (err) {
+        console.error("[SkyDark] Failed to delete reward:", err);
       }
     } else {
       setLocalRewards((prev) => prev.filter((r) => r.id !== rewardId));
