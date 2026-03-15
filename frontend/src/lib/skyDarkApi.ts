@@ -16,6 +16,7 @@ export interface SkydarkEvent {
   all_day?: number;
   location?: string | null;
   calendar_id?: string | null;
+  calendar_ids?: string[] | string | null;
   color?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -59,6 +60,8 @@ export interface SkydarkMeal {
   name: string;
   recipe_url?: string | null;
   ingredients?: string | null;
+  image_url?: string | null;
+  instructions?: string | null;
   meal_date: string;
   meal_type: string;
   created_at?: string | null;
@@ -141,6 +144,8 @@ export interface SkydarkMealRecipe {
   id: string;
   name: string;
   ingredients: { name: string; quantity?: string; unit?: string }[];
+  image_url?: string | null;
+  instructions?: string | null;
 }
 
 export async function fetchMealRecipes(conn: Connection): Promise<{ recipes: SkydarkMealRecipe[] }> {
@@ -149,7 +154,20 @@ export async function fetchMealRecipes(conn: Connection): Promise<{ recipes: Sky
 
 /** Normalize backend event to frontend CalendarEvent shape */
 export function eventToCalendarEvent(e: SkydarkEvent): CalendarEvent {
-  const calendar_id = e.calendar_id;
+  const legacyCalendarId = e.calendar_id;
+  let multiCalendarIds: string[] = [];
+  if (Array.isArray(e.calendar_ids)) {
+    multiCalendarIds = e.calendar_ids.map((id) => String(id)).filter(Boolean);
+  } else if (typeof e.calendar_ids === "string" && e.calendar_ids.trim()) {
+    try {
+      const parsed = JSON.parse(e.calendar_ids);
+      if (Array.isArray(parsed)) {
+        multiCalendarIds = parsed.map((id) => String(id)).filter(Boolean);
+      }
+    } catch {
+      multiCalendarIds = [e.calendar_ids];
+    }
+  }
   return {
     id: e.id,
     title: e.title,
@@ -158,7 +176,12 @@ export function eventToCalendarEvent(e: SkydarkEvent): CalendarEvent {
     end_time: e.end_time ?? undefined,
     all_day: Boolean(e.all_day),
     location: e.location ?? undefined,
-    calendar_id: Array.isArray(calendar_id) ? calendar_id : calendar_id ? [String(calendar_id)] : undefined,
+    calendar_id:
+      multiCalendarIds.length > 0
+        ? multiCalendarIds
+        : legacyCalendarId
+          ? [String(legacyCalendarId)]
+          : undefined,
     recurrence_rule: undefined,
     external_id: undefined,
     external_source: undefined,
@@ -177,6 +200,7 @@ export async function serviceAddEvent(
     end_time?: string;
     all_day?: boolean;
     calendar_id?: string;
+    calendar_ids?: string[];
     description?: string;
     location?: string;
   }
@@ -267,18 +291,30 @@ export async function serviceAddListItem(
 
 export async function serviceAddMealRecipe(
   conn: Connection,
-  data: { name: string; ingredients?: { name: string; quantity?: string; unit?: string }[] }
+  data: {
+    name: string;
+    ingredients?: { name: string; quantity?: string; unit?: string }[];
+    image_url?: string;
+    instructions?: string;
+  }
 ): Promise<unknown> {
   return callService(conn, DOMAIN, "add_meal_recipe", {
     name: data.name,
     ingredients: data.ingredients ?? [],
+    image_url: data.image_url,
+    instructions: data.instructions,
   });
 }
 
 /** Add a meal recipe via WebSocket and return the new recipe_id (for linking to a meal). */
 export async function fetchAddMealRecipe(
   conn: Connection,
-  data: { name: string; ingredients?: { name: string; quantity?: string; unit?: string }[] }
+  data: {
+    name: string;
+    ingredients?: { name: string; quantity?: string; unit?: string }[];
+    image_url?: string;
+    instructions?: string;
+  }
 ): Promise<{ recipe_id: string }> {
   const res = await send<{ recipe_id: string }>(conn, {
     type: "skydark_calendar/add_meal_recipe",
@@ -288,6 +324,8 @@ export async function fetchAddMealRecipe(
       quantity: i.quantity ?? "",
       unit: i.unit ?? "",
     })),
+    image_url: data.image_url,
+    instructions: data.instructions,
   });
   return res;
 }
@@ -300,6 +338,8 @@ export async function serviceAddMeal(
     meal_type: string;
     recipe_url?: string;
     ingredients?: string;
+    image_url?: string;
+    instructions?: string;
     meal_recipe_id?: string;
   }
 ): Promise<unknown> {
@@ -320,6 +360,8 @@ export async function serviceUpdateMeal(
     name?: string;
     meal_recipe_id?: string;
     ingredients?: string;
+    image_url?: string;
+    instructions?: string;
   }
 ): Promise<unknown> {
   return callService(conn, DOMAIN, "update_meal", data);

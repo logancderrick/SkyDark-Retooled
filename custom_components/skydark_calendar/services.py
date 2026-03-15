@@ -44,6 +44,7 @@ ADD_EVENT_SCHEMA = vol.Schema(
         vol.Optional("end_time"): vol.Any(cv.datetime, cv.string),
         vol.Optional("all_day", default=False): cv.boolean,
         vol.Optional("calendar_id"): cv.string,
+        vol.Optional("calendar_ids"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("description"): cv.string,
         vol.Optional("location"): cv.string,
     },
@@ -146,6 +147,8 @@ ADD_MEAL_RECIPE_SCHEMA = vol.Schema(
                 )
             ],
         ),
+        vol.Optional("image_url"): cv.string,
+        vol.Optional("instructions"): cv.string,
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -157,6 +160,8 @@ ADD_MEAL_SCHEMA = vol.Schema(
         vol.Required("meal_type"): cv.string,
         vol.Optional("recipe_url"): cv.string,
         vol.Optional("ingredients"): cv.string,
+        vol.Optional("image_url"): cv.string,
+        vol.Optional("instructions"): cv.string,
         vol.Optional("meal_recipe_id"): cv.string,
     },
     extra=vol.PREVENT_EXTRA,
@@ -175,6 +180,8 @@ UPDATE_MEAL_SCHEMA = vol.Schema(
         vol.Optional("name"): cv.string,
         vol.Optional("meal_recipe_id"): cv.string,
         vol.Optional("ingredients"): cv.string,
+        vol.Optional("image_url"): cv.string,
+        vol.Optional("instructions"): cv.string,
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -250,6 +257,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     end_time=end,
                     all_day=call.data.get("all_day", False),
                     calendar_id=call.data.get("calendar_id"),
+                    calendar_ids=call.data.get("calendar_ids"),
                     description=call.data.get("description"),
                     location=call.data.get("location"),
                 )
@@ -450,6 +458,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     db.add_meal_recipe,
                     name=call.data["name"],
                     ingredients=call.data.get("ingredients", []),
+                    image_url=call.data.get("image_url"),
+                    instructions=call.data.get("instructions"),
                 )
             )
         except Exception as e:
@@ -472,6 +482,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     meal_type=call.data["meal_type"],
                     recipe_url=call.data.get("recipe_url"),
                     ingredients=call.data.get("ingredients"),
+                    image_url=call.data.get("image_url"),
+                    instructions=call.data.get("instructions"),
                     meal_recipe_id=call.data.get("meal_recipe_id"),
                 )
             )
@@ -510,6 +522,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
                     name=call.data.get("name"),
                     meal_recipe_id=call.data.get("meal_recipe_id"),
                     ingredients=call.data.get("ingredients"),
+                    image_url=call.data.get("image_url"),
+                    instructions=call.data.get("instructions"),
                 )
             )
         except Exception as e:

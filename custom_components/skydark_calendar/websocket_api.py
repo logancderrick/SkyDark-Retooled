@@ -317,6 +317,8 @@ async def websocket_get_meal_recipes(
                 out.append({
                     "id": r["id"],
                     "name": r["name"],
+                    "image_url": r.get("image_url"),
+                    "instructions": r.get("instructions"),
                     "ingredients": [
                         {"name": i.get("name", ""), "quantity": i.get("quantity") or "", "unit": i.get("unit") or ""}
                         for i in ing
@@ -335,6 +337,8 @@ async def websocket_get_meal_recipes(
         vol.Required("type"): "skydark_calendar/add_meal_recipe",
         vol.Required("name"): str,
         vol.Optional("ingredients", default=[]): list,
+        vol.Optional("image_url"): str,
+        vol.Optional("instructions"): str,
     }
 )
 @websocket_api.async_response
@@ -351,8 +355,16 @@ async def websocket_add_meal_recipe(
     try:
         name = msg["name"]
         ingredients = msg.get("ingredients") or []
+        image_url = msg.get("image_url")
+        instructions = msg.get("instructions")
         recipe_id = await hass.async_add_executor_job(
-            partial(db.add_meal_recipe, name=name, ingredients=ingredients)
+            partial(
+                db.add_meal_recipe,
+                name=name,
+                ingredients=ingredients,
+                image_url=image_url,
+                instructions=instructions,
+            )
         )
         connection.send_result(msg["id"], {"recipe_id": recipe_id})
     except Exception as e:

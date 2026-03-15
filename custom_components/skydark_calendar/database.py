@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import uuid
+import json
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS events (
   all_day INTEGER DEFAULT 0,
   location TEXT,
   calendar_id TEXT,
+  calendar_ids TEXT,
   external_id TEXT,
   external_source TEXT,
   recurrence_rule TEXT,
@@ -98,6 +100,8 @@ CREATE INDEX IF NOT EXISTS idx_list_items_list ON list_items(list_id);
 CREATE TABLE IF NOT EXISTS meal_recipes (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  image_url TEXT,
+  instructions TEXT,
   created_at TEXT
 );
 
@@ -115,6 +119,8 @@ CREATE TABLE IF NOT EXISTS meals (
   name TEXT NOT NULL,
   recipe_url TEXT,
   ingredients TEXT,
+  image_url TEXT,
+  instructions TEXT,
   meal_date TEXT NOT NULL,
   meal_type TEXT NOT NULL,
   created_at TEXT,
@@ -210,6 +216,16 @@ class SkydarkDatabase:
                 conn.execute("ALTER TABLE lists ADD COLUMN list_type TEXT DEFAULT 'general'")
             if not self._column_exists(conn, "meals", "meal_recipe_id"):
                 conn.execute("ALTER TABLE meals ADD COLUMN meal_recipe_id TEXT")
+            if not self._column_exists(conn, "events", "calendar_ids"):
+                conn.execute("ALTER TABLE events ADD COLUMN calendar_ids TEXT")
+            if not self._column_exists(conn, "meals", "image_url"):
+                conn.execute("ALTER TABLE meals ADD COLUMN image_url TEXT")
+            if not self._column_exists(conn, "meals", "instructions"):
+                conn.execute("ALTER TABLE meals ADD COLUMN instructions TEXT")
+            if not self._column_exists(conn, "meal_recipes", "image_url"):
+                conn.execute("ALTER TABLE meal_recipes ADD COLUMN image_url TEXT")
+            if not self._column_exists(conn, "meal_recipes", "instructions"):
+                conn.execute("ALTER TABLE meal_recipes ADD COLUMN instructions TEXT")
             self._seed_default_family_members(conn)
 
         with self._connection() as conn:
@@ -332,6 +348,7 @@ class SkydarkDatabase:
         end_time: datetime | None = None,
         all_day: bool = False,
         calendar_id: str | None = None,
+        calendar_ids: list[str] | None = None,
         description: str | None = None,
         location: str | None = None,
         color: str | None = None,
@@ -342,23 +359,26 @@ class SkydarkDatabase:
         id_ = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
-            safe_calendar_id = calendar_id
-            if calendar_id:
+            # Support multi-assignment while keeping legacy calendar_id for FK/index.
+            provided_ids = calendar_ids or ([calendar_id] if calendar_id else [])
+            deduped_ids: list[str] = []
+            for mid in provided_ids:
+                if mid and mid not in deduped_ids:
+                    deduped_ids.append(mid)
+            safe_calendar_ids: list[str] = []
+            for mid in deduped_ids:
                 cur = conn.execute(
                     "SELECT 1 FROM family_members WHERE id = ? LIMIT 1",
-                    (calendar_id,),
+                    (mid,),
                 )
-                # Stale/unknown profile IDs can come from local UI state.
-                # Avoid rejecting the event on FK constraint and save unassigned.
-                if cur.fetchone() is None:
-                    _LOGGER.warning(
-                        "add_event: unknown calendar_id '%s', saving event without assignment",
-                        calendar_id,
-                    )
-                    safe_calendar_id = None
+                if cur.fetchone() is not None:
+                    safe_calendar_ids.append(mid)
+                else:
+                    _LOGGER.warning("add_event: unknown calendar_id '%s' ignored", mid)
+            safe_calendar_id = safe_calendar_ids[0] if safe_calendar_ids else None
             conn.execute(
-                """INSERT INTO events (id, title, description, start_time, end_time, all_day, location, calendar_id, external_id, external_source, recurrence_rule, color, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO events (id, title, description, start_time, end_time, all_day, location, calendar_id, calendar_ids, external_id, external_source, recurrence_rule, color, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     id_,
                     title,
@@ -368,6 +388,7 @@ class SkydarkDatabase:
                     1 if all_day else 0,
                     location or "",
                     safe_calendar_id,
+                    json.dumps(safe_calendar_ids) if safe_calendar_ids else None,
                     external_id,
                     external_source,
                     recurrence_rule,
@@ -379,7 +400,7 @@ class SkydarkDatabase:
         return id_
 
     def update_event(self, id_: str, **kwargs: Any) -> None:
-        allowed = {"title", "description", "start_time", "end_time", "all_day", "location", "calendar_id", "color", "recurrence_rule"}
+        allowed = {"title", "description", "start_time", "end_time", "all_day", "location", "calendar_id", "calendar_ids", "color", "recurrence_rule"}
         updates = []
         values = []
         for k, v in kwargs.items():
@@ -389,6 +410,8 @@ class SkydarkDatabase:
                 v = v.isoformat()
             if k == "all_day":
                 v = 1 if v else 0
+            if k == "calendar_ids" and isinstance(v, list):
+                v = json.dumps(v)
             updates.append(f"{k} = ?")
             values.append(v)
         if not updates:
@@ -642,14 +665,27 @@ class SkydarkDatabase:
         meal_type: str = "dinner",
         recipe_url: str | None = None,
         ingredients: str | None = None,
+        image_url: str | None = None,
+        instructions: str | None = None,
         meal_recipe_id: str | None = None,
     ) -> str:
         id_ = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
-                "INSERT INTO meals (id, name, recipe_url, ingredients, meal_date, meal_type, created_at, meal_recipe_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (id_, name, recipe_url, ingredients, meal_date, meal_type, now, meal_recipe_id),
+                "INSERT INTO meals (id, name, recipe_url, ingredients, image_url, instructions, meal_date, meal_type, created_at, meal_recipe_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    id_,
+                    name,
+                    recipe_url,
+                    ingredients,
+                    image_url,
+                    instructions,
+                    meal_date,
+                    meal_type,
+                    now,
+                    meal_recipe_id,
+                ),
             )
         return id_
 
@@ -659,6 +695,8 @@ class SkydarkDatabase:
         name: str | None = None,
         meal_recipe_id: str | None = None,
         ingredients: str | None = None,
+        image_url: str | None = None,
+        instructions: str | None = None,
     ) -> None:
         updates = []
         values: list[Any] = []
@@ -671,6 +709,12 @@ class SkydarkDatabase:
         if ingredients is not None:
             updates.append("ingredients = ?")
             values.append(ingredients)
+        if image_url is not None:
+            updates.append("image_url = ?")
+            values.append(image_url)
+        if instructions is not None:
+            updates.append("instructions = ?")
+            values.append(instructions)
         if not updates:
             return
         values.append(meal_id)
@@ -690,13 +734,19 @@ class SkydarkDatabase:
             cur = conn.execute("SELECT * FROM meal_recipes ORDER BY name")
             return [dict(row) for row in cur.fetchall()]
 
-    def add_meal_recipe(self, name: str, ingredients: list[dict] | None = None) -> str:
+    def add_meal_recipe(
+        self,
+        name: str,
+        ingredients: list[dict] | None = None,
+        image_url: str | None = None,
+        instructions: str | None = None,
+    ) -> str:
         id_ = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with self._connection() as conn:
             conn.execute(
-                "INSERT INTO meal_recipes (id, name, created_at) VALUES (?, ?, ?)",
-                (id_, name, now),
+                "INSERT INTO meal_recipes (id, name, image_url, instructions, created_at) VALUES (?, ?, ?, ?, ?)",
+                (id_, name, image_url, instructions, now),
             )
             if ingredients:
                 for ing in ingredients:

@@ -82,6 +82,7 @@ export default function CalendarView() {
             end_time: data.end_time,
             all_day: data.all_day ?? false,
             calendar_id: data.calendar_id?.[0],
+            calendar_ids: data.calendar_id,
             description: data.description,
             location: data.location,
           });

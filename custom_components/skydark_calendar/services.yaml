@@ -30,6 +30,11 @@ add_event:
       description: Assign to family member calendar
       selector:
         text:
+    calendar_ids:
+      name: Calendar / family member IDs
+      description: Assign to multiple family member calendars
+      selector:
+        object:
     description:
       name: Description
       selector:
@@ -293,6 +298,16 @@ add_meal_recipe:
       description: List of ingredients (each with name, quantity, unit)
       selector:
         object:
+    image_url:
+      name: Image URL
+      description: Optional meal image URL or data URL
+      selector:
+        text:
+    instructions:
+      name: Instructions
+      description: Optional cooking instructions/notes
+      selector:
+        text:
 
 add_meal:
   name: Add meal
@@ -324,6 +339,16 @@ add_meal:
     ingredients:
       name: Ingredients
       description: Optional ingredients (as text)
+      selector:
+        text:
+    image_url:
+      name: Image URL
+      description: Optional meal image URL or data URL
+      selector:
+        text:
+    instructions:
+      name: Instructions
+      description: Optional cooking instructions/notes
       selector:
         text:
     meal_recipe_id:
@@ -366,6 +391,16 @@ update_meal:
     ingredients:
       name: Ingredients
       description: Optional ingredients as JSON string (for meals not linked to a recipe)
+      selector:
+        text:
+    image_url:
+      name: Image URL
+      description: Optional meal image URL or data URL
+      selector:
+        text:
+    instructions:
+      name: Instructions
+      description: Optional cooking instructions/notes
       selector:
         text:
 

@@ -63,7 +63,16 @@ function parseMealIngredients(
   }
 }
 
-function skydarkMealsToSlots(rows: { id: string; name: string; meal_date: string; meal_type: string; meal_recipe_id?: string | null; ingredients?: string | { name: string; quantity?: string; unit?: string }[] | null }[]): MealSlot[] {
+function skydarkMealsToSlots(rows: {
+  id: string;
+  name: string;
+  meal_date: string;
+  meal_type: string;
+  meal_recipe_id?: string | null;
+  ingredients?: string | { name: string; quantity?: string; unit?: string }[] | null;
+  image_url?: string | null;
+  instructions?: string | null;
+}[]): MealSlot[] {
   return rows.map((m) => ({
     id: m.id,
     date: m.meal_date,
@@ -71,11 +80,19 @@ function skydarkMealsToSlots(rows: { id: string; name: string; meal_date: string
     name: m.name,
     recipeId: m.meal_recipe_id ?? undefined,
     ingredients: parseMealIngredients(m.ingredients),
+    imageUrl: m.image_url ?? undefined,
+    instructions: m.instructions ?? undefined,
   }));
 }
 
 function serverRecipesToMealRecipes(
-  list: { id: string; name: string; ingredients?: { name: string; quantity?: string; unit?: string }[] }[]
+  list: {
+    id: string;
+    name: string;
+    ingredients?: { name: string; quantity?: string; unit?: string }[];
+    image_url?: string | null;
+    instructions?: string | null;
+  }[]
 ): MealRecipe[] {
   return list.map((r) => ({
     id: r.id,
@@ -85,6 +102,8 @@ function serverRecipesToMealRecipes(
       quantity: i.quantity ?? "",
       unit: i.unit ?? "",
     })),
+    imageUrl: r.image_url ?? undefined,
+    instructions: r.instructions ?? undefined,
   }));
 }
 
@@ -153,6 +172,8 @@ export default function MealsView() {
             meal_id: data.slotId,
             name: data.name,
             meal_recipe_id: editSlot?.recipeId,
+            image_url: data.imageUrl,
+            instructions: data.instructions,
           };
           if (!editSlot?.recipeId && data.ingredients.length > 0) {
             updatePayload.ingredients = JSON.stringify(
@@ -189,6 +210,8 @@ export default function MealsView() {
             const { recipe_id } = await fetchAddMealRecipe(conn, {
               name: data.name,
               ingredients: data.ingredients.map((i) => ({ name: i.name, quantity: i.quantity ?? "", unit: i.unit ?? "" })),
+              image_url: data.imageUrl,
+              instructions: data.instructions,
             });
             meal_recipe_id = recipe_id;
             await skydark?.refetchRecipes();
@@ -197,6 +220,8 @@ export default function MealsView() {
             name: data.name,
             meal_date: slotForModal.date,
             meal_type: slotForModal.mealType,
+            image_url: data.imageUrl,
+            instructions: data.instructions,
           };
           if (meal_recipe_id) addPayload.meal_recipe_id = meal_recipe_id;
           else if (data.ingredients.length > 0)
