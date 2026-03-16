@@ -1,10 +1,18 @@
 import { NavLink } from "react-router-dom";
 import { navItems } from "./Sidebar";
 
-export default function MobileNav() {
+interface MobileNavProps {
+  position?: "top" | "bottom";
+  forceVisible?: boolean;
+}
+
+export default function MobileNav({ position = "top", forceVisible = false }: MobileNavProps) {
+  const edgeBorderClass = position === "bottom" ? "border-t" : "border-b";
+  const visibilityClass = forceVisible ? "flex" : "flex md:hidden";
+
   return (
     <nav
-      className="flex md:hidden items-center gap-1 px-3 py-2 overflow-x-auto border-b border-gray-200 bg-white shrink-0"
+      className={`${visibilityClass} items-center gap-1 px-3 py-2 overflow-x-auto ${edgeBorderClass} border-gray-200 bg-white shrink-0`}
       aria-label="Main navigation"
     >
       {navItems.map(({ path, label, Icon }) => (

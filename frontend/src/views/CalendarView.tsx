@@ -26,6 +26,7 @@ export default function CalendarView() {
   });
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [defaultEventStartDate, setDefaultEventStartDate] = useState<Date | null>(null);
   const [tasksProgress, setTasksProgress] = useState(true);
   const [eventsSelectAll, setEventsSelectAll] = useState(true);
   const [memberVisibility, setMemberVisibility] = useState<Record<string, boolean>>({});
@@ -160,6 +161,14 @@ export default function CalendarView() {
     setSelectedEvent(null);
   };
 
+  const openCreateEventModal = (date?: Date) => {
+    runIfUnlocked("addEvents", () => {
+      setSelectedEvent(null);
+      setDefaultEventStartDate(date ?? null);
+      setEventModalOpen(true);
+    });
+  };
+
   const goPrev = () => {
     if (viewMode === "month") setCurrentDate((d) => subMonths(d, 1));
     else if (viewMode === "week") setCurrentDate((d) => subWeeks(d, 1));
@@ -245,8 +254,12 @@ export default function CalendarView() {
           currentDate={currentDate}
           events={filteredEvents}
           familyMembers={familyMembers}
-          onDateClick={(d) => setCurrentDate(d)}
+          onDateClick={(d) => {
+            setCurrentDate(d);
+            openCreateEventModal(d);
+          }}
           onEventClick={(e) => {
+            setDefaultEventStartDate(null);
             setSelectedEvent(e);
             setEventModalOpen(true);
           }}
@@ -258,7 +271,12 @@ export default function CalendarView() {
           currentDate={currentDate}
           events={filteredEvents}
           familyMembers={familyMembers}
+          onDateClick={(d) => {
+            setCurrentDate(d);
+            openCreateEventModal(d);
+          }}
           onEventClick={(e) => {
+            setDefaultEventStartDate(null);
             setSelectedEvent(e);
             setEventModalOpen(true);
           }}
@@ -272,6 +290,7 @@ export default function CalendarView() {
           events={filteredEvents}
           familyMembers={familyMembers}
           onEventClick={(e) => {
+            setDefaultEventStartDate(null);
             setSelectedEvent(e);
             setEventModalOpen(true);
           }}
@@ -283,8 +302,10 @@ export default function CalendarView() {
         onClose={() => {
           setEventModalOpen(false);
           setSelectedEvent(null);
+          setDefaultEventStartDate(null);
         }}
         event={selectedEvent}
+        defaultStartDate={defaultEventStartDate}
         familyMembers={familyMembers}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
@@ -296,10 +317,7 @@ export default function CalendarView() {
             label: "Add event",
             icon: <span className="text-xl leading-none">+</span>,
             onClick: () => {
-              runIfUnlocked("addEvents", () => {
-                setSelectedEvent(null);
-                setEventModalOpen(true);
-              });
+              openCreateEventModal();
             },
           },
         ]}

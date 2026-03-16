@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../contexts/AppContext";
 import PinPrompt from "../Common/PinPrompt";
+import { useCurrentWeather, getWeatherIcon } from "../../hooks/useWeeklyWeather";
 
 interface HeaderProps {
   weatherEntity?: string;
@@ -30,6 +31,7 @@ export default function Header({
   const [time, setTime] = useState("");
   const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
   const { settings, isLocked, unlockApp, setIsLocked } = useAppContext();
+  const currentWeather = useCurrentWeather();
   const familyName = settings.familyName?.trim() || "My Family";
 
   useEffect(() => {
@@ -58,7 +60,9 @@ export default function Header({
         </h1>
         <span className="text-sm sm:text-base text-skydark-text-secondary shrink-0">{time}</span>
         <span className="text-sm sm:text-base text-skydark-text-secondary shrink-0">
-          Weather
+          {currentWeather
+            ? `${getWeatherIcon(currentWeather.condition)} ${currentWeather.temperature}°`
+            : "Weather"}
         </span>
       </div>
       {settings.lockEnabled && (

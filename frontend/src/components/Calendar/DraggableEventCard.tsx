@@ -67,7 +67,10 @@ export default function DraggableEventCard({
         opacity: isDragging ? 0.5 : 1,
         lineHeight: 1.2,
       }}
-      onClick={() => onEventClick?.(event)}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEventClick?.(event);
+      }}
     >
       <span className="block truncate font-medium text-[11px] leading-tight">{event.title}</span>
       {!event.all_day && event.end_time && (

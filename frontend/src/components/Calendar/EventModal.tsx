@@ -9,10 +9,15 @@ import { useAppContext } from "../../contexts/AppContext";
 
 type EventModalMode = "view" | "edit" | "create";
 
+function toLocalDateTimeInput(date: Date) {
+  return format(date, "yyyy-MM-dd'T'HH:mm");
+}
+
 interface EventModalProps {
   open: boolean;
   onClose: () => void;
   event?: CalendarEvent | null;
+  defaultStartDate?: Date | null;
   familyMembers: FamilyMember[];
   onSave: (data: Partial<CalendarEvent> & { id?: string }) => void;
   onDelete?: (eventId: string) => void;
@@ -22,6 +27,7 @@ export default function EventModal({
   open,
   onClose,
   event,
+  defaultStartDate,
   familyMembers,
   onSave,
   onDelete,
@@ -61,10 +67,15 @@ export default function EventModal({
       setLocation(event.location || "");
     } else {
       const now = new Date();
-      const end = new Date(now.getTime() + 60 * 60 * 1000);
+      const start = defaultStartDate ? new Date(defaultStartDate) : new Date(now);
+      if (defaultStartDate) {
+        // Keep the clicked day but use current time for quick event creation.
+        start.setHours(now.getHours(), now.getMinutes(), 0, 0);
+      }
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
       setTitle("");
-      setStartTime(now.toISOString().slice(0, 16));
-      setEndTime(end.toISOString().slice(0, 16));
+      setStartTime(toLocalDateTimeInput(start));
+      setEndTime(toLocalDateTimeInput(end));
       setAllDay(false);
       setSelectedProfileIds(familyMembers.map((m) => m.id));
       setDescription("");
@@ -73,7 +84,7 @@ export default function EventModal({
       setCountdown(false);
       setReminder(false);
     }
-  }, [event, open, familyMembers]);
+  }, [event, open, familyMembers, defaultStartDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

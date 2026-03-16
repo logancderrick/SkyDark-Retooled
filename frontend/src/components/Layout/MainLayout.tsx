@@ -246,6 +246,7 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const { pathname } = useLocation();
   const { settings, isLocked, setIsLocked } = useAppContext();
+  const [isPortrait, setIsPortrait] = useState(false);
   const { isIdle } = useIdleDetection(
     settings.autoRelockMinutes,
     !!(settings.lockEnabled && !isLocked && settings.autoRelockEnabled)
@@ -255,24 +256,42 @@ export default function MainLayout({ children }: MainLayoutProps) {
     if (isIdle) setIsLocked(true);
   }, [isIdle, setIsLocked]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mediaQuery = window.matchMedia("(orientation: portrait)");
+    const updateOrientation = () => setIsPortrait(mediaQuery.matches);
+    updateOrientation();
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateOrientation);
+      return () => mediaQuery.removeEventListener("change", updateOrientation);
+    }
+    mediaQuery.addListener(updateOrientation);
+    return () => mediaQuery.removeListener(updateOrientation);
+  }, []);
+
   const isCalendar = pathname.includes("calendar");
+  const shouldLockToViewport = isCalendar || isPortrait;
+
   return (
     <div
       className={`flex bg-skydark-bg font-sans text-skydark-text max-w-full ${
-        isCalendar ? "h-screen overflow-hidden" : "min-h-screen"
+        isPortrait ? "flex-col" : ""
+      } ${
+        shouldLockToViewport ? "h-screen overflow-hidden" : "min-h-screen"
       }`}
     >
-      <Sidebar />
+      {!isPortrait && <Sidebar />}
       <div className="flex flex-1 flex-col min-w-0 min-h-0 overflow-hidden">
-        <MobileNav />
+        {!isPortrait && <MobileNav />}
         <Header />
         <main
           className={`flex-1 p-5 sm:p-6 min-h-0 ${
-            isCalendar ? "overflow-hidden" : "overflow-auto"
+            shouldLockToViewport ? "overflow-hidden" : "overflow-auto"
           }`}
         >
           {children}
         </main>
+        {isPortrait && <MobileNav position="bottom" forceVisible />}
       </div>
       <ScreenSaverOverlay />
     </div>

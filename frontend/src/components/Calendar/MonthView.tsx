@@ -78,10 +78,14 @@ export default function MonthView({
           <div
             key={d.toISOString()}
             className="bg-skydark-bg min-h-[100px] p-1 flex flex-col"
+            onClick={() => onDateClick?.(d)}
           >
             <button
               type="button"
-              onClick={() => onDateClick?.(d)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDateClick?.(d);
+              }}
               className={`text-left text-sm w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
                 !isCurrentMonth ? "text-gray-400" : "text-skydark-text"
               } ${isToday(d) ? "bg-red-100 text-red-700 font-semibold" : ""}`}
@@ -115,7 +119,10 @@ export default function MonthView({
                 <button
                   type="button"
                   className="text-xs text-skydark-text-secondary hover:underline w-full text-left"
-                  onClick={() => onDateClick?.(d)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDateClick?.(d);
+                  }}
                 >
                   +{moreCount} more
                 </button>
