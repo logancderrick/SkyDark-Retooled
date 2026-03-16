@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useAppContext } from "../contexts/AppContext";
 
 export interface WeeklyDay {
   dayLabel: string;
@@ -97,6 +98,31 @@ function getCurrentPosition(): Promise<{ lat: number; lon: number }> {
   });
 }
 
+function normalizeUsZip(rawZip: string | undefined): string | null {
+  if (!rawZip) return null;
+  const cleaned = rawZip.trim();
+  const match = cleaned.match(/^\d{5}$/);
+  return match ? match[0] : null;
+}
+
+async function getCoordsFromZip(zip: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    if (!response.ok) return null;
+    const json = (await response.json()) as {
+      places?: Array<{ latitude?: string; longitude?: string }>;
+    };
+    const firstPlace = json.places?.[0];
+    if (!firstPlace?.latitude || !firstPlace?.longitude) return null;
+    const lat = Number.parseFloat(firstPlace.latitude);
+    const lon = Number.parseFloat(firstPlace.longitude);
+    if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+    return { lat, lon };
+  } catch {
+    return null;
+  }
+}
+
 function forecastFromOpenMeteo(payload: {
   current?: { temperature_2m?: number; weather_code?: number };
   daily?: {
@@ -141,14 +167,18 @@ function forecastFromOpenMeteo(payload: {
 }
 
 export function useWeatherData(): WeatherData {
+  const { settings } = useAppContext();
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const weatherZipCode = settings.weatherZipCode;
 
   useEffect(() => {
     let mounted = true;
 
     const fetchWeather = async () => {
       try {
-        const { lat, lon } = await getCurrentPosition();
+        const normalizedZip = normalizeUsZip(weatherZipCode);
+        const zipCoords = normalizedZip ? await getCoordsFromZip(normalizedZip) : null;
+        const { lat, lon } = zipCoords ?? (await getCurrentPosition());
         const url = new URL("https://api.open-meteo.com/v1/forecast");
         url.searchParams.set("latitude", String(lat));
         url.searchParams.set("longitude", String(lon));
@@ -185,7 +215,7 @@ export function useWeatherData(): WeatherData {
       mounted = false;
       window.clearInterval(id);
     };
-  }, []);
+  }, [weatherZipCode]);
 
   return useMemo(() => {
     if (weatherData) return weatherData;

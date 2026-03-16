@@ -35,7 +35,6 @@ export default function SettingsView() {
   const viewportSimulator = useViewportSimulator();
   const pendingPinActionRef = useRef<(() => void) | null>(null);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
-  const [weatherEntity, setWeatherEntity] = useState("");
   const [showDisableLockPrompt, setShowDisableLockPrompt] = useState(false);
   const [showSetPin, setShowSetPin] = useState(false);
   const [setPinStep, setSetPinStep] = useState<"current" | "new" | "confirm">("current");
@@ -214,15 +213,28 @@ export default function SettingsView() {
 
             <SettingsSection title="Display" icon={<GeneralIcon className="w-5 h-5 text-skydark-text-secondary" />}>
               <div className="py-3">
-                <label className="block text-sm font-medium text-skydark-text mb-1.5">Weather entity (Home Assistant)</label>
+                <label className="block text-sm font-medium text-skydark-text mb-1.5">Weather ZIP code (US)</label>
                 <input
-                  type="text"
-                  value={weatherEntity}
-                  onChange={(e) => setWeatherEntity(e.target.value)}
-                  placeholder="weather.home"
+                  type="tel"
+                  value={settings.weatherZipCode ?? ""}
+                  onChange={(e) => setSettings({ weatherZipCode: e.target.value })}
+                  placeholder="12345"
                   className="input-skydark max-w-md"
                 />
+                <p className="mt-1 text-xs text-skydark-text-secondary">
+                  Leave blank to use device location.
+                </p>
               </div>
+              <SettingRow
+                label="Show 7-day forecast in top header"
+                control={
+                  <Toggle
+                    checked={settings.showTopWeeklyForecast ?? false}
+                    onChange={(checked) => setSettings({ showTopWeeklyForecast: checked })}
+                    aria-label="Show top 7-day forecast"
+                  />
+                }
+              />
             </SettingsSection>
 
             <SettingsSection title="Volume" icon={<GeneralIcon className="w-5 h-5 text-skydark-text-secondary" />}>

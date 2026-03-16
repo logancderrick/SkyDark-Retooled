@@ -289,6 +289,10 @@ export default function CalendarView() {
           currentDate={currentDate}
           events={filteredEvents}
           familyMembers={familyMembers}
+          onDateClick={(d) => {
+            setCurrentDate(d);
+            openCreateEventModal(d);
+          }}
           onEventClick={(e) => {
             setDefaultEventStartDate(null);
             setSelectedEvent(e);

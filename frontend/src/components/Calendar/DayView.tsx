@@ -37,6 +37,7 @@ interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   familyMembers: FamilyMember[];
+  onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
 }
 
@@ -45,7 +46,7 @@ export interface DayViewRef {
 }
 
 const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
-  { currentDate, events, familyMembers, onEventClick },
+  { currentDate, events, familyMembers, onDateClick, onEventClick },
   ref
 ) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -165,6 +166,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
       <div
         className="flex-shrink-0 border-b border-gray-100 px-3 py-2 flex flex-col gap-1.5 bg-skydark-bg"
         style={{ scrollbarGutter: "stable" }}
+        onClick={() => onDateClick?.(currentDate)}
       >
         {allDayEvents.length === 0 && (
           <div className="text-xs text-skydark-text-secondary">All day</div>
@@ -178,7 +180,10 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
             <button
               key={event.id}
               type="button"
-              onClick={() => onEventClick?.(event)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEventClick?.(event);
+              }}
               className="text-left text-[10px] px-1.5 py-0.5 rounded font-medium w-full truncate"
               style={{
                 ...colorStyle,
@@ -229,6 +234,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
               <div
                 className="flex-1 relative border-l border-gray-100 bg-skydark-bg"
                 style={{ minHeight: fullDayHeight }}
+                onClick={() => onDateClick?.(currentDate)}
               >
                 {/* Current time red line (only on today) */}
                 {isToday && (
@@ -271,7 +277,10 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
                         ...colorStyle,
                         borderLeft: `3px solid ${borderColor}`,
                       }}
-                      onClick={() => onEventClick?.(event)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick?.(event);
+                      }}
                     >
                       <span className="block font-medium truncate text-[11px] leading-tight w-full">
                         {event.title}

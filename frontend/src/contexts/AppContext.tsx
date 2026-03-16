@@ -87,6 +87,10 @@ export interface AppSettings {
   screensaverTimeDisplayScale: number;
   /** Sleep mode weather size: 0-100, 50 = current */
   screensaverWeatherDisplayScale: number;
+  /** Optional US ZIP code for weather API lookups. */
+  weatherZipCode: string;
+  /** Show a compact 7-day forecast row in the top header. */
+  showTopWeeklyForecast: boolean;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -104,6 +108,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   screensaverTransitionDurationMs: 1200,
   screensaverTimeDisplayScale: 50,
   screensaverWeatherDisplayScale: 50,
+  weatherZipCode: "",
+  showTopWeeklyForecast: false,
 };
 
 interface AppState {

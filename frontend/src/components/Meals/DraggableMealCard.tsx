@@ -45,7 +45,7 @@ export default function DraggableMealCard({ recipe, onRecipeClick }: DraggableMe
       className="flex-shrink-0 w-52 min-w-[13rem] rounded-xl border-2 border-gray-200 bg-white shadow-sm overflow-hidden cursor-grab active:cursor-grabbing hover:border-skydark-accent hover:shadow-md transition-all"
       style={{ opacity: isDragging ? 0.5 : 1 }}
     >
-      <div className="h-11 w-full bg-gray-100">
+      <div className="aspect-square w-full bg-gray-100">
         {recipe.imageUrl ? (
           <img
             src={recipe.imageUrl}

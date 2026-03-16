@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "../../contexts/AppContext";
 import PinPrompt from "../Common/PinPrompt";
-import { useCurrentWeather, getWeatherIcon } from "../../hooks/useWeeklyWeather";
+import { useWeatherData, getWeatherIcon } from "../../hooks/useWeeklyWeather";
 
 interface HeaderProps {
   weatherEntity?: string;
@@ -31,7 +31,8 @@ export default function Header({
   const [time, setTime] = useState("");
   const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
   const { settings, isLocked, unlockApp, setIsLocked } = useAppContext();
-  const currentWeather = useCurrentWeather();
+  const weather = useWeatherData();
+  const currentWeather = weather.current;
   const familyName = settings.familyName?.trim() || "My Family";
 
   useEffect(() => {
@@ -51,41 +52,60 @@ export default function Header({
 
   return (
     <header
-      className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-skydark-bg gap-4"
-      style={{ minHeight: 80 }}
+      className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-skydark-bg"
+      style={{ minHeight: settings.showTopWeeklyForecast ? 112 : 80 }}
     >
-      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-        <h1 className="text-lg sm:text-xl font-semibold text-skydark-text truncate">
-          {familyName}
-        </h1>
-        <span className="text-sm sm:text-base text-skydark-text-secondary shrink-0">{time}</span>
-        <span className="text-sm sm:text-base text-skydark-text-secondary shrink-0">
-          {currentWeather
-            ? `${getWeatherIcon(currentWeather.condition)} ${currentWeather.temperature}°`
-            : "Weather"}
-        </span>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <h1 className="text-lg sm:text-xl font-semibold text-skydark-text truncate">
+            {familyName}
+          </h1>
+          <span className="text-sm sm:text-base text-skydark-text-secondary shrink-0">{time}</span>
+          <span className="text-sm sm:text-base text-skydark-text-secondary shrink-0">
+            {currentWeather
+              ? `${getWeatherIcon(currentWeather.condition)} ${currentWeather.temperature}°`
+              : "Weather"}
+          </span>
+        </div>
+        {settings.lockEnabled && (
+          <div className="flex items-center shrink-0">
+            {isLocked ? (
+              <button
+                type="button"
+                onClick={() => setShowUnlockPrompt(true)}
+                className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-skydark-accent"
+                aria-label="Unlock (enter PIN)"
+              >
+                <LockIcon className="w-6 h-6 text-red-500" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsLocked(true)}
+                className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-skydark-accent"
+                aria-label="Lock"
+              >
+                <UnlockIcon className="w-6 h-6 text-green-500" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      {settings.lockEnabled && (
-        <div className="flex items-center shrink-0">
-          {isLocked ? (
-            <button
-              type="button"
-              onClick={() => setShowUnlockPrompt(true)}
-              className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-skydark-accent"
-              aria-label="Unlock (enter PIN)"
+
+      {settings.showTopWeeklyForecast && weather.weekly.length > 0 && (
+        <div className="mt-2 flex items-center gap-3 overflow-x-auto pb-1" aria-label="Top weekly forecast">
+          {weather.weekly.slice(0, 7).map((day) => (
+            <div
+              key={day.dayLabel}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1 min-w-[86px] text-center"
             >
-              <LockIcon className="w-6 h-6 text-red-500" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsLocked(true)}
-              className="p-2 rounded-lg hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-skydark-accent"
-              aria-label="Lock"
-            >
-              <UnlockIcon className="w-6 h-6 text-green-500" />
-            </button>
-          )}
+              <div className="text-[11px] font-medium text-skydark-text-secondary">{day.dayLabel}</div>
+              <div className="text-sm">{getWeatherIcon(day.condition)}</div>
+              <div className="text-[11px] text-skydark-text">
+                {day.tempMin}° / {day.tempMax}°
+              </div>
+            </div>
+          ))}
         </div>
       )}
       <PinPrompt
