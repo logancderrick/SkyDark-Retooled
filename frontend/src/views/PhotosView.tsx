@@ -5,7 +5,7 @@ import PinPrompt from "../components/Common/PinPrompt";
 import CloseIcon from "../components/Common/CloseIcon";
 
 export default function PhotosView() {
-  const { photos, setPhotos } = usePhotosContext();
+  const { photos, addPhoto, deletePhoto } = usePhotosContext();
   const { setScreensaverTriggered, isFeatureLocked, verifyPin } = useAppContext();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showPinPrompt, setShowPinPrompt] = useState(false);
@@ -15,15 +15,12 @@ export default function PhotosView() {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
     const maxSizeBytes = 1.5 * 1024 * 1024; // 1.5 MB per image so localStorage stays usable
-    let added = 0;
-    files.forEach((file, idx) => {
+    files.forEach((file) => {
       if (file.size > maxSizeBytes) return;
-      const id = `upload-${Date.now()}-${idx}`;
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
-        setPhotos((prev) => [{ id, url: dataUrl, caption: "" }, ...prev]);
-        added += 1;
+        void addPhoto(dataUrl, "");
       };
       reader.readAsDataURL(file);
     });
@@ -47,11 +44,7 @@ export default function PhotosView() {
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setPhotos((prev) => {
-      const item = prev.find((p) => p.id === id);
-      if (item && item.url.startsWith("blob:")) URL.revokeObjectURL(item.url);
-      return prev.filter((p) => p.id !== id);
-    });
+    void deletePhoto(id);
     if (selectedId === id) setSelectedId(null);
   };
 

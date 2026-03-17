@@ -11,6 +11,7 @@ import {
   fetchConfig,
   fetchEvents,
   fetchFamilyMembers,
+  fetchPhotos,
   fetchLists,
   fetchMeals,
   fetchMealRecipes,
@@ -25,6 +26,7 @@ import {
   type SkydarkMealRecipe,
   type SkydarkTask,
   type SkydarkReward,
+  type SkydarkPhoto,
 } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
 import type { FamilyMember } from "../types/calendar";
@@ -40,6 +42,7 @@ export interface SkydarkDataState {
   meals: SkydarkMeal[];
   mealRecipes: SkydarkMealRecipe[];
   familyMembers: FamilyMember[];
+  photos: SkydarkPhoto[];
   config: {
     family_name?: string;
     weather_entity?: string;
@@ -61,6 +64,7 @@ const initialState: SkydarkDataState = {
   meals: [],
   mealRecipes: [],
   familyMembers: [],
+  photos: [],
   config: null,
   appSettings: null,
   pointsByMember: {},
@@ -95,6 +99,7 @@ export function useSkydarkData(
         mealsRes,
         recipesRes,
         familyRes,
+        photosRes,
         configRes,
         appSettingsRes,
         pointsRes,
@@ -106,6 +111,7 @@ export function useSkydarkData(
         fetchMeals(conn, start, end),
         fetchMealRecipes(conn),
         fetchFamilyMembers(conn),
+        fetchPhotos(conn),
         fetchConfig(conn),
         fetchAppSettings(conn),
         fetchPoints(conn),
@@ -136,6 +142,7 @@ export function useSkydarkData(
         familyMembers: Array.isArray(familyRes.family_members)
           ? familyRes.family_members
           : [],
+        photos: photosRes.photos ?? [],
         config,
         appSettings:
           appSettingsRes.settings && typeof appSettingsRes.settings === "object"

@@ -158,6 +158,89 @@ async def websocket_get_family_members(
 
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): "skydark_calendar/get_photos",
+    }
+)
+@websocket_api.async_response
+async def websocket_get_photos(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Handle get photos command."""
+    db = _get_db(hass)
+    if not db:
+        connection.send_error(msg["id"], "not_ready", "Integration not loaded")
+        return
+    try:
+        photos = await hass.async_add_executor_job(db.get_photos)
+        connection.send_result(msg["id"], {"photos": photos})
+    except Exception as e:
+        _LOGGER.exception("websocket get_photos failed: %s", e)
+        connection.send_error(msg["id"], "failed", "An error occurred loading photos.")
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "skydark_calendar/add_photo",
+        vol.Required("url"): str,
+        vol.Optional("caption"): str,
+        vol.Optional("uploaded_by"): str,
+    }
+)
+@websocket_api.async_response
+async def websocket_add_photo(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Save a frontend photo URL (data URL or absolute URL) into DB."""
+    db = _get_db(hass)
+    if not db:
+        connection.send_error(msg["id"], "not_ready", "Integration not loaded")
+        return
+    try:
+        photo_id = await hass.async_add_executor_job(
+            partial(
+                db.add_photo,
+                file_path=msg["url"],
+                caption=msg.get("caption"),
+                uploaded_by=msg.get("uploaded_by"),
+            )
+        )
+        connection.send_result(msg["id"], {"photo_id": photo_id})
+    except Exception as e:
+        _LOGGER.exception("websocket add_photo failed: %s", e)
+        connection.send_error(msg["id"], "failed", "An error occurred saving photo.")
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "skydark_calendar/delete_photo",
+        vol.Required("photo_id"): str,
+    }
+)
+@websocket_api.async_response
+async def websocket_delete_photo(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
+    """Delete a photo row by id."""
+    db = _get_db(hass)
+    if not db:
+        connection.send_error(msg["id"], "not_ready", "Integration not loaded")
+        return
+    try:
+        await hass.async_add_executor_job(db.delete_photo, msg["photo_id"])
+        connection.send_result(msg["id"], {"success": True})
+    except Exception as e:
+        _LOGGER.exception("websocket delete_photo failed: %s", e)
+        connection.send_error(msg["id"], "failed", "An error occurred deleting photo.")
+
+
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): "skydark_calendar/add_family_member",
         vol.Required("name"): str,
         vol.Required("color"): str,
@@ -571,6 +654,9 @@ async def async_register_websocket_handlers(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_get_tasks)
     websocket_api.async_register_command(hass, websocket_get_lists)
     websocket_api.async_register_command(hass, websocket_get_family_members)
+    websocket_api.async_register_command(hass, websocket_get_photos)
+    websocket_api.async_register_command(hass, websocket_add_photo)
+    websocket_api.async_register_command(hass, websocket_delete_photo)
     websocket_api.async_register_command(hass, websocket_add_family_member)
     websocket_api.async_register_command(hass, websocket_update_family_member)
     websocket_api.async_register_command(hass, websocket_delete_family_member)

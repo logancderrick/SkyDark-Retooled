@@ -24,6 +24,7 @@ import {
 
 const STORAGE_KEY_SETTINGS = "skydark_app_settings";
 const STORAGE_KEY_MEMBERS = "skydark_family_members";
+const STORAGE_KEY_SHOPPING_CHECKED = "skydark_shopping_checked";
 
 const DEFAULT_MEMBERS: FamilyMember[] = [
   { id: "1", name: "Mom", color: "#FFD4D4", initial: "M" },
@@ -97,6 +98,8 @@ export interface AppSettings {
   weatherZipCode: string;
   /** Show a compact 7-day forecast row in the top header. */
   showTopWeeklyForecast: boolean;
+  /** Meal prep checked-state map (shopping item id -> checked). */
+  shoppingChecked: Record<string, boolean>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -116,6 +119,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   screensaverWeatherDisplayScale: 50,
   weatherZipCode: "",
   showTopWeeklyForecast: false,
+  shoppingChecked: {},
 };
 
 interface AppState {
@@ -174,6 +178,9 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
   if (typeof merged.familyName !== "string" || !merged.familyName.trim()) {
     merged.familyName = DEFAULT_SETTINGS.familyName;
   }
+  if (!merged.shoppingChecked || typeof merged.shoppingChecked !== "object") {
+    merged.shoppingChecked = {};
+  }
   return merged;
 }
 
@@ -208,10 +215,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const rawSettings = localStorage.getItem(STORAGE_KEY_SETTINGS);
       const rawMembers = localStorage.getItem(STORAGE_KEY_MEMBERS);
+      const rawShoppingChecked = localStorage.getItem(STORAGE_KEY_SHOPPING_CHECKED);
       if (rawSettings || rawMembers) {
         if (rawSettings) {
           const parsed = JSON.parse(rawSettings) as Partial<AppSettings>;
-          const merged = normalizeSettings(parsed);
+          const shoppingCheckedFromLegacy = (() => {
+            if (!rawShoppingChecked) return {};
+            try {
+              const parsedChecked = JSON.parse(rawShoppingChecked) as Record<string, boolean>;
+              return parsedChecked && typeof parsedChecked === "object" ? parsedChecked : {};
+            } catch {
+              return {};
+            }
+          })();
+          const merged = normalizeSettings({
+            ...parsed,
+            shoppingChecked: {
+              ...(parsed.shoppingChecked ?? {}),
+              ...shoppingCheckedFromLegacy,
+            },
+          });
           setSettingsState(merged);
           void saveAppSettings(conn, merged as unknown as Record<string, unknown>);
         }
@@ -231,6 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         localStorage.removeItem(STORAGE_KEY_SETTINGS);
         localStorage.removeItem(STORAGE_KEY_MEMBERS);
+        localStorage.removeItem(STORAGE_KEY_SHOPPING_CHECKED);
       } catch {
         // ignore
       }
