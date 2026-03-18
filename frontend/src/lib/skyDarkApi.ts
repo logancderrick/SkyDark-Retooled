@@ -133,7 +133,12 @@ export async function fetchPhotos(conn: Connection): Promise<{
 
 export async function addPhotoWS(
   conn: Connection,
-  data: { url: string; caption?: string; uploaded_by?: string }
+  data: {
+    url: string;
+    caption?: string;
+    uploaded_by?: string;
+    filename?: string;
+  }
 ): Promise<{ photo_id: string }> {
   return send(conn, { type: "skydark_calendar/add_photo", ...data });
 }
@@ -159,7 +164,6 @@ export async function resolveMediaUrl(
   });
   const url = res?.url;
   if (!url) return mediaContentId;
-  // Resolved URL may be relative; ensure it works (HA uses same origin)
   return url.startsWith("/") ? `${window.location.origin}${url}` : url;
 }
 

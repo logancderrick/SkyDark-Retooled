@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 
 CALENDAR_MEDIA_FOLDER = "Calendar Images"
 _MEDIA_URL_PREFIX = f"/media/local/{quote(CALENDAR_MEDIA_FOLDER)}"
+_MEDIA_SOURCE_PREFIX = "media-source://media_source/local"
 _DATA_URL_RE = re.compile(
     r"^data:(?P<mime>image/[a-zA-Z0-9.+-]+);base64,(?P<data>.+)$", re.DOTALL
 )
@@ -102,6 +103,12 @@ def delete_managed_media_file(hass: HomeAssistant, file_path_or_url: str) -> Non
     if raw.startswith(_MEDIA_URL_PREFIX):
         filename = unquote(raw[len(_MEDIA_URL_PREFIX) + 1 :])
         candidate = (media_dir / filename).resolve()
+    elif raw.startswith(f"{_MEDIA_SOURCE_PREFIX}/"):
+        rel_path = unquote(raw[len(_MEDIA_SOURCE_PREFIX) + 1 :])
+        prefix = f"{CALENDAR_MEDIA_FOLDER}/"
+        if rel_path.startswith(prefix):
+            filename = rel_path[len(prefix) :]
+            candidate = (media_dir / filename).resolve()
     elif raw.startswith("/media/local/"):
         # Accept unescaped path style too for backwards compatibility.
         parsed = urlparse(raw)
@@ -120,6 +127,26 @@ def delete_managed_media_file(hass: HomeAssistant, file_path_or_url: str) -> Non
 def _to_media_url(filename: str) -> str:
     """Create a Home Assistant media URL for a file in Calendar Images."""
     return f"{_MEDIA_URL_PREFIX}/{quote(filename)}"
+
+
+def to_media_source_url(file_path_or_url: str) -> str:
+    """Convert managed media URLs into media-source URLs for frontend resolving."""
+    if not file_path_or_url:
+        return ""
+    raw = file_path_or_url.strip()
+    if raw.startswith("media-source://"):
+        return raw
+    if raw.startswith(_MEDIA_URL_PREFIX + "/"):
+        filename = unquote(raw[len(_MEDIA_URL_PREFIX) + 1 :])
+        return f"{_MEDIA_SOURCE_PREFIX}/{quote(CALENDAR_MEDIA_FOLDER)}/{quote(filename)}"
+    if raw.startswith("/media/local/"):
+        parsed = urlparse(raw)
+        local_path = unquote(parsed.path)
+        prefix = f"/media/local/{CALENDAR_MEDIA_FOLDER}/"
+        if local_path.startswith(prefix):
+            filename = local_path[len(prefix) :]
+            return f"{_MEDIA_SOURCE_PREFIX}/{quote(CALENDAR_MEDIA_FOLDER)}/{quote(filename)}"
+    return raw
 
 
 def _extension_for(mime_type: str | None, filename_hint: str | None) -> str:

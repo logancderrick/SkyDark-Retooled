@@ -18,6 +18,7 @@ from .photo_media import (
     delete_managed_media_file,
     ensure_calendar_media_dir,
     save_data_url_to_media,
+    to_media_source_url,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -179,6 +180,9 @@ async def websocket_get_photos(
         return
     try:
         photos = await hass.async_add_executor_job(db.get_photos)
+        for photo in photos:
+            file_path = str(photo.get("file_path") or "")
+            photo["file_path"] = to_media_source_url(file_path)
         connection.send_result(msg["id"], {"photos": photos})
     except Exception as e:
         _LOGGER.exception("websocket get_photos failed: %s", e)

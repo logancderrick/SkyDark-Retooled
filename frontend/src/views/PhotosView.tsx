@@ -15,13 +15,13 @@ export default function PhotosView() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
-    const maxSizeBytes = 10 * 1024 * 1024; // 10 MB per image (stored in HA Media folder)
+    const maxSizeBytes = 1.5 * 1024 * 1024; // Keep uploads reasonably small for HA media storage.
     files.forEach((file) => {
       if (file.size > maxSizeBytes) return;
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
-        void addPhoto(dataUrl, "");
+        void addPhoto(dataUrl, "", file.name);
       };
       reader.readAsDataURL(file);
     });

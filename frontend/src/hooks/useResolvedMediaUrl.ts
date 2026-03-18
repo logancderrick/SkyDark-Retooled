@@ -35,10 +35,10 @@ export function useResolvedMediaUrl(
     }
     let cancelled = false;
     resolveMediaUrl(conn, url)
-      .then((r) => {
-        if (!cancelled && r) {
-          resolvedCache.set(url, r);
-          setResolved(r);
+      .then((result) => {
+        if (!cancelled && result) {
+          resolvedCache.set(url, result);
+          setResolved(result);
         }
       })
       .catch(() => {

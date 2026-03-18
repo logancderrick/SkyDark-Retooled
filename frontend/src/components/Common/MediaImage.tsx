@@ -1,10 +1,9 @@
 /**
  * Image component that resolves media-source:// URLs for display.
- * Use for photos stored in Home Assistant Media > My Media > Calendar Images.
  */
 
-import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl";
 import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
+import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl";
 
 interface MediaImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
