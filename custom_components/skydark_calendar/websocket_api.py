@@ -6,7 +6,6 @@ import json
 import logging
 from datetime import datetime
 from functools import partial
-from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -15,7 +14,11 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from . import photos as photos_module
+from .photo_media import (
+    delete_managed_media_file,
+    ensure_calendar_media_dir,
+    save_data_url_to_media,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -176,10 +179,6 @@ async def websocket_get_photos(
         return
     try:
         photos = await hass.async_add_executor_job(db.get_photos)
-        # Convert file_path to media-source URL for display
-        for p in photos:
-            fp = p.get("file_path") or ""
-            p["file_path"] = photos_module.file_path_to_media_source_url(fp)
         connection.send_result(msg["id"], {"photos": photos})
     except Exception as e:
         _LOGGER.exception("websocket get_photos failed: %s", e)
@@ -192,6 +191,7 @@ async def websocket_get_photos(
         vol.Required("url"): str,
         vol.Optional("caption"): str,
         vol.Optional("uploaded_by"): str,
+        vol.Optional("filename"): str,
     }
 )
 @websocket_api.async_response
@@ -200,41 +200,31 @@ async def websocket_add_photo(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Save a frontend photo (data URL) to Media > My Media > Calendar Images."""
+    """Save a frontend photo into HA media and persist its media URL."""
     db = _get_db(hass)
     if not db:
         connection.send_error(msg["id"], "not_ready", "Integration not loaded")
         return
-    url = msg["url"]
-    # Data URL: save to media folder
-    if url.strip().lower().startswith("data:"):
-        config_dir = Path(hass.config.config_dir)
-        rel_path = await hass.async_add_executor_job(
-            photos_module.save_photo_to_media, config_dir, url
-        )
-        if not rel_path:
-            connection.send_error(msg["id"], "failed", "Invalid image data or save failed.")
-            return
-        try:
-            photo_id = await hass.async_add_executor_job(
-                partial(
-                    db.add_photo,
-                    file_path=rel_path,
-                    caption=msg.get("caption"),
-                    uploaded_by=msg.get("uploaded_by"),
-                )
-            )
-            connection.send_result(msg["id"], {"photo_id": photo_id})
-        except Exception as e:
-            _LOGGER.exception("websocket add_photo failed: %s", e)
-            connection.send_error(msg["id"], "failed", "An error occurred saving photo.")
-        return
-    # Legacy: non-data URL (e.g. from upload_photo service) - store path as-is
     try:
+        url = msg["url"]
+        if not isinstance(url, str) or not url.startswith("data:image/"):
+            connection.send_error(
+                msg["id"],
+                "invalid_format",
+                "Only image data URLs are accepted for photo upload.",
+            )
+            return
+
+        media_url = await hass.async_add_executor_job(
+            save_data_url_to_media,
+            hass,
+            url,
+            msg.get("filename"),
+        )
         photo_id = await hass.async_add_executor_job(
             partial(
                 db.add_photo,
-                file_path=url,
+                file_path=media_url,
                 caption=msg.get("caption"),
                 uploaded_by=msg.get("uploaded_by"),
             )
@@ -257,22 +247,19 @@ async def websocket_delete_photo(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    """Delete a photo from DB and from Media > Calendar Images if applicable."""
+    """Delete a photo and remove the managed file when applicable."""
     db = _get_db(hass)
     if not db:
         connection.send_error(msg["id"], "not_ready", "Integration not loaded")
         return
-    photo_id = msg["photo_id"]
     try:
-        photo = await hass.async_add_executor_job(db.get_photo, photo_id)
-        if photo:
-            rel_path = photo.get("file_path") or ""
-            if rel_path and not rel_path.startswith("data:") and ".." not in rel_path:
-                config_dir = Path(hass.config.config_dir)
-                await hass.async_add_executor_job(
-                    photos_module.delete_photo_from_media, config_dir, rel_path
-                )
-        await hass.async_add_executor_job(db.delete_photo, photo_id)
+        photos = await hass.async_add_executor_job(db.get_photos)
+        photo = next((item for item in photos if item.get("id") == msg["photo_id"]), None)
+        await hass.async_add_executor_job(db.delete_photo, msg["photo_id"])
+        if photo and photo.get("file_path"):
+            await hass.async_add_executor_job(
+                delete_managed_media_file, hass, str(photo["file_path"])
+            )
         connection.send_result(msg["id"], {"success": True})
     except Exception as e:
         _LOGGER.exception("websocket delete_photo failed: %s", e)
@@ -690,6 +677,7 @@ async def async_register_websocket_handlers(hass: HomeAssistant) -> None:
     """Register WebSocket API handlers (skip if already registered on reload)."""
     if hass.data.get(DOMAIN, {}).get("ws_registered"):
         return
+    await hass.async_add_executor_job(ensure_calendar_media_dir, hass)
     websocket_api.async_register_command(hass, websocket_get_events)
     websocket_api.async_register_command(hass, websocket_get_tasks)
     websocket_api.async_register_command(hass, websocket_get_lists)

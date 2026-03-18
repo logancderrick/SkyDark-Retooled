@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -16,6 +15,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
+from .photo_media import copy_file_to_media, ensure_calendar_media_dir
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -546,36 +546,43 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _LOGGER.exception("delete_meal failed: %s", e)
 
     async def upload_photo(call: ServiceCall) -> None:
-        """Register a photo (file_path already stored on disk)."""
+        """Copy a photo into HA media storage and register it."""
         if DOMAIN not in hass.data:
             return
         db = hass.data[DOMAIN].get("db")
         if not db:
             return
 
-        file_path = call.data["file_path"]
+        file_path_raw = call.data["file_path"]
 
         config_dir = Path(hass.config.config_dir).resolve()
         try:
-            resolved_path = Path(file_path).resolve()
+            resolved_path = Path(file_path_raw).resolve()
             if not resolved_path.is_relative_to(config_dir):
                 _LOGGER.warning(
                     "upload_photo: rejected file_path '%s' outside config directory",
-                    file_path,
+                    file_path_raw,
                 )
                 return
             if not resolved_path.is_file():
-                _LOGGER.warning("upload_photo: file does not exist '%s'", file_path)
+                _LOGGER.warning("upload_photo: file does not exist '%s'", file_path_raw)
                 return
         except (ValueError, OSError) as e:
-            _LOGGER.warning("upload_photo: invalid file_path '%s': %s", file_path, e)
+            _LOGGER.warning("upload_photo: invalid file_path '%s': %s", file_path_raw, e)
             return
 
         try:
+            media_url = await hass.async_add_executor_job(
+                partial(
+                    _copy_photo_to_media_storage,
+                    hass,
+                    resolved_path,
+                )
+            )
             await hass.async_add_executor_job(
                 partial(
                     db.add_photo,
-                    file_path=file_path,
+                    file_path=media_url,
                     caption=call.data.get("caption"),
                     uploaded_by=call.data.get("uploaded_by"),
                 )
@@ -664,3 +671,9 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     hass.services.async_register(
         DOMAIN, SERVICE_SEND_NOTIFICATION, send_notification, schema=SEND_NOTIFICATION_SCHEMA
     )
+
+
+def _copy_photo_to_media_storage(hass: HomeAssistant, source_path: Path) -> str:
+    """Copy a source image into /media/Calendar Images and return HA media URL."""
+    ensure_calendar_media_dir(hass)
+    return copy_file_to_media(hass, source_path, filename_hint=source_path.name)
