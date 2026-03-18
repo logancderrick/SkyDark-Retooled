@@ -7,8 +7,8 @@ import { useAppContext } from "../../contexts/AppContext";
 import { usePhotosContext } from "../../contexts/PhotosContext";
 import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
 import { useIdleDetection } from "../../hooks/useIdleDetection";
+import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl";
 import { useWeeklyWeather, getWeatherIcon } from "../../hooks/useWeeklyWeather";
-import MediaImage from "../Common/MediaImage";
 
 function SleepModeTime() {
   const { settings } = useAppContext();
@@ -105,27 +105,6 @@ function ScreenSaverOverlay() {
   const [visibleLayer, setVisibleLayer] = useState(0);
   const transitionEndRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Preload current and next image to avoid pop-in and stutter during transition
-  useEffect(() => {
-    if (photos.length === 0) return;
-    const preload = async (url: string) => {
-      if (!url) return;
-      let src = url;
-      if (url.startsWith("media-source://") && conn) {
-        try {
-          const { resolveMediaUrl } = await import("../../lib/skyDarkApi");
-          src = await resolveMediaUrl(conn, url);
-        } catch {
-          return;
-        }
-      }
-      const img = new Image();
-      img.src = src;
-    };
-    void preload(photos[index]?.url ?? "");
-    if (photos.length > 1) void preload(photos[(index + 1) % photos.length]?.url ?? "");
-  }, [photos, index, conn]);
-
   useEffect(() => {
     if (!isIdle && !screensaverTriggered) return;
     if (photos.length === 0) return;
@@ -159,6 +138,8 @@ function ScreenSaverOverlay() {
   const currentPhoto = photos[index];
   const nextIndex = (index + 1) % photos.length;
   const nextPhoto = photos[nextIndex];
+  const currentUrl = useResolvedMediaUrl(currentPhoto?.url ?? "", conn);
+  const nextUrl = useResolvedMediaUrl(nextPhoto?.url ?? "", conn);
   const transitionStyle = { transition: `opacity ${durationMs}ms ease-out` };
   const slideStyle = { transition: `transform ${durationMs}ms ease-out` };
 
@@ -168,6 +149,17 @@ function ScreenSaverOverlay() {
     reset();
     setScreensaverTriggered(false);
   };
+
+  // Preload resolved URLs to avoid black frames on transitions.
+  useEffect(() => {
+    if (!currentUrl) return;
+    const preload = (url: string) => {
+      const img = new Image();
+      img.src = url;
+    };
+    preload(currentUrl);
+    if (nextUrl) preload(nextUrl);
+  }, [currentUrl, nextUrl]);
 
   if (!show) return null;
 
@@ -183,32 +175,32 @@ function ScreenSaverOverlay() {
       aria-label="Screen saver active, click to exit"
     >
       {singleImage ? (
-        <MediaImage
-          src={currentPhoto?.url ?? ""}
+        <img
+          src={currentUrl}
           alt={currentPhoto?.caption || "Slideshow"}
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           draggable={false}
         />
       ) : transitionType === "fade" ? (
         <>
-          <MediaImage
-            src={currentPhoto?.url ?? ""}
+          <img
+            src={currentUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             style={{ ...transitionStyle, opacity: visibleLayer === 0 ? 1 : 0 }}
             draggable={false}
             aria-hidden
           />
-          <MediaImage
-            src={nextPhoto?.url ?? ""}
+          <img
+            src={nextUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             style={{ ...transitionStyle, opacity: visibleLayer === 1 ? 1 : 0 }}
             draggable={false}
             aria-hidden
           />
-          <MediaImage
-            src={visibleLayer === 0 ? currentPhoto?.url ?? "" : nextPhoto?.url ?? ""}
+          <img
+            src={visibleLayer === 0 ? currentUrl : nextUrl}
             alt={currentPhoto?.caption || nextPhoto?.caption || "Slideshow"}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none sr-only"
             draggable={false}
@@ -216,8 +208,8 @@ function ScreenSaverOverlay() {
         </>
       ) : (
         <>
-          <MediaImage
-            src={currentPhoto?.url ?? ""}
+          <img
+            src={currentUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             style={{
@@ -227,8 +219,8 @@ function ScreenSaverOverlay() {
             draggable={false}
             aria-hidden
           />
-          <MediaImage
-            src={nextPhoto?.url ?? ""}
+          <img
+            src={nextUrl}
             alt=""
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             style={{
@@ -238,8 +230,8 @@ function ScreenSaverOverlay() {
             draggable={false}
             aria-hidden
           />
-          <MediaImage
-            src={visibleLayer === 0 ? currentPhoto?.url ?? "" : nextPhoto?.url ?? ""}
+          <img
+            src={visibleLayer === 0 ? currentUrl : nextUrl}
             alt={currentPhoto?.caption || nextPhoto?.caption || "Slideshow"}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none sr-only"
             draggable={false}
