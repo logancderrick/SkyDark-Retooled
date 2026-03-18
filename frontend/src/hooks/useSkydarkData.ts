@@ -33,6 +33,13 @@ import type { FamilyMember } from "../types/calendar";
 
 const DEFAULT_EVENT_RANGE_DAYS = 60;
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export interface SkydarkDataState {
   connection: Connection | null;
   events: CalendarEvent[];
@@ -86,12 +93,10 @@ export function useSkydarkData(
 
   const load = useCallback(
     async (conn: Connection, startDate?: string, endDate?: string) => {
-      const start = startDate ?? new Date().toISOString().slice(0, 10);
+      const start = startDate ?? formatLocalDate(new Date());
       const end =
         endDate ??
-        new Date(Date.now() + eventRangeDays * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 10);
+        formatLocalDate(new Date(Date.now() + eventRangeDays * 24 * 60 * 60 * 1000));
       const [
         eventsRes,
         tasksRes,
@@ -177,12 +182,10 @@ export function useSkydarkData(
       const conn = data.connection;
       if (!conn) return;
       try {
-        const start = startDate ?? new Date().toISOString().slice(0, 10);
+        const start = startDate ?? formatLocalDate(new Date());
         const end =
           endDate ??
-          new Date(Date.now() + eventRangeDays * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .slice(0, 10);
+          formatLocalDate(new Date(Date.now() + eventRangeDays * 24 * 60 * 60 * 1000));
         const res = await fetchEvents(conn, start, end);
         const events = (res.events ?? []).map((e: SkydarkEvent) =>
           eventToCalendarEvent(e),
@@ -200,12 +203,10 @@ export function useSkydarkData(
       const conn = data.connection;
       if (!conn) return;
       try {
-        const start = startDate ?? new Date().toISOString().slice(0, 10);
+        const start = startDate ?? formatLocalDate(new Date());
         const end =
           endDate ??
-          new Date(Date.now() + eventRangeDays * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .slice(0, 10);
+          formatLocalDate(new Date(Date.now() + eventRangeDays * 24 * 60 * 60 * 1000));
         const res = await fetchMeals(conn, start, end);
         setData((prev) => ({ ...prev, meals: res.meals ?? [] }));
       } catch (e) {

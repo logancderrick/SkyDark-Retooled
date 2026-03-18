@@ -1,148 +1,82 @@
 # Skydark Family Calendar
 
-**A family organization panel for Home Assistant:** calendar, chores, lists, meals, photos, rewards, and sleep routines — all in one place.
+Turn Home Assistant into a single family command center.
 
----
+Skydark is a full-screen family organizer for Home Assistant that combines calendar, chores, lists, meals, rewards, and photos in one clean panel your whole household can use.
 
-## Quick start
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Custom%20Integration-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/)
+[![HACS](https://img.shields.io/badge/HACS-Custom%20Repository-41BDF5)](https://hacs.xyz/)
 
-- **Using Home Assistant?** Install via [HACS](#install-via-hacs) or [manually](#manual-install), add the integration, then open **Skydark Calendar** from the sidebar.
-- **Developing?** See [Repository structure](#repository-structure) and [CONTRIBUTING.md](CONTRIBUTING.md).
+![Skydark preview](.github/social-preview.png)
 
----
+## Why people install SkyDark
 
-## What’s in the app
+- One place for everything your family tracks daily.
+- Designed for a wall tablet or dashboard view in Home Assistant.
+- Built for action, not just display: create tasks, plan meals, check lists, track rewards.
+- Clean, touch-friendly UI that works for both adults and kids.
 
-| Area | What you get |
-|------|----------------|
-| **Calendar** | Month / week / day views, drag-and-drop events, family member colors |
-| **Chores** | Tasks per person, daily/weekly/custom frequency, points |
-| **Lists** | Grocery, to-do, custom lists with checkboxes |
-| **Meals** | Weekly meal grid, recipe library, meal prep (ingredients) list |
-| **Photos** | Family photos, screensaver / sleep mode |
-| **Rewards** | Points and rewards per family member |
-| **Settings** | Family name, members, PIN lock, screensaver, feature toggles |
+## What you can do
 
-Runs as a **custom panel** in Home Assistant. Data is stored in SQLite under your HA config; optional services and automations for events, tasks, and notifications.
+| Area | What it does |
+|------|---------------|
+| **Calendar** | Month/week/day views, drag-and-drop events, family member colors |
+| **Chores** | Per-person tasks, routine frequencies, completion tracking, points |
+| **Lists** | Grocery and custom lists with simple check-off flow |
+| **Meals** | Weekly planner plus meal prep ingredient generation |
+| **Rewards** | Points and reward redemption tracking per family member |
+| **Photos** | Family photo view with sleep/screensaver support |
+| **Settings** | Profiles, lock controls, feature toggles, family-level preferences |
 
----
+Runs as a Home Assistant custom integration and panel. Data is stored locally in your HA config using SQLite.
 
-## Install via HACS
+## Install (HACS recommended)
 
-1. **HACS** → **Integrations** → **⋮** → **Custom repositories**
-2. Add: `https://github.com/HunterJacobs/SkyDark` → Category: **Integration**
-3. Search **Skydark Family Calendar** → **Download** → Restart Home Assistant
-4. **Settings** → **Devices & Services** → **Add Integration** → **Skydark Family Calendar**
-5. Open **Skydark Calendar** in the sidebar
+1. Open **HACS** -> **Integrations** -> **Custom repositories**
+2. Add `https://github.com/HunterJacobs/SkyDark` as category **Integration**
+3. Install **Skydark Family Calendar**
+4. Restart Home Assistant
+5. Go to **Settings** -> **Devices & Services** -> **Add Integration** -> **Skydark Family Calendar**
+6. Open **Skydark Calendar** from the sidebar
 
 ## Manual install
 
-1. [Download the repo](https://github.com/HunterJacobs/SkyDark/archive/refs/heads/main.zip) and extract.
-2. Copy the **`custom_components/skydark_calendar`** folder into your Home Assistant `config/custom_components/` folder.
-3. Restart Home Assistant.
-4. **Settings** → **Devices & Services** → **Add Integration** → **Skydark Family Calendar**.
+1. Download this repo as ZIP and extract it
+2. Copy `custom_components/skydark_calendar` into your HA `config/custom_components/` directory
+3. Restart Home Assistant
+4. Add **Skydark Family Calendar** in **Devices & Services**
 
-The panel is served at `/skydark`; open it from the sidebar or by going to `/skydark` in your browser.
+The panel is served at `/skydark`.
 
----
+## Best fit for
 
-## Repository structure
+- Families using Home Assistant as the home dashboard
+- Wall-tablet setups in kitchens, entryways, or living spaces
+- Homes that want chores + rewards + meal planning in one workflow
 
-So you can find your way around:
+## Services and automations
 
-```
-SkyDark/
-├── README.md                 ← You are here
-├── CONTRIBUTING.md           ← How to run, build, and work on the code
-├── info.md                   ← Short description (e.g. for HACS store)
-├── docs/                     ← Extra docs (HACS submission, etc.)
-│
-├── custom_components/        ← Home Assistant integration (backend)
-│   └── skydark_calendar/
-│       ├── __init__.py       ← Setup, config flow, service registration
-│       ├── config_flow.py    ← Add-integration UI
-│       ├── const.py          ← Domain, version, paths
-│       ├── database.py       ← SQLite (events, tasks, lists, meals, photos, rewards)
-│       ├── websocket_api.py  ← WebSocket handlers for the frontend
-│       ├── services.py       ← HA services (add_event, add_task, etc.)
-│       ├── manifest.json     ← Integration metadata
-│       ├── services.yaml     ← Service definitions for HA UI
-│       ├── www/              ← Built frontend (generated by npm run build)
-│       └── ...
-│
-└── frontend/                 ← React app (Vite, TypeScript)
-    ├── src/
-    │   ├── App.tsx           ← Routes
-    │   ├── main.tsx          ← Entry
-    │   ├── views/            ← Full-page views (Calendar, Tasks, Meals, etc.)
-    │   ├── components/       ← Reusable UI (Calendar, Layout, Modals, …)
-    │   ├── contexts/         ← React context (app state, photos, skydark data)
-    │   ├── lib/              ← API helpers (skyDarkApi.ts ↔ WebSocket)
-    │   └── types/            ← TypeScript types
-    ├── public/               ← Static assets (default photos, manifest)
-    ├── package.json
-    └── vite.config.ts        ← Builds into custom_components/.../www
-```
+Skydark includes service calls for event/task/list/meal/reward actions and notification helpers.
 
-- **Backend** = `custom_components/skydark_calendar` (Python, HA integration).
-- **Frontend** = `frontend/` (React/TS). Built output goes into `custom_components/skydark_calendar/www/`.
+Examples:
 
----
+- `skydark_calendar.add_event`
+- `skydark_calendar.complete_task`
+- `skydark_calendar.add_list_item`
+- `skydark_calendar.add_meal`
+- `skydark_calendar.send_notification`
 
-## Development
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev     # Dev server (no HA needed for UI work)
-npm run build   # Build into custom_components/skydark_calendar/www
-npm run test    # Vitest
-```
-
-### Backend
-
-The backend is the Home Assistant custom component. Use a Python environment compatible with your HA version if you run tests locally. After the first run, the SQLite DB is at `config/skydark_calendar/skydark_calendar.db`.
-
-More detail: [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## Services & automations
-
-**Example services** (call from Developer Tools → Services or automations):
-
-- `skydark_calendar.add_event` — title, start_time, end_time, all_day?, calendar_id?, description?, location?
-- `skydark_calendar.complete_task` — task_id, completed_date?
-- `skydark_calendar.add_list_item` — list_id, content
-- `skydark_calendar.add_meal` — name, meal_date, meal_type, ingredients?, meal_recipe_id?
-- `skydark_calendar.delete_reward` — reward_id
-- `skydark_calendar.send_notification` — message, title?
-
-**Automations:** The integration can fire `skydark_calendar_event_created` when an event is added via the service. Use it as a trigger in automations.
-
-Full list and parameters: **Settings** → **Devices & Services** → **Skydark Family Calendar** → **Services**.
-
----
-
-## Photos & media
-
-Photos are stored in **Media > My Media > Calendar Images**. When you import photos in the app, they are saved to `config/media/Calendar Images/` and appear in the Home Assistant media browser. Ensure your `media_dirs` includes the config media folder (e.g. `local: /config/media` in `configuration.yaml` under `homeassistant`). The `upload_photo` service can register files already in that folder.
-
----
+Event automations are supported (for example, event-created triggers).  
+See full service docs in **Settings** -> **Devices & Services** -> **Skydark Family Calendar** -> **Services**.
 
 ## Troubleshooting
 
-- **White screen or 403 when opening the panel (or on refresh)**  
-  The app is served at `/skydark` and `/skydark/index.html`. Make sure you’re on the latest version and restart Home Assistant after updating.
+- **White screen or 403 on open/refresh**: update to latest version and fully restart Home Assistant.
+- **Console warnings about fonts/sandbox/layout**: usually from HA browser context and typically harmless.
 
-- **Console warnings (Roboto preload, iframe sandbox, layout)**  
-  These come from the Home Assistant dashboard or browser and are harmless; the Skydark panel still works.
+## For contributors
 
----
+- Developer setup and architecture: [CONTRIBUTING.md](CONTRIBUTING.md)
+- HACS submission notes: [docs/HACS_NEXT_STEPS.md](docs/HACS_NEXT_STEPS.md)
 
-## License & links
-
-- **Repo:** [github.com/HunterJacobs/SkyDark](https://github.com/HunterJacobs/SkyDark)
-- **HACS store submission:** [docs/HACS_NEXT_STEPS.md](docs/HACS_NEXT_STEPS.md)
+If SkyDark helps your household, a star on this repo helps more Home Assistant users find it.
