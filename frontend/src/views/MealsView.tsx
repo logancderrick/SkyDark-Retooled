@@ -449,7 +449,7 @@ export default function MealsView() {
       backend={dndBackend}
       options={isTouchDevice ? { enableMouseEvents: true } : undefined}
     >
-    <div className="h-full">
+    <div className="min-h-full">
       <h2 className="text-lg font-semibold text-skydark-text mb-4">Meals</h2>
 
       <div className="overflow-x-auto">

@@ -175,7 +175,7 @@ export default function SettingsView() {
                       className="flex items-center gap-3 p-3 rounded-card-lg bg-white shadow-skydark"
                     >
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                        className="w-10 h-10 aspect-square rounded-full shrink-0 flex items-center justify-center text-white font-semibold"
                         style={{ backgroundColor: m.color }}
                       >
                         {m.initial}

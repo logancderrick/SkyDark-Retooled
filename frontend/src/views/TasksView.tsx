@@ -187,7 +187,7 @@ export default function TasksView() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="min-h-full flex flex-col">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-skydark-text">Chores</h2>
         <div className="flex items-center gap-4">
@@ -244,7 +244,7 @@ export default function TasksView() {
       </div>
 
       {activeTab === "byPerson" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {familyMembers.map((member) => {
             const memberTasks = visibleTasks.filter((t) => t.assignee_id === member.id);
             const completedCount = memberTasks.filter((t) => t.completed_date).length;
@@ -265,7 +265,7 @@ export default function TasksView() {
       )}
 
       {activeTab === "allChores" && (
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="overflow-auto">
           <table className="w-full border-collapse bg-white rounded-card shadow-skydark overflow-hidden min-w-[700px]">
             <thead>
               <tr className="bg-skydark-bg border-b border-gray-200">
@@ -302,7 +302,7 @@ export default function TasksView() {
                         {member ? (
                           <span className="inline-flex items-center gap-2">
                             <span
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+                              className="w-8 h-8 aspect-square rounded-full shrink-0 flex items-center justify-center text-white text-sm font-semibold"
                               style={{ backgroundColor: member.color }}
                             >
                               {member.initial || member.name[0]}

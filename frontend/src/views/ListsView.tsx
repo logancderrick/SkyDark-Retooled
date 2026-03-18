@@ -165,7 +165,7 @@ export default function ListsView() {
     : lists;
 
   return (
-    <div className="h-full">
+    <div className="min-h-full">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-lg font-semibold text-skydark-text">Lists</h2>
         <div className="flex items-center gap-2 flex-wrap">
@@ -193,7 +193,7 @@ export default function ListsView() {
           </button>
         </div>
       </div>
-      <div className="flex gap-6 overflow-x-auto pb-4">
+      <div className="flex flex-col gap-6 pb-4">
         {filteredLists.map((list) => (
           <ListCard
             key={list.id}

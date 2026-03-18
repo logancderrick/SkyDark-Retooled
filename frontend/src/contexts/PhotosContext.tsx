@@ -53,7 +53,7 @@ function savePhotos(photos: PhotoItem[]) {
 
 interface PhotosContextValue {
   photos: PhotoItem[];
-  addPhoto: (url: string, caption?: string) => Promise<void>;
+  addPhoto: (url: string, caption?: string, filename?: string) => Promise<void>;
   deletePhoto: (id: string) => Promise<void>;
 }
 
@@ -88,7 +88,9 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
       (p) => p.id.startsWith("upload-") || p.url.startsWith("data:")
     );
     if (!hasCustomLocal || serverPhotos.length > 0) return;
-    void Promise.all(local.map((p) => addPhotoWS(conn, { url: p.url, caption: p.caption ?? "" })))
+    void Promise.all(
+      local.map((p) => addPhotoWS(conn, { url: p.url, caption: p.caption ?? "" }))
+    )
       .then(() => skydark?.refetch())
       .catch(() => {
         // Ignore migration failures; user can retry import.
@@ -101,9 +103,9 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
   }, [conn, serverPhotos.length, skydark]);
 
   const addPhoto = useCallback(
-    async (url: string, caption: string = "") => {
+    async (url: string, caption: string = "", filename?: string) => {
       if (conn) {
-        await addPhotoWS(conn, { url, caption });
+        await addPhotoWS(conn, { url, caption, filename });
         await skydark?.refetch();
         return;
       }

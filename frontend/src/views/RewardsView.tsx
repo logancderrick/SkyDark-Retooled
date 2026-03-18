@@ -173,7 +173,7 @@ export default function RewardsView() {
   };
 
   return (
-    <div className="h-full">
+    <div className="min-h-full">
       <h2 className="text-lg font-semibold text-skydark-text mb-4">Rewards</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -185,7 +185,7 @@ export default function RewardsView() {
                 className="flex items-center gap-3 p-3 rounded-card bg-white shadow-skydark"
               >
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                  className="w-10 h-10 aspect-square rounded-full shrink-0 flex items-center justify-center text-white font-semibold"
                   style={{ backgroundColor: m.color }}
                 >
                   {m.initial}
