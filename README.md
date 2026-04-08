@@ -49,6 +49,13 @@ Runs as a Home Assistant custom integration and panel. Data is stored locally in
 
 The panel is served at `/skydark`.
 
+## Configuration (UI only)
+
+Skydark is set up through **Settings → Devices & services → Add integration**. It does **not** read options from `configuration.yaml`.
+
+- **Do not** add a `skydark_calendar:` block to `configuration.yaml`. Any keys there are ignored and Home Assistant may show a repair telling you to remove them.
+- **If you see that warning:** delete the `skydark_calendar:` section from your YAML, keep the integration added via the UI, then **restart Home Assistant**.
+
 ## Best fit for
 
 - Families using Home Assistant as the home dashboard
@@ -72,6 +79,7 @@ See full service docs in **Settings** -> **Devices & Services** -> **Skydark Fam
 
 ## Troubleshooting
 
+- **“Does not support configuration via YAML” / ignored YAML settings:** Remove `skydark_calendar:` from `configuration.yaml` and use **Devices & services** only; then restart HA (see [Configuration (UI only)](#configuration-ui-only)).
 - **White screen or 403 on open/refresh**: update to latest version and fully restart Home Assistant.
 - **Console warnings about fonts/sandbox/layout**: usually from HA browser context and typically harmless.
 

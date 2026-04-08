@@ -13,6 +13,10 @@ It combines calendar, chores, lists, meal planning, rewards, and photos into one
 - Rewards tracking for family motivation
 - Local HA integration with SQLite-backed data and automation-friendly services
 
+## Configuration
+
+Add the integration under **Settings → Devices & services** (config flow). Do not add `skydark_calendar:` to `configuration.yaml`; YAML is not used.
+
 ## Documentation
 
 Full install, setup, and usage details: [github.com/HunterJacobs/SkyDark](https://github.com/HunterJacobs/SkyDark)
