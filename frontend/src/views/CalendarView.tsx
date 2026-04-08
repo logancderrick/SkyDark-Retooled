@@ -242,6 +242,7 @@ export default function CalendarView() {
           currentDate={currentDate}
           events={filteredEvents}
           familyMembers={familyMembers}
+          remoteCalendarColors={settings.remoteCalendarColors}
           onDateClick={(d) => {
             setCurrentDate(d);
             openCreateEventModal(d);
@@ -259,6 +260,7 @@ export default function CalendarView() {
           currentDate={currentDate}
           events={filteredEvents}
           familyMembers={familyMembers}
+          remoteCalendarColors={settings.remoteCalendarColors}
           onDateClick={(d) => {
             setCurrentDate(d);
             openCreateEventModal(d);
@@ -277,6 +279,7 @@ export default function CalendarView() {
           currentDate={currentDate}
           events={filteredEvents}
           familyMembers={familyMembers}
+          remoteCalendarColors={settings.remoteCalendarColors}
           onDateClick={(d) => {
             setCurrentDate(d);
             openCreateEventModal(d);

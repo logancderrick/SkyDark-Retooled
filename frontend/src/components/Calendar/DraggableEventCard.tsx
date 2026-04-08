@@ -3,13 +3,14 @@ import { useDrag } from "react-dnd";
 import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
 import { format, parseISO } from "date-fns";
-import { getEventColorStyle, normalizeCalendarIds } from "./EventColorPattern";
+import { getEventColorStyleForDisplay } from "./EventColorPattern";
 
 export const EVENT_TYPE = "calendar-event";
 
 interface DraggableEventCardProps {
   event: CalendarEvent;
   familyMembers: FamilyMember[];
+  remoteCalendarColors?: Record<string, string>;
   top: number;
   height: number;
   onEventClick?: (event: CalendarEvent) => void;
@@ -19,14 +20,18 @@ interface DraggableEventCardProps {
 export default function DraggableEventCard({
   event,
   familyMembers,
+  remoteCalendarColors,
   top,
   height,
   onEventClick,
   onEventMove,
 }: DraggableEventCardProps) {
   const ref = useRef<HTMLButtonElement>(null);
-  const profileIds = normalizeCalendarIds(event.calendar_id);
-  const { style: colorStyle, borderColor } = getEventColorStyle(profileIds, familyMembers);
+  const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+    event,
+    familyMembers,
+    remoteCalendarColors
+  );
 
   const [{ isDragging }, drag] = useDrag({
     type: EVENT_TYPE,

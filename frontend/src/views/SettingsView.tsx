@@ -20,6 +20,7 @@ import { useViewportSimulator } from "../contexts/ViewportSimulatorContext";
 import { VIEWPORT_PRESETS } from "../lib/viewportPresets";
 import { useWeatherData } from "../hooks/useWeeklyWeather";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
+import { REMOTE_CALENDAR_DEFAULT_COLORS } from "../components/Calendar/EventColorPattern";
 
 export default function SettingsView() {
   const {
@@ -400,7 +401,19 @@ export default function SettingsView() {
                     .split(/[\n,]+/)
                     .map((s) => s.trim())
                     .filter((s) => s.startsWith("calendar."));
-                  setSettings({ remoteCalendarEntities: ids });
+                  const prevColors = settings.remoteCalendarColors ?? {};
+                  const nextColors: Record<string, string> = {};
+                  ids.forEach((id, i) => {
+                    const existing = prevColors[id]?.trim();
+                    nextColors[id] =
+                      existing && /^#[0-9A-Fa-f]{6}$/i.test(existing)
+                        ? existing
+                        : REMOTE_CALENDAR_DEFAULT_COLORS[i % REMOTE_CALENDAR_DEFAULT_COLORS.length];
+                  });
+                  setSettings({
+                    remoteCalendarEntities: ids,
+                    remoteCalendarColors: nextColors,
+                  });
                   void skydark?.refetchEvents();
                 }}
                 rows={5}
@@ -408,6 +421,45 @@ export default function SettingsView() {
                 placeholder={"calendar.google_personal\ncalendar.family"}
                 spellCheck={false}
               />
+              {(settings.remoteCalendarEntities ?? []).length > 0 && (
+                <div className="mt-4 space-y-3 max-w-lg">
+                  <p className="text-sm font-medium text-skydark-text">Colors</p>
+                  <p className="text-xs text-skydark-text-secondary">
+                    Pick a color for each calendar. These match the chips on the calendar and the filter buttons.
+                  </p>
+                  {(settings.remoteCalendarEntities ?? []).map((eid, i) => (
+                    <div key={eid} className="flex flex-wrap items-center gap-3">
+                      <span
+                        className="text-sm text-skydark-text-secondary font-mono truncate flex-1 min-w-[8rem]"
+                        title={eid}
+                      >
+                        {eid.replace(/^calendar\./, "")}
+                      </span>
+                      <input
+                        type="color"
+                        aria-label={`Color for ${eid}`}
+                        value={
+                          (() => {
+                            const c = settings.remoteCalendarColors?.[eid]?.trim();
+                            return c && /^#[0-9A-Fa-f]{6}$/i.test(c)
+                              ? c
+                              : REMOTE_CALENDAR_DEFAULT_COLORS[i % REMOTE_CALENDAR_DEFAULT_COLORS.length];
+                          })()
+                        }
+                        onChange={(e) =>
+                          setSettings({
+                            remoteCalendarColors: {
+                              ...(settings.remoteCalendarColors ?? {}),
+                              [eid]: e.target.value,
+                            },
+                          })
+                        }
+                        className="h-9 w-14 cursor-pointer rounded border border-gray-200 bg-white p-0.5 shrink-0"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </SettingsSection>
           </>
         )}

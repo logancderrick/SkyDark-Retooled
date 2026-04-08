@@ -13,7 +13,7 @@ import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
 import DraggableEventCard from "./DraggableEventCard";
 import DropTargetCell from "./DropTargetCell";
-import { getEventColorStyle, normalizeCalendarIds } from "./EventColorPattern";
+import { getEventColorStyleForDisplay } from "./EventColorPattern";
 import { getInitialScrollTopForFourHourWindow, isAllDayEvent } from "./calendarScrollUtils";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -55,6 +55,7 @@ interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   familyMembers: FamilyMember[];
+  remoteCalendarColors?: Record<string, string>;
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
   onEventMove?: (eventId: string, newStart: Date, newEnd: Date) => void;
@@ -65,7 +66,7 @@ export interface WeekViewRef {
 }
 
 const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
-  { currentDate, events, familyMembers, onDateClick, onEventClick, onEventMove },
+  { currentDate, events, familyMembers, remoteCalendarColors, onDateClick, onEventClick, onEventMove },
   ref
 ) {
   const weekStart = startOfWeek(currentDate);
@@ -218,9 +219,10 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                   onClick={() => onDateClick?.(d)}
                 >
                   {visibleEvents.map((event) => {
-                    const { style: colorStyle, borderColor } = getEventColorStyle(
-                      normalizeCalendarIds(event.calendar_id),
-                      familyMembers
+                    const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+                      event,
+                      familyMembers,
+                      remoteCalendarColors
                     );
                     return (
                       <button
@@ -315,6 +317,7 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                               key={`${blockIndex}-${event.id}`}
                               event={event}
                               familyMembers={familyMembers}
+                              remoteCalendarColors={remoteCalendarColors}
                               top={top}
                               height={height}
                               onEventClick={onEventClick}

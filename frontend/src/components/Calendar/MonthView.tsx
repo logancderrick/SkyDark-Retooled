@@ -11,7 +11,7 @@ import {
 } from "date-fns";
 import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
-import { getEventColorStyle, normalizeCalendarIds } from "./EventColorPattern";
+import { getEventColorStyleForDisplay } from "./EventColorPattern";
 
 const MAX_VISIBLE_EVENTS = 3;
 
@@ -19,6 +19,8 @@ interface MonthViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   familyMembers: FamilyMember[];
+  /** Per remote calendar entity_id -> hex color */
+  remoteCalendarColors?: Record<string, string>;
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
 }
@@ -27,6 +29,7 @@ export default function MonthView({
   currentDate,
   events,
   familyMembers,
+  remoteCalendarColors,
   onDateClick,
   onEventClick,
 }: MonthViewProps) {
@@ -94,8 +97,11 @@ export default function MonthView({
             </button>
             <div className="flex-1 space-y-1 overflow-hidden">
               {visibleEvents.map((ev) => {
-                const profileIds = normalizeCalendarIds(ev.calendar_id);
-                const { style: colorStyle, borderColor } = getEventColorStyle(profileIds, familyMembers);
+                const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+                  ev,
+                  familyMembers,
+                  remoteCalendarColors
+                );
                 return (
                   <button
                     key={ev.id}

@@ -1,5 +1,6 @@
 import { useAppContext } from "../../contexts/AppContext";
 import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
+import { colorForRemoteCalendarEntity } from "./EventColorPattern";
 
 function shortLabel(entityId: string): string {
   const last = entityId.includes(".") ? entityId.split(".").pop() : entityId;
@@ -31,6 +32,7 @@ export default function CalendarRemoteToggles() {
     <div className="flex flex-wrap items-center gap-2 justify-end w-full">
       {entities.map((eid) => {
         const on = vis[eid] !== false;
+        const accent = colorForRemoteCalendarEntity(eid, settings.remoteCalendarColors);
         return (
           <button
             key={eid}
@@ -38,11 +40,19 @@ export default function CalendarRemoteToggles() {
             onClick={() => toggleEntity(eid)}
             disabled={!hasConnection}
             title={eid}
-            className={`px-3 py-2 rounded-xl text-sm font-medium min-h-0 min-w-0 max-w-[11rem] truncate transition-colors ${
+            className={`px-3 py-2 rounded-xl text-sm font-medium min-h-0 min-w-0 max-w-[11rem] truncate transition-colors border ${
               on
-                ? "bg-skydark-accent-bg text-skydark-accent border border-skydark-accent/30"
-                : "bg-gray-100 text-skydark-text-secondary border border-gray-200 opacity-80"
+                ? "text-skydark-text shadow-sm"
+                : "bg-gray-100 text-skydark-text-secondary border-gray-200 opacity-80"
             } ${!hasConnection ? "opacity-50 cursor-not-allowed" : ""}`}
+            style={
+              on
+                ? {
+                    backgroundColor: `${accent}CC`,
+                    borderColor: accent,
+                  }
+                : undefined
+            }
             aria-pressed={on}
             aria-label={`${on ? "Hide" : "Show"} events from ${eid}`}
           >

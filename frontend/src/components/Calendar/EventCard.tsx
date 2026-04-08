@@ -1,11 +1,12 @@
 import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
 import { format, parseISO } from "date-fns";
-import { getEventColorStyle, normalizeCalendarIds } from "./EventColorPattern";
+import { getEventColorStyleForDisplay } from "./EventColorPattern";
 
 interface EventCardProps {
   event: CalendarEvent;
   familyMembers: FamilyMember[];
+  remoteCalendarColors?: Record<string, string>;
   compact?: boolean;
   showTime?: boolean;
 }
@@ -13,6 +14,7 @@ interface EventCardProps {
 export default function EventCard({
   event,
   familyMembers,
+  remoteCalendarColors,
   compact = false,
   showTime = true,
 }: EventCardProps) {
@@ -26,8 +28,11 @@ export default function EventCard({
         ? `${format(start, "h:mm a")} - ${format(end, "h:mm a")}`
         : format(start, "h:mm a");
 
-  const profileIds = normalizeCalendarIds(event.calendar_id);
-  const { style: colorStyle, borderColor } = getEventColorStyle(profileIds, familyMembers);
+  const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+    event,
+    familyMembers,
+    remoteCalendarColors
+  );
 
   return (
     <div

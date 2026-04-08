@@ -2,7 +2,7 @@ import { forwardRef, useRef, useEffect, useImperativeHandle, useState } from "re
 import { format, parseISO, isSameDay, differenceInMinutes } from "date-fns";
 import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
-import { getEventColorStyle, normalizeCalendarIds } from "./EventColorPattern";
+import { getEventColorStyleForDisplay } from "./EventColorPattern";
 import { getInitialScrollTopForFourHourWindow, isAllDayEvent } from "./calendarScrollUtils";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -37,6 +37,7 @@ interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   familyMembers: FamilyMember[];
+  remoteCalendarColors?: Record<string, string>;
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
 }
@@ -46,7 +47,7 @@ export interface DayViewRef {
 }
 
 const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
-  { currentDate, events, familyMembers, onDateClick, onEventClick },
+  { currentDate, events, familyMembers, remoteCalendarColors, onDateClick, onEventClick },
   ref
 ) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -172,9 +173,10 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
           <div className="text-xs text-skydark-text-secondary">All day</div>
         )}
         {allDayEvents.slice(0, 2).map((event) => {
-          const { style: colorStyle, borderColor } = getEventColorStyle(
-            normalizeCalendarIds(event.calendar_id),
-            familyMembers
+          const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+            event,
+            familyMembers,
+            remoteCalendarColors
           );
           return (
             <button
@@ -261,9 +263,10 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
                     event,
                     pixelsPerHour
                   );
-                  const { style: colorStyle, borderColor } = getEventColorStyle(
-                    normalizeCalendarIds(event.calendar_id),
-                    familyMembers
+                  const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+                    event,
+                    familyMembers,
+                    remoteCalendarColors
                   );
                   return (
                     <button

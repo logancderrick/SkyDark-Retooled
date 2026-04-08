@@ -1,7 +1,41 @@
+import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
 
 const DEFAULT_EVENT_COLOR = "#C8E6F5";
 const DEFAULT_BORDER_COLOR = "#3B9BBF";
+
+/** Default palette when no per-calendar color is saved (stable by entity id). */
+export const REMOTE_CALENDAR_DEFAULT_COLORS = [
+  "#C8E6F5",
+  "#FFD4D4",
+  "#C8F5E8",
+  "#FFF4D4",
+  "#E8D4F5",
+  "#FFE4C8",
+  "#D4E8FF",
+  "#E0F0D4",
+] as const;
+
+function hashEntityIdToPaletteIndex(entityId: string): number {
+  let h = 0;
+  for (let i = 0; i < entityId.length; i++) {
+    h = (h << 5) - h + entityId.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h) % REMOTE_CALENDAR_DEFAULT_COLORS.length;
+}
+
+/** Resolved hex for a remote calendar (saved color or palette fallback). */
+export function colorForRemoteCalendarEntity(
+  entityId: string,
+  remoteCalendarColors?: Record<string, string>
+): string {
+  const raw = remoteCalendarColors?.[entityId]?.trim();
+  if (raw && /^#[0-9A-Fa-f]{6}$/i.test(raw)) {
+    return raw;
+  }
+  return REMOTE_CALENDAR_DEFAULT_COLORS[hashEntityIdToPaletteIndex(entityId)];
+}
 
 /** Normalize calendar_id from legacy string or array to string[]. */
 export function normalizeCalendarIds(
@@ -75,6 +109,26 @@ export function getEventColorStyle(
     },
     borderColor: colors[0],
   };
+}
+
+/**
+ * Event styling: remote HA calendars use optional per-entity colors; family events use profile colors.
+ */
+export function getEventColorStyleForDisplay(
+  event: CalendarEvent,
+  familyMembers: FamilyMember[],
+  remoteCalendarColors?: Record<string, string>
+): EventColorStyleResult {
+  const src = event.external_source;
+  if (src) {
+    const hex = colorForRemoteCalendarEntity(src, remoteCalendarColors);
+    return {
+      style: { backgroundColor: hex },
+      borderColor: hex,
+    };
+  }
+  const profileIds = normalizeCalendarIds(event.calendar_id);
+  return getEventColorStyle(profileIds, familyMembers);
 }
 
 export { DEFAULT_EVENT_COLOR, DEFAULT_BORDER_COLOR };

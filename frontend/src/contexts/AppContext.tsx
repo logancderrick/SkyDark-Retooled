@@ -104,6 +104,8 @@ export interface AppSettings {
   remoteCalendarEntities?: string[];
   /** Per-entity visibility for remote calendar events (false = hidden). */
   remoteCalendarVisibility?: Record<string, boolean>;
+  /** Per remote calendar entity_id -> #RRGGBB for event chips and toggles. */
+  remoteCalendarColors?: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -193,6 +195,12 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
     (typeof merged.remoteCalendarVisibility !== "object" || merged.remoteCalendarVisibility === null)
   ) {
     merged.remoteCalendarVisibility = {};
+  }
+  if (
+    merged.remoteCalendarColors !== undefined &&
+    (typeof merged.remoteCalendarColors !== "object" || merged.remoteCalendarColors === null)
+  ) {
+    merged.remoteCalendarColors = {};
   }
   return merged;
 }
