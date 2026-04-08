@@ -2,6 +2,7 @@
  * Typed wrappers for SkyDark WebSocket API (skydark_calendar/* commands).
  */
 
+import { addDays, format, startOfDay } from "date-fns";
 import { callService } from "home-assistant-js-websocket";
 import type { Connection } from "home-assistant-js-websocket";
 import type { CalendarEvent } from "../types/calendar";
@@ -271,6 +272,72 @@ export async function serviceAddEvent(
   }
 ): Promise<unknown> {
   return callService(conn, DOMAIN, "add_event", data);
+}
+
+/**
+ * Mirror a new event onto another HA calendar (e.g. Google) via calendar.create_event.
+ * Skips silently if the entity id is missing or invalid.
+ */
+export async function pushEventToHaCalendar(
+  conn: Connection,
+  entityId: string,
+  data: {
+    title: string;
+    start_time: string;
+    end_time?: string;
+    all_day?: boolean;
+    description?: string;
+    location?: string;
+  }
+): Promise<void> {
+  const id = entityId.trim();
+  if (!id.startsWith("calendar.")) return;
+
+  const summary = data.title;
+  const description = data.description ?? "";
+  const location = data.location ?? "";
+
+  if (data.all_day) {
+    const startLocal = startOfDay(new Date(data.start_time));
+    const lastInclusive = data.end_time
+      ? startOfDay(new Date(data.end_time))
+      : startLocal;
+    const last = lastInclusive < startLocal ? startLocal : lastInclusive;
+    const endExclusive = addDays(last, 1);
+    await callService(
+      conn,
+      "calendar",
+      "create_event",
+      {
+        summary,
+        description,
+        location,
+        all_day: true,
+        start_date: format(startLocal, "yyyy-MM-dd"),
+        end_date: format(endExclusive, "yyyy-MM-dd"),
+      },
+      { entity_id: id }
+    );
+    return;
+  }
+
+  const start = new Date(data.start_time);
+  const end = data.end_time
+    ? new Date(data.end_time)
+    : new Date(start.getTime() + 60 * 60 * 1000);
+  await callService(
+    conn,
+    "calendar",
+    "create_event",
+    {
+      summary,
+      description,
+      location,
+      start_date_time: start.toISOString(),
+      end_date_time: end.toISOString(),
+    },
+    { entity_id: id }
+  );
 }
 
 export async function serviceAddTask(

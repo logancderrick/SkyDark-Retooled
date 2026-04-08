@@ -106,6 +106,13 @@ export interface AppSettings {
   remoteCalendarVisibility?: Record<string, boolean>;
   /** Per remote calendar entity_id -> #RRGGBB for event chips and toggles. */
   remoteCalendarColors?: Record<string, string>;
+  /** When set, new events default to this family member; otherwise "Family" profile or first member. */
+  defaultFamilyCalendarMemberId?: string;
+  /**
+   * Optional HA calendar entity_id. After each new SkyDark event, `calendar.create_event` is called
+   * so the event appears on that calendar (Google / iCal sync, etc.).
+   */
+  pushEventsToCalendarEntityId?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -201,6 +208,18 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
     (typeof merged.remoteCalendarColors !== "object" || merged.remoteCalendarColors === null)
   ) {
     merged.remoteCalendarColors = {};
+  }
+  if (
+    merged.defaultFamilyCalendarMemberId !== undefined &&
+    typeof merged.defaultFamilyCalendarMemberId !== "string"
+  ) {
+    merged.defaultFamilyCalendarMemberId = undefined;
+  }
+  if (
+    merged.pushEventsToCalendarEntityId !== undefined &&
+    typeof merged.pushEventsToCalendarEntityId !== "string"
+  ) {
+    merged.pushEventsToCalendarEntityId = undefined;
   }
   return merged;
 }

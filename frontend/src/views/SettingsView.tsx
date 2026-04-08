@@ -387,6 +387,59 @@ export default function SettingsView() {
           <>
             <h2 className="text-xl font-semibold text-skydark-text mb-6">Calendar</h2>
 
+            <SettingsSection title="Family calendar" icon={<CalendarSettingsIcon className="w-5 h-5 text-skydark-text-secondary" />}>
+              <p className="text-sm text-skydark-text-secondary mb-3">
+                New events default to a family profile named <span className="font-medium text-skydark-text">Family</span> when it
+                exists; otherwise the first profile. You can pin a specific profile or push new events to another Home Assistant
+                calendar (for Google / iCal sync).
+              </p>
+              <label className="block text-sm font-medium text-skydark-text mb-1.5">Default calendar for new events</label>
+              <select
+                value={
+                  settings.defaultFamilyCalendarMemberId &&
+                  members.some((m) => m.id === settings.defaultFamilyCalendarMemberId)
+                    ? settings.defaultFamilyCalendarMemberId
+                    : "__auto__"
+                }
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSettings({
+                    defaultFamilyCalendarMemberId: v === "__auto__" ? undefined : v,
+                  });
+                }}
+                className="input-skydark w-full max-w-lg"
+                aria-label="Default calendar for new events"
+              >
+                <option value="__auto__">Auto (profile named Family, or first member)</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+              <label className="block text-sm font-medium text-skydark-text mb-1.5 mt-6">
+                Push new events to Home Assistant calendar (optional)
+              </label>
+              <input
+                type="text"
+                className="input-skydark w-full max-w-lg font-mono text-sm"
+                placeholder="calendar.google_com_family"
+                value={settings.pushEventsToCalendarEntityId ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSettings({ pushEventsToCalendarEntityId: v ? v : undefined });
+                }}
+                spellCheck={false}
+                aria-label="Home Assistant calendar entity to push new events to"
+              />
+              <p className="text-xs text-skydark-text-secondary mt-2 max-w-lg">
+                After SkyDark saves a new event, the panel calls Home Assistant&apos;s{" "}
+                <span className="font-mono">calendar.create_event</span> on this entity so the event appears in that calendar and
+                can sync via Google, Apple, etc. Use a calendar you can write to. If you also merge that same calendar as a remote
+                source, events may show twice until you hide one source.
+              </p>
+            </SettingsSection>
+
             <SettingsSection title="Remote calendars" icon={<CalendarSettingsIcon className="w-5 h-5 text-skydark-text-secondary" />}>
               <p className="text-sm text-skydark-text-secondary mb-3">
                 Add Home Assistant calendar entity IDs (one per line), for example from the Remote Calendar integration.

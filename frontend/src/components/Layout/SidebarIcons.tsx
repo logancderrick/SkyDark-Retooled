@@ -85,6 +85,16 @@ export function PhotosIcon({ className }: IconProps) {
   );
 }
 
+/** Video / security camera */
+export function CameraIcon({ className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M14.5 4h-5L7 7H4a2 2 0 00-2 2v6a2 2 0 002 2h3l2.5 3h5a2 2 0 002-2V6a2 2 0 00-2-2z" />
+      <circle cx="11" cy="12" r="2.5" />
+    </svg>
+  );
+}
+
 export function SettingsIcon({ className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} className={className}>

@@ -5,6 +5,7 @@ import {
   CheckIcon,
   StarIcon,
   PhotosIcon,
+  CameraIcon,
   SettingsIcon,
 } from "./SidebarIcons";
 import skydarkLogo from "../../assets/skydark-logo.png";
@@ -15,6 +16,7 @@ export const navItems = [
   { path: "/tasks", label: "Chores", Icon: CheckIcon },
   { path: "/rewards", label: "Rewards", Icon: StarIcon },
   { path: "/photos", label: "Photos", Icon: PhotosIcon },
+  { path: "/cameras", label: "Cameras", Icon: CameraIcon },
   { path: "/settings", label: "Settings", Icon: SettingsIcon },
 ];
 

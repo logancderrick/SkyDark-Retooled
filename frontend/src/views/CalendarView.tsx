@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfWeek } from "date-fns";
 import MonthView from "../components/Calendar/MonthView";
 import WeekView, { type WeekViewRef } from "../components/Calendar/WeekView";
@@ -10,7 +10,8 @@ import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
 import { usePinGate } from "../hooks/usePinGate";
-import { serviceAddEvent } from "../lib/skyDarkApi";
+import { getDefaultFamilyCalendarMemberId } from "../lib/calendarDefaults";
+import { pushEventToHaCalendar, serviceAddEvent } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
 
 const FALLBACK_EVENTS: CalendarEvent[] = [];
@@ -27,6 +28,10 @@ export default function CalendarView() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [defaultEventStartDate, setDefaultEventStartDate] = useState<Date | null>(null);
   const { familyMembers, settings } = useAppContext();
+  const defaultCalendarMemberId = useMemo(
+    () => getDefaultFamilyCalendarMemberId(familyMembers, settings.defaultFamilyCalendarMemberId),
+    [familyMembers, settings.defaultFamilyCalendarMemberId]
+  );
   const { runIfUnlocked, pinPromptProps } = usePinGate();
   const weekViewRef = useRef<WeekViewRef>(null);
   const dayViewRef = useRef<DayViewRef>(null);
@@ -84,6 +89,21 @@ export default function CalendarView() {
             location: data.location,
           });
           await skydark?.refetchEvents();
+          const pushId = settings.pushEventsToCalendarEntityId?.trim();
+          if (pushId?.startsWith("calendar.")) {
+            try {
+              await pushEventToHaCalendar(conn, pushId, {
+                title,
+                start_time: startTime,
+                end_time: data.end_time,
+                all_day: data.all_day ?? false,
+                description: data.description,
+                location: data.location,
+              });
+            } catch (pushErr) {
+              console.error("[SkyDark] Failed to push event to HA calendar:", pushErr);
+            }
+          }
         } catch (err) {
           console.error("[SkyDark] Failed to add event:", err);
           // fallback: optimistic local add when service fails
@@ -302,6 +322,7 @@ export default function CalendarView() {
         event={selectedEvent}
         defaultStartDate={defaultEventStartDate}
         familyMembers={familyMembers}
+        defaultCalendarMemberId={defaultCalendarMemberId}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
       />
