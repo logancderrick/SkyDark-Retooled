@@ -107,6 +107,14 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 
 
 # All Skydark services; unregistered on unload.
+def _index_html_mtime_ns(www_path: Path) -> str:
+    """Stable value for cache-busting the panel iframe URL after www updates."""
+    try:
+        return str((www_path / "index.html").stat().st_mtime_ns)
+    except OSError:
+        return "0"
+
+
 _SERVICES = (
     "add_event",
     "add_task",
@@ -135,6 +143,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         www_path = Path(__path__[0]) / "www"
         www_exists = await hass.async_add_executor_job(www_path.exists)
+        panel_index_url = f"{PANEL_URL}/index.html"
         if www_exists:
             hass.http.register_view(SkyDarkRootView())
             hass.http.register_view(SkyDarkRootSlashView())
@@ -143,6 +152,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 [StaticPathConfig(PANEL_URL, str(www_path), cache_headers=False)]
             )
             _LOGGER.debug("Registered static path %s -> %s", PANEL_URL, www_path)
+            cache_bust = await hass.async_add_executor_job(_index_html_mtime_ns, www_path)
+            panel_index_url = f"{PANEL_URL}/index.html?cb={cache_bust}"
 
         async_remove_panel(hass, "skydark")
         async_register_built_in_panel(
@@ -151,7 +162,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sidebar_title=PANEL_TITLE,
             sidebar_icon=PANEL_ICON,
             frontend_url_path="skydark",
-            config={"url": f"{PANEL_URL}/index.html"},
+            config={"url": panel_index_url},
             require_admin=False,
         )
 
