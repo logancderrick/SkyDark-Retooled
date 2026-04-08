@@ -1,0 +1,55 @@
+import { useAppContext } from "../../contexts/AppContext";
+import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
+
+function shortLabel(entityId: string): string {
+  const last = entityId.includes(".") ? entityId.split(".").pop() : entityId;
+  return (last ?? entityId).replace(/_/g, " ");
+}
+
+export default function CalendarRemoteToggles() {
+  const { settings, setSettings } = useAppContext();
+  const skydark = useSkydarkDataContext();
+  const entities = settings.remoteCalendarEntities ?? [];
+  const vis = settings.remoteCalendarVisibility ?? {};
+  const hasConnection = !!skydark?.data?.connection;
+
+  if (entities.length === 0) {
+    return null;
+  }
+
+  const toggleEntity = (entityId: string) => {
+    const isVisible = vis[entityId] !== false;
+    setSettings({
+      remoteCalendarVisibility: {
+        ...vis,
+        [entityId]: !isVisible,
+      },
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 justify-end w-full">
+      {entities.map((eid) => {
+        const on = vis[eid] !== false;
+        return (
+          <button
+            key={eid}
+            type="button"
+            onClick={() => toggleEntity(eid)}
+            disabled={!hasConnection}
+            title={eid}
+            className={`px-3 py-2 rounded-xl text-sm font-medium min-h-0 min-w-0 max-w-[11rem] truncate transition-colors ${
+              on
+                ? "bg-skydark-accent-bg text-skydark-accent border border-skydark-accent/30"
+                : "bg-gray-100 text-skydark-text-secondary border border-gray-200 opacity-80"
+            } ${!hasConnection ? "opacity-50 cursor-not-allowed" : ""}`}
+            aria-pressed={on}
+            aria-label={`${on ? "Hide" : "Show"} events from ${eid}`}
+          >
+            {shortLabel(eid)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

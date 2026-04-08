@@ -9,6 +9,7 @@ export interface CalendarEvent {
   calendar_id?: string[];
   recurrence_rule?: string;
   external_id?: string;
+  /** Home Assistant calendar entity_id for remote events (e.g. calendar.google_work). */
   external_source?: string;
 }
 

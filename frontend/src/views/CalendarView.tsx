@@ -4,8 +4,7 @@ import MonthView from "../components/Calendar/MonthView";
 import WeekView, { type WeekViewRef } from "../components/Calendar/WeekView";
 import DayView, { type DayViewRef } from "../components/Calendar/DayView";
 import EventModal from "../components/Calendar/EventModal";
-import FilterDropdown from "../components/Calendar/FilterDropdown";
-import { normalizeCalendarIds } from "../components/Calendar/EventColorPattern";
+import CalendarRemoteToggles from "../components/Calendar/CalendarRemoteToggles";
 import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
@@ -27,10 +26,7 @@ export default function CalendarView() {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [defaultEventStartDate, setDefaultEventStartDate] = useState<Date | null>(null);
-  const [tasksProgress, setTasksProgress] = useState(true);
-  const [eventsSelectAll, setEventsSelectAll] = useState(true);
-  const [memberVisibility, setMemberVisibility] = useState<Record<string, boolean>>({});
-  const { familyMembers } = useAppContext();
+  const { familyMembers, settings } = useAppContext();
   const { runIfUnlocked, pinPromptProps } = usePinGate();
   const weekViewRef = useRef<WeekViewRef>(null);
   const dayViewRef = useRef<DayViewRef>(null);
@@ -56,10 +52,10 @@ export default function CalendarView() {
   }, [viewMode]);
 
   const filteredEvents = events.filter((e) => {
-    const ids = normalizeCalendarIds(e.calendar_id);
-    if (ids.length === 0) return true;
-    // Show event if at least one selected (visible) member is assigned to the event.
-    return ids.some((id) => memberVisibility[id] !== false);
+    if (e.external_source) {
+      return settings.remoteCalendarVisibility?.[e.external_source] !== false;
+    }
+    return true;
   });
 
   const handleSaveEvent = (data: Partial<CalendarEvent> & { id?: string }) => {
@@ -191,63 +187,55 @@ export default function CalendarView() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      <div className="flex flex-shrink-0 items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-skydark-text">
-          {viewMode === "month" && format(currentDate, "MMMM yyyy")}
-          {viewMode === "week" && `Week of ${format(currentDate, "MMM d")}`}
-          {viewMode === "day" && format(currentDate, "EEEE, MMM d")}
-        </h2>
-        <div className="flex items-center gap-2">
-          <select
-            value={viewMode}
-            onChange={(e) => {
-              const mode = e.target.value as "month" | "week" | "day";
-              setViewMode(mode);
-              const now = new Date();
-              if (mode === "week") setCurrentDate(startOfWeek(now));
-              else if (mode === "day") setCurrentDate(now);
-            }}
-            className="input-skydark"
-          >
-            <option value="month">Month</option>
-            <option value="week">Week</option>
-            <option value="day">Day</option>
-          </select>
-          <FilterDropdown
-            familyMembers={familyMembers}
-            tasksProgress={tasksProgress}
-            onTasksProgressChange={setTasksProgress}
-            eventsSelectAll={eventsSelectAll}
-            onEventsSelectAllChange={setEventsSelectAll}
-            memberVisibility={memberVisibility}
-            onMemberVisibilityChange={(id, visible) =>
-              setMemberVisibility((prev) => ({ ...prev, [id]: visible }))
-            }
-          />
-          <button
-            type="button"
-            onClick={goPrev}
-            className="p-2 rounded-xl hover:bg-gray-100 min-h-0 min-w-0"
-            aria-label="Previous"
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={goToday}
-            className="px-3 py-2.5 rounded-xl bg-gray-100 text-skydark-text font-medium text-sm min-h-0 min-w-0"
-          >
-            Today
-          </button>
-          <button
-            type="button"
-            onClick={goNext}
-            className="p-2 rounded-xl hover:bg-gray-100 min-h-0 min-w-0"
-            aria-label="Next"
-          >
-            →
-          </button>
+      <div className="flex flex-shrink-0 flex-col gap-3 mb-6">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="text-lg font-semibold text-skydark-text">
+            {viewMode === "month" && format(currentDate, "MMMM yyyy")}
+            {viewMode === "week" && `Week of ${format(currentDate, "MMM d")}`}
+            {viewMode === "day" && format(currentDate, "EEEE, MMM d")}
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <select
+              value={viewMode}
+              onChange={(e) => {
+                const mode = e.target.value as "month" | "week" | "day";
+                setViewMode(mode);
+                const now = new Date();
+                if (mode === "week") setCurrentDate(startOfWeek(now));
+                else if (mode === "day") setCurrentDate(now);
+              }}
+              className="input-skydark"
+            >
+              <option value="month">Month</option>
+              <option value="week">Week</option>
+              <option value="day">Day</option>
+            </select>
+            <button
+              type="button"
+              onClick={goPrev}
+              className="p-2 rounded-xl hover:bg-gray-100 min-h-0 min-w-0"
+              aria-label="Previous"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              onClick={goToday}
+              className="px-3 py-2.5 rounded-xl bg-gray-100 text-skydark-text font-medium text-sm min-h-0 min-w-0"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              className="p-2 rounded-xl hover:bg-gray-100 min-h-0 min-w-0"
+              aria-label="Next"
+            >
+              →
+            </button>
+          </div>
         </div>
+        <CalendarRemoteToggles />
       </div>
       {viewMode === "month" && (
         <MonthView

@@ -114,6 +114,7 @@ export default function EventModal({
   };
 
   const isView = mode === "view";
+  const isRemoteEvent = !!event?.external_source;
   const assignedMembers = selectedProfileIds
     .map((id) => familyMembers.find((m) => m.id === id))
     .filter(Boolean) as FamilyMember[];
@@ -126,7 +127,7 @@ export default function EventModal({
       title={isView ? (event?.title ?? "Event") : event ? "Edit Event" : "Add Event"}
       variant="slideRight"
       rightAction={
-        isView ? (
+        isView && !isRemoteEvent ? (
           <button
             type="button"
             onClick={() => setMode("edit")}
@@ -157,7 +158,13 @@ export default function EventModal({
               <p className="text-skydark-text">{location}</p>
             </div>
           )}
-          {assignedMembers.length > 0 && (
+          {event?.external_source && (
+            <div>
+              <p className="text-sm text-skydark-text-secondary mb-0.5">Home Assistant calendar</p>
+              <p className="text-skydark-text text-sm break-all">{event.external_source}</p>
+            </div>
+          )}
+          {!isRemoteEvent && assignedMembers.length > 0 && (
             <div>
               <p className="text-sm text-skydark-text-secondary mb-0.5">Assigned to</p>
               <div className="flex flex-wrap gap-2">
@@ -314,7 +321,7 @@ export default function EventModal({
         </div>
 
         <div className="pt-6 pb-2 shrink-0 space-y-2">
-          {event && onDelete && (
+          {event && onDelete && !isRemoteEvent && (
             <button
               type="button"
               onClick={() => {

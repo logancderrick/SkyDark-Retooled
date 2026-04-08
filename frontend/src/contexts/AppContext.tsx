@@ -100,6 +100,10 @@ export interface AppSettings {
   showTopWeeklyForecast: boolean;
   /** Meal prep checked-state map (shopping item id -> checked). */
   shoppingChecked: Record<string, boolean>;
+  /** Home Assistant calendar entity IDs to merge into the calendar (e.g. calendar.google_work). */
+  remoteCalendarEntities?: string[];
+  /** Per-entity visibility for remote calendar events (false = hidden). */
+  remoteCalendarVisibility?: Record<string, boolean>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -180,6 +184,15 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
   }
   if (!merged.shoppingChecked || typeof merged.shoppingChecked !== "object") {
     merged.shoppingChecked = {};
+  }
+  if (merged.remoteCalendarEntities !== undefined && !Array.isArray(merged.remoteCalendarEntities)) {
+    merged.remoteCalendarEntities = [];
+  }
+  if (
+    merged.remoteCalendarVisibility !== undefined &&
+    (typeof merged.remoteCalendarVisibility !== "object" || merged.remoteCalendarVisibility === null)
+  ) {
+    merged.remoteCalendarVisibility = {};
   }
   return merged;
 }

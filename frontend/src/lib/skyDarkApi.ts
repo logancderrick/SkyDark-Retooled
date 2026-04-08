@@ -20,6 +20,8 @@ export interface SkydarkEvent {
   color?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+  external_id?: string | null;
+  external_source?: string | null;
 }
 
 export interface SkydarkTask {
@@ -246,8 +248,8 @@ export function eventToCalendarEvent(e: SkydarkEvent): CalendarEvent {
           ? [String(legacyCalendarId)]
           : undefined,
     recurrence_rule: undefined,
-    external_id: undefined,
-    external_source: undefined,
+    external_id: e.external_id ?? undefined,
+    external_source: e.external_source ?? undefined,
   };
 }
 

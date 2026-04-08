@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import SettingsSidebar, { type SettingsSectionId } from "../components/Settings/SettingsSidebar";
 import SettingsSection, { SettingRow } from "../components/Settings/SettingsSection";
@@ -19,6 +19,7 @@ import {
 import { useViewportSimulator } from "../contexts/ViewportSimulatorContext";
 import { VIEWPORT_PRESETS } from "../lib/viewportPresets";
 import { useWeatherData } from "../hooks/useWeeklyWeather";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 
 export default function SettingsView() {
   const {
@@ -35,7 +36,14 @@ export default function SettingsView() {
   const navigate = useNavigate();
   const viewportSimulator = useViewportSimulator();
   const weather = useWeatherData();
+  const skydark = useSkydarkDataContext();
   const pendingPinActionRef = useRef<(() => void) | null>(null);
+  const [remoteDraft, setRemoteDraft] = useState(() =>
+    (settings.remoteCalendarEntities ?? []).join("\n"),
+  );
+  useEffect(() => {
+    setRemoteDraft((settings.remoteCalendarEntities ?? []).join("\n"));
+  }, [settings.remoteCalendarEntities]);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
   const [showDisableLockPrompt, setShowDisableLockPrompt] = useState(false);
   const [showSetPin, setShowSetPin] = useState(false);
@@ -346,8 +354,6 @@ export default function SettingsView() {
                           ["completeChores", "Complete chores"],
                           ["addRewards", "Add rewards"],
                           ["claimRewards", "Claim rewards"],
-                          ["meals", "Meals (all)"],
-                          ["mealprep", "Meal prep (check/uncheck ingredients)"],
                           ["importPhotos", "Import photos"],
                           ["changeSettings", "Change any settings"],
                         ] as const
@@ -380,26 +386,28 @@ export default function SettingsView() {
           <>
             <h2 className="text-xl font-semibold text-skydark-text mb-6">Calendar</h2>
 
-            <SettingsSection title="Calendar sync" icon={<CalendarSettingsIcon className="w-5 h-5 text-skydark-text-secondary" />}>
+            <SettingsSection title="Remote calendars" icon={<CalendarSettingsIcon className="w-5 h-5 text-skydark-text-secondary" />}>
               <p className="text-sm text-skydark-text-secondary mb-3">
-                Connect Google or Microsoft Calendar in a future update for two-way sync.
+                Add Home Assistant calendar entity IDs (one per line), for example from the Remote Calendar integration.
+                Events from these calendars are merged into SkyDark. Use the buttons on the calendar view to show or hide each source.
               </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="btn-secondary disabled:opacity-60"
-                  disabled
-                >
-                  Connect Google Calendar (coming soon)
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary disabled:opacity-60"
-                  disabled
-                >
-                  Connect Microsoft Calendar (coming soon)
-                </button>
-              </div>
+              <label className="block text-sm font-medium text-skydark-text mb-1.5">Calendar entities</label>
+              <textarea
+                value={remoteDraft}
+                onChange={(e) => setRemoteDraft(e.target.value)}
+                onBlur={() => {
+                  const ids = remoteDraft
+                    .split(/[\n,]+/)
+                    .map((s) => s.trim())
+                    .filter((s) => s.startsWith("calendar."));
+                  setSettings({ remoteCalendarEntities: ids });
+                  void skydark?.refetchEvents();
+                }}
+                rows={5}
+                className="input-skydark w-full max-w-lg font-mono text-sm"
+                placeholder={"calendar.google_personal\ncalendar.family"}
+                spellCheck={false}
+              />
             </SettingsSection>
           </>
         )}

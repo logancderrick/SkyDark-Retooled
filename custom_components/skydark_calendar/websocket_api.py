@@ -14,6 +14,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+from .ha_remote_calendar import merge_remote_calendar_events
 from .photo_media import (
     delete_managed_media_file,
     ensure_calendar_media_dir,
@@ -76,6 +77,10 @@ async def websocket_get_events(
     try:
         events = await hass.async_add_executor_job(
             partial(db.get_events, start=start, end=end)
+        )
+        settings_map = await hass.async_add_executor_job(db.get_settings)
+        events = await merge_remote_calendar_events(
+            hass, events, settings_map, start=start, end=end
         )
         connection.send_result(msg["id"], {"events": events})
     except Exception as e:
