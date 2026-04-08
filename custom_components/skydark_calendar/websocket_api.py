@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
 from functools import partial
 from typing import Any
 
@@ -14,7 +13,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
-from .ha_remote_calendar import merge_remote_calendar_events
+from .ha_remote_calendar import merge_remote_calendar_events, parse_skydark_ws_event_range
 from .photo_media import (
     delete_managed_media_file,
     ensure_calendar_media_dir,
@@ -61,17 +60,27 @@ async def websocket_get_events(
 
     start = None
     end = None
-    if msg.get("start_date"):
+    if msg.get("start_date") and msg.get("end_date"):
         try:
-            start = datetime.fromisoformat(msg["start_date"].replace("Z", "+00:00"))
-        except ValueError:
-            connection.send_error(msg["id"], "invalid_format", "Invalid start_date")
+            start, end = parse_skydark_ws_event_range(
+                str(msg["start_date"]),
+                str(msg["end_date"]),
+            )
+        except ValueError as err:
+            connection.send_error(
+                msg["id"], "invalid_format", f"Invalid start_date/end_date: {err}"
+            )
             return
-    if msg.get("end_date"):
+    elif msg.get("start_date"):
         try:
-            end = datetime.fromisoformat(msg["end_date"].replace("Z", "+00:00"))
-        except ValueError:
-            connection.send_error(msg["id"], "invalid_format", "Invalid end_date")
+            start, end = parse_skydark_ws_event_range(
+                str(msg["start_date"]),
+                str(msg["start_date"]),
+            )
+        except ValueError as err:
+            connection.send_error(
+                msg["id"], "invalid_format", f"Invalid start_date: {err}"
+            )
             return
 
     try:
