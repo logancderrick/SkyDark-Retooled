@@ -9,7 +9,8 @@ export interface PinPromptProps {
 }
 
 export interface UsePinGateResult {
-  runIfUnlocked: (feature: LockedFeatureKey, action: () => void) => void;
+  /** Runs the action when the feature is not locked; supports async actions (e.g. API calls). */
+  runIfUnlocked: (feature: LockedFeatureKey, action: () => void | Promise<void>) => void;
   pinPromptProps: PinPromptProps;
 }
 
@@ -19,12 +20,17 @@ export function usePinGate(): UsePinGateResult {
   const pendingActionRef = useRef<(() => void) | null>(null);
 
   const runIfUnlocked = useCallback(
-    (feature: LockedFeatureKey, action: () => void) => {
+    (feature: LockedFeatureKey, action: () => void | Promise<void>) => {
+      const run = () => {
+        void Promise.resolve(action()).catch(() => {
+          // Async actions (e.g. create list) should not leave the UI stuck
+        });
+      };
       if (isFeatureLocked(feature)) {
-        pendingActionRef.current = action;
+        pendingActionRef.current = run;
         setShowPinPrompt(true);
       } else {
-        action();
+        run();
       }
     },
     [isFeatureLocked]
@@ -39,7 +45,7 @@ export function usePinGate(): UsePinGateResult {
       try {
         action?.();
       } catch {
-        // Prevent a failed action from leaving the PIN prompt stuck
+        // Prevent a failed sync action from leaving the PIN prompt stuck
       }
       return true;
     },

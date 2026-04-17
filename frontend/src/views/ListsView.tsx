@@ -51,6 +51,8 @@ export default function ListsView() {
   const [localDeletedItems, setLocalDeletedItems] = useState<Set<string>>(new Set());
   const [localDeletedLists, setLocalDeletedLists] = useState<Set<string>>(new Set());
   const [localLists, setLocalLists] = useState<ListData[]>(FALLBACK_LISTS);
+  const [createListSaving, setCreateListSaving] = useState(false);
+  const [createListError, setCreateListError] = useState<string | null>(null);
 
   const serverLists = useMemo(() => {
     if (!skydark?.data?.connection || !skydark.data.lists) return [];
@@ -80,7 +82,7 @@ export default function ListsView() {
     if (conn) {
       try {
         await serviceAddListItem(conn, { list_id: listId, content });
-        await skydark?.refetch();
+        await skydark?.refetchLists();
       } catch {
         // leave as-is
       }
@@ -139,25 +141,36 @@ export default function ListsView() {
   };
 
   const doCreateList = async (name: string) => {
+    setCreateListError(null);
+    setCreateListSaving(true);
     const conn = skydark?.data?.connection;
-    if (conn) {
-      try {
+    try {
+      if (conn) {
         await serviceCreateList(conn, {
           name,
           color: newListColor,
           owner_id: newListOwnerId || undefined,
         });
-        await skydark?.refetch();
-      } catch {
-        // leave as-is
+        setNewListName("");
+        setNewListColor(SKYDARK_COLORS[0] ?? "#C8E6F5");
+        setNewListOwnerId("");
+        setAddListOpen(false);
+        await skydark?.refetchLists?.();
+      } else {
+        setLocalLists((prev) => [
+          ...prev,
+          { id: `l${Date.now()}`, name, color: newListColor, owner_id: newListOwnerId || null, items: [] },
+        ]);
+        setNewListName("");
+        setNewListColor(SKYDARK_COLORS[0] ?? "#C8E6F5");
+        setNewListOwnerId("");
+        setAddListOpen(false);
       }
-    } else {
-      setLocalLists((prev) => [...prev, { id: `l${Date.now()}`, name, color: newListColor, owner_id: newListOwnerId || null, items: [] }]);
+    } catch (e) {
+      setCreateListError(e instanceof Error ? e.message : "Could not create list. Check Home Assistant logs.");
+    } finally {
+      setCreateListSaving(false);
     }
-    setNewListName("");
-    setNewListColor(SKYDARK_COLORS[0] ?? "#C8E6F5");
-    setNewListOwnerId("");
-    setAddListOpen(false);
   };
 
   const filteredLists = filterOwnerId
@@ -210,8 +223,20 @@ export default function ListsView() {
         ))}
       </div>
 
-      <Modal open={addListOpen} onClose={() => setAddListOpen(false)} title="Create list">
+      <Modal
+        open={addListOpen}
+        onClose={() => {
+          setAddListOpen(false);
+          setCreateListError(null);
+        }}
+        title="Create list"
+      >
         <div className="space-y-4">
+          {createListError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2" role="alert">
+              {createListError}
+            </p>
+          )}
           <div>
             <label className="block text-sm font-medium text-skydark-text mb-1">List name</label>
             <input
@@ -220,6 +245,7 @@ export default function ListsView() {
               onChange={(e) => setNewListName(e.target.value)}
               className="input-skydark"
               placeholder="e.g. Grocery"
+              disabled={createListSaving}
             />
           </div>
           <div>
@@ -230,7 +256,8 @@ export default function ListsView() {
                   key={c}
                   type="button"
                   onClick={() => setNewListColor(c)}
-                  className="w-8 h-8 rounded-full border-2"
+                  disabled={createListSaving}
+                  className="w-8 h-8 rounded-full border-2 disabled:opacity-50"
                   style={{
                     backgroundColor: c,
                     borderColor: newListColor === c ? "#2B3A4A" : "transparent",
@@ -246,6 +273,7 @@ export default function ListsView() {
               value={newListOwnerId}
               onChange={(e) => setNewListOwnerId(e.target.value)}
               className="input-skydark"
+              disabled={createListSaving}
             >
               <option value="">Everyone</option>
               {familyMembers.map((m) => (
@@ -256,16 +284,24 @@ export default function ListsView() {
             </select>
           </div>
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={() => setAddListOpen(false)} className="btn-secondary flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAddListOpen(false);
+                setCreateListError(null);
+              }}
+              disabled={createListSaving}
+              className="btn-secondary flex-1 disabled:opacity-60"
+            >
               Cancel
             </button>
             <button
               type="button"
               onClick={createList}
-              disabled={!newListName.trim()}
+              disabled={!newListName.trim() || createListSaving}
               className="btn-primary flex-1 disabled:opacity-60"
             >
-              Create
+              {createListSaving ? "Creating…" : "Create"}
             </button>
           </div>
         </div>

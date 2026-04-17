@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "../../contexts/AppContext";
 import PinPrompt from "../Common/PinPrompt";
 import { useWeatherData, getWeatherIcon } from "../../hooks/useWeeklyWeather";
+import { publicLogoUrl } from "../../lib/branding";
 
 interface HeaderProps {
   weatherEntity?: string;
@@ -57,6 +58,14 @@ export default function Header({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-wrap">
+          <img
+            src={publicLogoUrl}
+            alt=""
+            width={36}
+            height={36}
+            className="h-9 w-9 object-contain shrink-0 md:hidden"
+            aria-hidden
+          />
           <h1 className="text-lg sm:text-xl font-semibold text-skydark-text truncate">
             {familyName}
           </h1>

@@ -78,6 +78,7 @@ export function useSkydarkData(
   data: SkydarkDataState;
   refetch: () => Promise<void>;
   refetchEvents: (startDate?: string, endDate?: string) => Promise<void>;
+  refetchLists: () => Promise<void>;
 } {
   const [data, setData] = useState<SkydarkDataState>(initialState);
 
@@ -182,6 +183,23 @@ export function useSkydarkData(
     [data.connection, eventRangeDays],
   );
 
+  const refetchLists = useCallback(async () => {
+    const conn = data.connection;
+    if (!conn) return;
+    try {
+      const listsRes = await fetchLists(conn);
+      const listItems: Record<string, SkydarkListItem[]> =
+        listsRes.list_items ?? {};
+      setData((prev) => ({
+        ...prev,
+        lists: listsRes.lists ?? [],
+        listItems,
+      }));
+    } catch {
+      // keep previous lists on partial failure
+    }
+  }, [data.connection]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -205,5 +223,5 @@ export function useSkydarkData(
     };
   }, [load]);
 
-  return { data, refetch, refetchEvents };
+  return { data, refetch, refetchEvents, refetchLists };
 }

@@ -8,7 +8,7 @@ import {
   CameraIcon,
   SettingsIcon,
 } from "./SidebarIcons";
-import skydarkLogo from "../../assets/skydark-logo.png";
+import { publicLogoUrl } from "../../lib/branding";
 
 export const navItems = [
   { path: "/calendar", label: "Calendar", Icon: CalendarIcon },
@@ -28,7 +28,7 @@ export default function Sidebar() {
       aria-label="Main navigation"
     >
       <div className="mb-4 flex items-center justify-center w-12 h-12" aria-hidden>
-        <img src={skydarkLogo} alt="" className="max-w-full max-h-full object-contain" />
+        <img src={publicLogoUrl} alt="" className="max-w-full max-h-full object-contain" width={48} height={48} />
       </div>
       <nav className="flex flex-col items-center gap-1 w-full" aria-label="Main">
         {navItems.map(({ path, label, Icon }) => (
