@@ -33,7 +33,7 @@ export default function Header({
   const { settings, isLocked, unlockApp, setIsLocked } = useAppContext();
   const weather = useWeatherData();
   const currentWeather = weather.current;
-  const familyName = settings.familyName?.trim() || "My Family";
+  const familyName = settings.familyName?.trim() || "The Derricks";
 
   useEffect(() => {
     const update = () => {

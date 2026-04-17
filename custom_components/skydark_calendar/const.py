@@ -12,7 +12,14 @@ CONF_FAMILY_NAME = "family_name"
 CONF_WEATHER_ENTITY = "weather_entity"
 
 # Defaults
-DEFAULT_FAMILY_NAME = "My Family"
+DEFAULT_FAMILY_NAME = "The Derricks"
+
+DEFAULT_REMOTE_CALENDAR_ENTITIES: tuple[str, ...] = (
+    "calendar.logan_work_ahead",
+    "calendar.logan_work_cornelis",
+    "calendar.kaylee_work",
+    "calendar.family",
+)
 
 # Database
 DB_NAME = "skydark_calendar.db"

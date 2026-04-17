@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator
 
+from .const import DEFAULT_FAMILY_NAME, DEFAULT_REMOTE_CALENDAR_ENTITIES
+
 _LOGGER = logging.getLogger(__name__)
 
 # Whitelist for _column_exists to prevent SQL injection (PRAGMA table_info doesn't support params).
@@ -227,6 +229,7 @@ class SkydarkDatabase:
             if not self._column_exists(conn, "meal_recipes", "instructions"):
                 conn.execute("ALTER TABLE meal_recipes ADD COLUMN instructions TEXT")
             self._seed_default_family_members(conn)
+            self._seed_default_frontend_app_settings(conn)
 
         with self._connection() as conn:
             _init(conn)
@@ -234,7 +237,7 @@ class SkydarkDatabase:
     def _seed_default_family_members(self, conn: sqlite3.Connection) -> None:
         """Seed initial members when DB has none.
 
-        The frontend ships with default IDs ("1".."4") for first-run UX.
+        The frontend ships with default IDs ("1".."3") for first-run UX.
         Seeding matching IDs avoids foreign-key failures when events/tasks are
         created before the user customizes profiles.
         """
@@ -245,10 +248,9 @@ class SkydarkDatabase:
 
         now = datetime.now(timezone.utc).isoformat()
         defaults = [
-            ("1", "Mom", "#FFD4D4", "M", 1),
-            ("2", "Dad", "#C8E6F5", "D", 2),
-            ("3", "Harper", "#C8F5E8", "H", 3),
-            ("4", "Liam", "#FFF4D4", "L", 4),
+            ("1", "Logan", "#C8E6F5", "L", 1),
+            ("2", "Kaylee", "#FFD4D4", "K", 2),
+            ("3", "Kittrick", "#C8F5E8", "Ki", 3),
         ]
         conn.executemany(
             """
@@ -257,6 +259,34 @@ class SkydarkDatabase:
             VALUES (?, ?, ?, NULL, ?, ?, ?)
             """,
             [(id_, name, color, initial, sort_order, now) for id_, name, color, initial, sort_order in defaults],
+        )
+
+    def _seed_default_frontend_app_settings(self, conn: sqlite3.Connection) -> None:
+        """Seed shared app settings when none exist yet (first install).
+
+        Ensures remote HA calendars merge on the backend before the panel saves
+        settings for the first time.
+        """
+        key = "frontend_app_settings_v1"
+        cur = conn.execute("SELECT value FROM app_settings WHERE key = ?", (key,))
+        row = cur.fetchone()
+        if row is not None:
+            raw = (row[0] or "").strip()
+            if raw and raw != "{}":
+                try:
+                    data = json.loads(raw)
+                    if isinstance(data, dict) and data:
+                        return
+                except (TypeError, ValueError):
+                    pass
+
+        blob = {
+            "familyName": DEFAULT_FAMILY_NAME,
+            "remoteCalendarEntities": list(DEFAULT_REMOTE_CALENDAR_ENTITIES),
+        }
+        conn.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
+            (key, json.dumps(blob)),
         )
 
     # Family members

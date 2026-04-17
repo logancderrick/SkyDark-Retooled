@@ -27,10 +27,16 @@ const STORAGE_KEY_MEMBERS = "skydark_family_members";
 const STORAGE_KEY_SHOPPING_CHECKED = "skydark_shopping_checked";
 
 const DEFAULT_MEMBERS: FamilyMember[] = [
-  { id: "1", name: "Mom", color: "#FFD4D4", initial: "M" },
-  { id: "2", name: "Dad", color: "#C8E6F5", initial: "D" },
-  { id: "3", name: "Harper", color: "#C8F5E8", initial: "H" },
-  { id: "4", name: "Liam", color: "#FFF4D4", initial: "L" },
+  { id: "1", name: "Logan", color: "#C8E6F5", initial: "L" },
+  { id: "2", name: "Kaylee", color: "#FFD4D4", initial: "K" },
+  { id: "3", name: "Kittrick", color: "#C8F5E8", initial: "Ki" },
+];
+
+const DEFAULT_REMOTE_CALENDAR_ENTITIES: string[] = [
+  "calendar.logan_work_ahead",
+  "calendar.logan_work_cornelis",
+  "calendar.kaylee_work",
+  "calendar.family",
 ];
 
 export interface LockedFeatures {
@@ -106,6 +112,8 @@ export interface AppSettings {
   remoteCalendarVisibility?: Record<string, boolean>;
   /** Per remote calendar entity_id -> #RRGGBB for event chips and toggles. */
   remoteCalendarColors?: Record<string, string>;
+  /** Optional friendly names for merged calendar entities (entity_id -> label). */
+  remoteCalendarLabels?: Record<string, string>;
   /** When set, new events default to this family member; otherwise "Family" profile or first member. */
   defaultFamilyCalendarMemberId?: string;
   /**
@@ -116,7 +124,8 @@ export interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  familyName: "My Family",
+  familyName: "The Derricks",
+  remoteCalendarEntities: [...DEFAULT_REMOTE_CALENDAR_ENTITIES],
   lockEnabled: false,
   autoRelockEnabled: false,
   autoRelockMinutes: 5,
@@ -208,6 +217,12 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
     (typeof merged.remoteCalendarColors !== "object" || merged.remoteCalendarColors === null)
   ) {
     merged.remoteCalendarColors = {};
+  }
+  if (
+    merged.remoteCalendarLabels !== undefined &&
+    (typeof merged.remoteCalendarLabels !== "object" || merged.remoteCalendarLabels === null)
+  ) {
+    merged.remoteCalendarLabels = {};
   }
   if (
     merged.defaultFamilyCalendarMemberId !== undefined &&

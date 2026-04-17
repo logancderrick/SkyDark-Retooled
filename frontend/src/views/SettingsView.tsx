@@ -170,7 +170,7 @@ export default function SettingsView() {
                 <label className="block text-sm font-medium text-skydark-text mb-1.5">Family name</label>
                 <input
                   type="text"
-                  value={settings.familyName ?? "My Family"}
+                  value={settings.familyName ?? "The Derricks"}
                   onChange={(e) => setSettings({ familyName: e.target.value })}
                   className="input-skydark max-w-md"
                 />
@@ -389,11 +389,11 @@ export default function SettingsView() {
 
             <SettingsSection title="Family calendar" icon={<CalendarSettingsIcon className="w-5 h-5 text-skydark-text-secondary" />}>
               <p className="text-sm text-skydark-text-secondary mb-3">
-                New events default to a family profile named <span className="font-medium text-skydark-text">Family</span> when it
-                exists; otherwise the first profile. You can pin a specific profile or push new events to another Home Assistant
-                calendar (for Google / iCal sync).
+                When you add an event from the calendar, you pick a Home Assistant <span className="font-medium text-skydark-text">calendar.*</span>{" "}
+                entity (from your merged list below). Events are created there via Home Assistant so they can sync with Google,
+                Apple, etc. The profile default here is only used when editing SkyDark events that are stored on a family profile.
               </p>
-              <label className="block text-sm font-medium text-skydark-text mb-1.5">Default calendar for new events</label>
+              <label className="block text-sm font-medium text-skydark-text mb-1.5">Default profile for SkyDark-stored events</label>
               <select
                 value={
                   settings.defaultFamilyCalendarMemberId &&
@@ -408,7 +408,7 @@ export default function SettingsView() {
                   });
                 }}
                 className="input-skydark w-full max-w-lg"
-                aria-label="Default calendar for new events"
+                aria-label="Default family profile for SkyDark-stored events"
               >
                 <option value="__auto__">Auto (profile named Family, or first member)</option>
                 {members.map((m) => (
@@ -418,7 +418,7 @@ export default function SettingsView() {
                 ))}
               </select>
               <label className="block text-sm font-medium text-skydark-text mb-1.5 mt-6">
-                Push new events to Home Assistant calendar (optional)
+                Default Home Assistant calendar for new events (optional)
               </label>
               <input
                 type="text"
@@ -433,10 +433,10 @@ export default function SettingsView() {
                 aria-label="Home Assistant calendar entity to push new events to"
               />
               <p className="text-xs text-skydark-text-secondary mt-2 max-w-lg">
-                After SkyDark saves a new event, the panel calls Home Assistant&apos;s{" "}
-                <span className="font-mono">calendar.create_event</span> on this entity so the event appears in that calendar and
-                can sync via Google, Apple, etc. Use a calendar you can write to. If you also merge that same calendar as a remote
-                source, events may show twice until you hide one source.
+                If set, the Add Event screen selects this calendar first when it appears in your merged list. The panel calls{" "}
+                <span className="font-mono">calendar.create_event</span> on the calendar you choose when saving a new event. Use a
+                calendar you can write to. If you merge the same calendar as a remote source, events may appear twice until you hide
+                one source.
               </p>
             </SettingsSection>
 
@@ -455,17 +455,22 @@ export default function SettingsView() {
                     .map((s) => s.trim())
                     .filter((s) => s.startsWith("calendar."));
                   const prevColors = settings.remoteCalendarColors ?? {};
+                  const prevLabels = settings.remoteCalendarLabels ?? {};
                   const nextColors: Record<string, string> = {};
+                  const nextLabels: Record<string, string> = {};
                   ids.forEach((id, i) => {
                     const existing = prevColors[id]?.trim();
                     nextColors[id] =
                       existing && /^#[0-9A-Fa-f]{6}$/i.test(existing)
                         ? existing
                         : REMOTE_CALENDAR_DEFAULT_COLORS[i % REMOTE_CALENDAR_DEFAULT_COLORS.length];
+                    const label = prevLabels[id]?.trim();
+                    if (label) nextLabels[id] = label;
                   });
                   setSettings({
                     remoteCalendarEntities: ids,
                     remoteCalendarColors: nextColors,
+                    remoteCalendarLabels: nextLabels,
                   });
                   void skydark?.refetchEvents();
                 }}
@@ -476,18 +481,37 @@ export default function SettingsView() {
               />
               {(settings.remoteCalendarEntities ?? []).length > 0 && (
                 <div className="mt-4 space-y-3 max-w-lg">
-                  <p className="text-sm font-medium text-skydark-text">Colors</p>
+                  <p className="text-sm font-medium text-skydark-text">Display names and colors</p>
                   <p className="text-xs text-skydark-text-secondary">
-                    Pick a color for each calendar. These match the chips on the calendar and the filter buttons.
+                    Optional friendly names appear on calendar filter chips and in the Add Event picker. Colors match event chips
+                    and toggles.
                   </p>
                   {(settings.remoteCalendarEntities ?? []).map((eid, i) => (
-                    <div key={eid} className="flex flex-wrap items-center gap-3">
+                    <div
+                      key={eid}
+                      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                    >
                       <span
-                        className="text-sm text-skydark-text-secondary font-mono truncate flex-1 min-w-[8rem]"
+                        className="text-xs text-skydark-text-secondary font-mono truncate flex-1 min-w-0 sm:max-w-[14rem]"
                         title={eid}
                       >
-                        {eid.replace(/^calendar\./, "")}
+                        {eid}
                       </span>
+                      <input
+                        type="text"
+                        className="input-skydark flex-1 min-w-[8rem] max-w-md text-sm"
+                        placeholder="Display name (optional)"
+                        value={settings.remoteCalendarLabels?.[eid] ?? ""}
+                        onChange={(e) =>
+                          setSettings({
+                            remoteCalendarLabels: {
+                              ...(settings.remoteCalendarLabels ?? {}),
+                              [eid]: e.target.value,
+                            },
+                          })
+                        }
+                        aria-label={`Display name for ${eid}`}
+                      />
                       <input
                         type="color"
                         aria-label={`Color for ${eid}`}

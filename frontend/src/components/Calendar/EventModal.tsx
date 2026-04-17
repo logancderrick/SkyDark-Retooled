@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
+import { calendarEntityLabel } from "../../lib/calendarEntityUi";
 import Modal from "../Common/Modal";
 import Toggle from "../Common/Toggle";
 import { normalizeCalendarIds } from "./EventColorPattern";
@@ -18,8 +19,11 @@ interface EventModalProps {
   event?: CalendarEvent | null;
   defaultStartDate?: Date | null;
   familyMembers: FamilyMember[];
-  /** Resolved default profile id for new events (family profile or Settings default). */
-  defaultCalendarMemberId?: string;
+  /** When adding an event, user picks one of these HA calendar entities. */
+  haCalendarEntityIds?: string[];
+  /** Preferred HA calendar when opening Add Event (e.g. Settings default). */
+  defaultHaCalendarEntityId?: string;
+  remoteCalendarLabels?: Record<string, string>;
   onSave: (data: Partial<CalendarEvent> & { id?: string }) => void;
   onDelete?: (eventId: string) => void;
 }
@@ -30,7 +34,9 @@ export default function EventModal({
   event,
   defaultStartDate,
   familyMembers,
-  defaultCalendarMemberId,
+  haCalendarEntityIds = [],
+  defaultHaCalendarEntityId,
+  remoteCalendarLabels,
   onSave,
   onDelete,
 }: EventModalProps) {
@@ -73,16 +79,18 @@ export default function EventModal({
       setStartTime(toLocalDateTimeInput(start));
       setEndTime(toLocalDateTimeInput(end));
       setAllDay(false);
-      setSelectedCalendarId(
-        defaultCalendarMemberId?.trim() || familyMembers[0]?.id || ""
-      );
+      const haIds = haCalendarEntityIds ?? [];
+      const preferredHa = defaultHaCalendarEntityId?.trim();
+      const defaultHa =
+        preferredHa && haIds.includes(preferredHa) ? preferredHa : haIds[0] ?? "";
+      setSelectedCalendarId(defaultHa);
       setDescription("");
       setLocation("");
       setRepeats(false);
       setCountdown(false);
       setReminder(false);
     }
-  }, [event, open, familyMembers, defaultStartDate, defaultCalendarMemberId]);
+  }, [event, open, familyMembers, defaultStartDate, haCalendarEntityIds, defaultHaCalendarEntityId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +110,8 @@ export default function EventModal({
 
   const isView = mode === "view";
   const isRemoteEvent = !!event?.external_source;
+  const creating = !event;
+  const editingProfileEvent = !!(event && !event.external_source);
 
   const viewCalendarMembers = event
     ? (normalizeCalendarIds(event.calendar_id)
@@ -257,30 +267,63 @@ export default function EventModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-skydark-text mb-1.5">Calendar</label>
-                {familyMembers.length === 0 ? (
-                  <p className="text-sm text-skydark-text-secondary">
-                    Add a family profile under Settings first.
-                  </p>
-                ) : (
-                  <select
-                    value={selectedCalendarId}
-                    onChange={(e) => setSelectedCalendarId(e.target.value)}
-                    className="input-skydark w-full"
-                    required
-                    aria-label="Calendar for this event"
-                  >
-                    {familyMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <p className="text-xs text-skydark-text-secondary mt-1.5">
-                  Stored in SkyDark for this profile. New events default to a profile named Family when present, or the default in
-                  Settings → Calendar.
-                </p>
+                {creating ? (
+                  <>
+                    <label className="block text-sm font-medium text-skydark-text mb-1.5">Home Assistant calendar</label>
+                    {(haCalendarEntityIds ?? []).length === 0 ? (
+                      <p className="text-sm text-amber-900 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                        Add at least one <span className="font-mono">calendar.*</span> entity under{" "}
+                        <span className="font-medium">Settings → Calendar → Remote calendars</span> so you can choose where new
+                        events are created.
+                      </p>
+                    ) : (
+                      <select
+                        value={selectedCalendarId}
+                        onChange={(e) => setSelectedCalendarId(e.target.value)}
+                        className="input-skydark w-full"
+                        required
+                        aria-label="Home Assistant calendar for this event"
+                      >
+                        {(haCalendarEntityIds ?? []).map((eid) => (
+                          <option key={eid} value={eid}>
+                            {calendarEntityLabel(eid, remoteCalendarLabels)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <p className="text-xs text-skydark-text-secondary mt-1.5">
+                      The event is written to this calendar using Home Assistant&apos;s{" "}
+                      <span className="font-mono">calendar.create_event</span> and appears in SkyDark when that calendar is merged.
+                    </p>
+                  </>
+                ) : editingProfileEvent ? (
+                  <>
+                    <label className="block text-sm font-medium text-skydark-text mb-1.5">Family profile</label>
+                    {familyMembers.length === 0 ? (
+                      <p className="text-sm text-skydark-text-secondary">
+                        Add a family profile under Settings first.
+                      </p>
+                    ) : (
+                      <select
+                        value={selectedCalendarId}
+                        onChange={(e) => setSelectedCalendarId(e.target.value)}
+                        className="input-skydark w-full"
+                        required
+                        aria-label="Family profile for this event"
+                      >
+                        {familyMembers.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <p className="text-xs text-skydark-text-secondary mt-1.5">
+                      SkyDark stores this event on the selected profile. Use Settings → Calendar for defaults and merged HA
+                      calendars.
+                    </p>
+                  </>
+                ) : null}
               </div>
 
               <div>
@@ -318,7 +361,15 @@ export default function EventModal({
                   Delete
                 </button>
               )}
-              <button type="submit" className="btn-primary w-full" disabled={familyMembers.length === 0}>
+              <button
+                type="submit"
+                className="btn-primary w-full"
+                disabled={
+                  creating
+                    ? (haCalendarEntityIds ?? []).length === 0
+                    : editingProfileEvent && familyMembers.length === 0
+                }
+              >
                 {event ? "Save" : "Add"}
               </button>
             </div>

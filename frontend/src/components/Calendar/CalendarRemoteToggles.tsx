@@ -1,11 +1,7 @@
 import { useAppContext } from "../../contexts/AppContext";
 import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
+import { calendarEntityLabel } from "../../lib/calendarEntityUi";
 import { colorForRemoteCalendarEntity } from "./EventColorPattern";
-
-function shortLabel(entityId: string): string {
-  const last = entityId.includes(".") ? entityId.split(".").pop() : entityId;
-  return (last ?? entityId).replace(/_/g, " ");
-}
 
 export default function CalendarRemoteToggles() {
   const { settings, setSettings } = useAppContext();
@@ -33,6 +29,7 @@ export default function CalendarRemoteToggles() {
       {entities.map((eid) => {
         const on = vis[eid] !== false;
         const accent = colorForRemoteCalendarEntity(eid, settings.remoteCalendarColors);
+        const label = calendarEntityLabel(eid, settings.remoteCalendarLabels);
         return (
           <button
             key={eid}
@@ -54,9 +51,9 @@ export default function CalendarRemoteToggles() {
                 : undefined
             }
             aria-pressed={on}
-            aria-label={`${on ? "Hide" : "Show"} events from ${eid}`}
+            aria-label={`${on ? "Hide" : "Show"} events from ${label}`}
           >
-            {shortLabel(eid)}
+            {label}
           </button>
         );
       })}

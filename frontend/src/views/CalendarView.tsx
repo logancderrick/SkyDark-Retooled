@@ -10,7 +10,6 @@ import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
 import { usePinGate } from "../hooks/usePinGate";
-import { getDefaultFamilyCalendarMemberId } from "../lib/calendarDefaults";
 import { pushEventToHaCalendar, serviceAddEvent } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
 
@@ -28,10 +27,29 @@ export default function CalendarView() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [defaultEventStartDate, setDefaultEventStartDate] = useState<Date | null>(null);
   const { familyMembers, settings } = useAppContext();
-  const defaultCalendarMemberId = useMemo(
-    () => getDefaultFamilyCalendarMemberId(familyMembers, settings.defaultFamilyCalendarMemberId),
-    [familyMembers, settings.defaultFamilyCalendarMemberId]
-  );
+  const haCalendarEntityIds = useMemo(() => {
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const eid of settings.remoteCalendarEntities ?? []) {
+      if (eid.startsWith("calendar.") && !seen.has(eid)) {
+        seen.add(eid);
+        ids.push(eid);
+      }
+    }
+    const pushId = settings.pushEventsToCalendarEntityId?.trim();
+    if (pushId?.startsWith("calendar.") && !seen.has(pushId)) {
+      seen.add(pushId);
+      ids.push(pushId);
+    }
+    return ids;
+  }, [settings.remoteCalendarEntities, settings.pushEventsToCalendarEntityId]);
+
+  const defaultHaCalendarEntityId = useMemo(() => {
+    const push = settings.pushEventsToCalendarEntityId?.trim();
+    if (push?.startsWith("calendar.") && haCalendarEntityIds.includes(push)) return push;
+    return haCalendarEntityIds[0] ?? "";
+  }, [haCalendarEntityIds, settings.pushEventsToCalendarEntityId]);
+
   const { runIfUnlocked, pinPromptProps } = usePinGate();
   const weekViewRef = useRef<WeekViewRef>(null);
   const dayViewRef = useRef<DayViewRef>(null);
@@ -73,6 +91,34 @@ export default function CalendarView() {
     const conn = skydark?.data?.connection;
     const isAdd = !data.id;
     const hasRequired = data.title && data.start_time;
+    const primaryCal = data.calendar_id?.[0];
+    const targetHa =
+      typeof primaryCal === "string" && primaryCal.startsWith("calendar.") ? primaryCal : null;
+
+    if (isAdd && hasRequired && targetHa) {
+      const title = data.title as string;
+      const startTime = data.start_time as string;
+      if (conn) {
+        try {
+          await pushEventToHaCalendar(conn, targetHa, {
+            title,
+            start_time: startTime,
+            end_time: data.end_time,
+            all_day: data.all_day ?? false,
+            description: data.description,
+            location: data.location,
+          });
+          await skydark?.refetchEvents();
+        } catch (err) {
+          console.error("[SkyDark] Failed to create event on Home Assistant calendar:", err);
+        }
+      }
+      setEventModalOpen(false);
+      setSelectedEvent(null);
+      setDefaultEventStartDate(null);
+      return;
+    }
+
     if (isAdd && hasRequired) {
       const title = data.title as string;
       const startTime = data.start_time as string;
@@ -106,7 +152,6 @@ export default function CalendarView() {
           }
         } catch (err) {
           console.error("[SkyDark] Failed to add event:", err);
-          // fallback: optimistic local add when service fails
           const newEvent: CalendarEvent = {
             id: String(Date.now()),
             title,
@@ -120,7 +165,6 @@ export default function CalendarView() {
           setLocalOverrides((prev) => ({ ...prev, events: [...prev.events, newEvent] }));
         }
       } else {
-        // No connection: keep event visible locally so add isn't silently dropped
         const newEvent: CalendarEvent = {
           id: String(Date.now()),
           title,
@@ -143,6 +187,7 @@ export default function CalendarView() {
     }
     setEventModalOpen(false);
     setSelectedEvent(null);
+    setDefaultEventStartDate(null);
   };
 
   const handleEventMove = (eventId: string, newStart: Date, newEnd: Date) => {
@@ -322,7 +367,9 @@ export default function CalendarView() {
         event={selectedEvent}
         defaultStartDate={defaultEventStartDate}
         familyMembers={familyMembers}
-        defaultCalendarMemberId={defaultCalendarMemberId}
+        haCalendarEntityIds={haCalendarEntityIds}
+        defaultHaCalendarEntityId={defaultHaCalendarEntityId}
+        remoteCalendarLabels={settings.remoteCalendarLabels}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
       />
