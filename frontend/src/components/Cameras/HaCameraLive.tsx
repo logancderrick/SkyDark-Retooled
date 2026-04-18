@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Connection } from "home-assistant-js-websocket";
 import type HlsType from "hls.js";
+import { getHassAccessToken } from "../../lib/haAuth";
+import { buildCameraProxyStreamUrl } from "../../lib/haCameraAuth";
 
 type CameraStreamResult = { result?: { url?: string } };
 
@@ -12,10 +14,13 @@ export default function HaCameraLive({
   entityId,
   title,
   connection,
+  entityPicture,
 }: {
   entityId: string;
   title: string;
   connection: Connection;
+  /** From camera state `attributes.entity_picture` — carries HA stream auth token for iframe/proxy. */
+  entityPicture?: string | null;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsType | null>(null);
@@ -60,6 +65,7 @@ export default function HaCameraLive({
     if (!video) return;
 
     let cancelled = false;
+    const detachFns: Array<() => void> = [];
     hlsRef.current?.destroy();
     hlsRef.current = null;
 
@@ -69,7 +75,14 @@ export default function HaCameraLive({
       const el = videoRef.current;
 
       if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        const bearer = getHassAccessToken(connection);
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          xhrSetup(xhr) {
+            if (bearer) xhr.setRequestHeader("Authorization", `Bearer ${bearer}`);
+          },
+        });
         hlsRef.current = hls;
         hls.loadSource(hlsUrl);
         hls.attachMedia(el);
@@ -77,13 +90,18 @@ export default function HaCameraLive({
           if (data.fatal) {
             hls.destroy();
             hlsRef.current = null;
-            setUseMjpeg(true);
+            if (!cancelled) setUseMjpeg(true);
           }
         });
       } else if (el.canPlayType("application/vnd.apple.mpegurl")) {
+        const onNativeError = () => {
+          if (!cancelled) setUseMjpeg(true);
+        };
+        el.addEventListener("error", onNativeError);
+        detachFns.push(() => el.removeEventListener("error", onNativeError));
         el.src = hlsUrl;
       } else {
-        setUseMjpeg(true);
+        if (!cancelled) setUseMjpeg(true);
         return;
       }
 
@@ -92,13 +110,13 @@ export default function HaCameraLive({
 
     return () => {
       cancelled = true;
+      detachFns.forEach((fn) => fn());
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
-  }, [hlsUrl, useMjpeg]);
+  }, [hlsUrl, useMjpeg, connection]);
 
-  const origin = window.location.origin;
-  const mjpegSrc = `${origin}/api/camera_proxy_stream/${encodeURIComponent(entityId)}`;
+  const mjpegSrc = buildCameraProxyStreamUrl(entityId, connection, entityPicture);
 
   if (useMjpeg) {
     return (

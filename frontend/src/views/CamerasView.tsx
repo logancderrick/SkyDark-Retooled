@@ -90,7 +90,16 @@ export default function CamerasView() {
                   className="relative w-full bg-black overflow-hidden shrink-0"
                   style={{ height: 272, minHeight: 272, maxHeight: 272 }}
                 >
-                  <HaCameraLive entityId={cam.entity_id} title={name} connection={conn} />
+                  <HaCameraLive
+                    entityId={cam.entity_id}
+                    title={name}
+                    connection={conn}
+                    entityPicture={
+                      typeof cam.attributes?.entity_picture === "string"
+                        ? cam.attributes.entity_picture
+                        : undefined
+                    }
+                  />
                 </div>
                 <div className="px-3 py-2 border-t border-gray-100">
                   <p className="text-sm font-medium text-skydark-text truncate" title={name}>

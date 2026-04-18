@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   format,
   startOfMonth,
@@ -33,6 +34,12 @@ export default function MonthView({
   onDateClick,
   onEventClick,
 }: MonthViewProps) {
+  const [expandedDayKeys, setExpandedDayKeys] = useState<Set<string>>(() => new Set());
+  const monthKey = format(currentDate, "yyyy-MM");
+  useEffect(() => {
+    setExpandedDayKeys(new Set());
+  }, [monthKey]);
+
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart);
@@ -72,9 +79,11 @@ export default function MonthView({
         </div>
       ))}
       {days.map((d) => {
+        const dayKey = format(d, "yyyy-MM-dd");
         const dayEvents = getEventsForDay(d);
-        const visibleEvents = dayEvents.slice(0, MAX_VISIBLE_EVENTS);
-        const moreCount = dayEvents.length - MAX_VISIBLE_EVENTS;
+        const isExpanded = expandedDayKeys.has(dayKey);
+        const visibleEvents = isExpanded ? dayEvents : dayEvents.slice(0, MAX_VISIBLE_EVENTS);
+        const moreCount = isExpanded ? 0 : Math.max(0, dayEvents.length - MAX_VISIBLE_EVENTS);
         const isCurrentMonth = isSameMonth(d, currentDate);
 
         return (
@@ -95,7 +104,7 @@ export default function MonthView({
             >
               {format(d, "d")}
             </button>
-            <div className="flex-1 space-y-1 overflow-hidden">
+            <div className={`flex-1 space-y-1 ${isExpanded ? "overflow-y-auto max-h-[220px]" : "overflow-hidden"}`}>
               {visibleEvents.map((ev) => {
                 const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
                   ev,
@@ -127,10 +136,30 @@ export default function MonthView({
                   className="text-xs text-skydark-text-secondary hover:underline w-full text-left"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDateClick?.(d);
+                    setExpandedDayKeys((prev) => {
+                      const next = new Set(prev);
+                      next.add(dayKey);
+                      return next;
+                    });
                   }}
                 >
                   +{moreCount} more
+                </button>
+              )}
+              {isExpanded && dayEvents.length > MAX_VISIBLE_EVENTS && (
+                <button
+                  type="button"
+                  className="text-xs text-skydark-text-secondary hover:underline w-full text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedDayKeys((prev) => {
+                      const next = new Set(prev);
+                      next.delete(dayKey);
+                      return next;
+                    });
+                  }}
+                >
+                  Show less
                 </button>
               )}
             </div>

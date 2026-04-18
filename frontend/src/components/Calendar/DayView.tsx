@@ -55,6 +55,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
   const lastInitializedDateRef = useRef<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [timeStripHeight, setTimeStripHeight] = useState(DEFAULT_FOUR_HOUR_VIEWPORT_PX);
+  const [allDayExpanded, setAllDayExpanded] = useState(false);
 
   const isToday = isSameDay(currentDate, now);
   const dateKey = format(currentDate, "yyyy-MM-dd");
@@ -83,6 +84,10 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
     const timerId = window.setInterval(tick, 60_000);
     return () => window.clearInterval(timerId);
   }, []);
+
+  useEffect(() => {
+    setAllDayExpanded(false);
+  }, [dateKey]);
 
   // Auto-update scroll position every minute to keep current time centered (only if viewing today)
   useEffect(() => {
@@ -172,7 +177,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
         {allDayEvents.length === 0 && (
           <div className="text-xs text-skydark-text-secondary">All day</div>
         )}
-        {allDayEvents.slice(0, 2).map((event) => {
+        {(allDayExpanded ? allDayEvents : allDayEvents.slice(0, 2)).map((event) => {
           const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
             event,
             familyMembers,
@@ -196,10 +201,29 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
             </button>
           );
         })}
-        {allDayEvents.length > 2 && (
-          <div className="text-[10px] text-skydark-text-secondary">
+        {!allDayExpanded && allDayEvents.length > 2 && (
+          <button
+            type="button"
+            className="text-[10px] text-skydark-text-secondary text-left hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAllDayExpanded(true);
+            }}
+          >
             +{allDayEvents.length - 2} more
-          </div>
+          </button>
+        )}
+        {allDayExpanded && allDayEvents.length > 2 && (
+          <button
+            type="button"
+            className="text-[10px] text-skydark-text-secondary text-left hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAllDayExpanded(false);
+            }}
+          >
+            Show less
+          </button>
         )}
       </div>
 

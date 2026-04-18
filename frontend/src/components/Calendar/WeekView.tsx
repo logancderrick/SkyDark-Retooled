@@ -76,8 +76,13 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
   const fullDayHeightRef = useRef<number>(0);
   const [now, setNow] = useState(() => new Date());
   const [timeStripHeight, setTimeStripHeight] = useState(DEFAULT_FOUR_HOUR_VIEWPORT_PX);
+  const [expandedAllDayKeys, setExpandedAllDayKeys] = useState<Set<string>>(() => new Set());
   const weekContainsToday = days.some((d) => isSameDay(d, now));
   const weekKey = format(weekStart, "yyyy-MM-dd");
+
+  useEffect(() => {
+    setExpandedAllDayKeys(new Set());
+  }, [weekKey]);
   // Use fallback until ResizeObserver reports real height so time labels and grid render correctly
   const pixelsPerHour =
     timeStripHeight > 0 ? Math.max(timeStripHeight / 4, 1) : DEFAULT_FOUR_HOUR_VIEWPORT_PX / 4;
@@ -210,8 +215,10 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                 return isSameDay(start, d);
               });
               const allDayEvents = dayEvents.filter((e) => isAllDayEvent(e));
-              const visibleEvents = allDayEvents.slice(0, 2);
-              const overflowCount = allDayEvents.length - 2;
+              const dayKey = format(d, "yyyy-MM-dd");
+              const allDayExpanded = expandedAllDayKeys.has(dayKey);
+              const visibleEvents = allDayExpanded ? allDayEvents : allDayEvents.slice(0, 2);
+              const overflowCount = allDayExpanded ? 0 : Math.max(0, allDayEvents.length - 2);
               return (
                 <div
                   key={d.toISOString()}
@@ -243,9 +250,36 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                     );
                   })}
                   {overflowCount > 0 && (
-                    <span className="text-[10px] text-skydark-text-secondary px-1.5">
+                    <button
+                      type="button"
+                      className="text-[10px] text-skydark-text-secondary px-1.5 text-left hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedAllDayKeys((prev) => {
+                          const next = new Set(prev);
+                          next.add(dayKey);
+                          return next;
+                        });
+                      }}
+                    >
                       +{overflowCount} more
-                    </span>
+                    </button>
+                  )}
+                  {allDayExpanded && allDayEvents.length > 2 && (
+                    <button
+                      type="button"
+                      className="text-[10px] text-skydark-text-secondary px-1.5 text-left hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedAllDayKeys((prev) => {
+                          const next = new Set(prev);
+                          next.delete(dayKey);
+                          return next;
+                        });
+                      }}
+                    >
+                      Show less
+                    </button>
                   )}
                 </div>
               );
