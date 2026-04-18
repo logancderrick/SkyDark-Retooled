@@ -421,6 +421,14 @@ export async function serviceAddListItem(
   return callService(conn, DOMAIN, "add_list_item", data);
 }
 
+export async function serviceDeleteList(conn: Connection, listId: string): Promise<unknown> {
+  return callService(conn, DOMAIN, "delete_list", { list_id: listId });
+}
+
+export async function serviceDeleteListItem(conn: Connection, itemId: string): Promise<unknown> {
+  return callService(conn, DOMAIN, "delete_list_item", { item_id: itemId });
+}
+
 export async function serviceAddMealRecipe(
   conn: Connection,
   data: {

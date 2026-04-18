@@ -4,6 +4,9 @@ import type { HassEntity } from "home-assistant-js-websocket";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import HaCameraLive from "../components/Cameras/HaCameraLive";
 
+/** Hidden from the grid (e.g. vacuum map render entities, not real security feeds). */
+const EXCLUDED_CAMERA_ENTITIES = new Set(["camera.l40_ultra_map", "camera.l40_ultra_map_1"]);
+
 export default function CamerasView() {
   const skydark = useSkydarkDataContext();
   const conn = skydark?.data?.connection ?? null;
@@ -17,7 +20,9 @@ export default function CamerasView() {
       try {
         const states = await getStates(conn);
         if (cancelled) return;
-        const cams = states.filter((s) => s.entity_id.startsWith("camera."));
+        const cams = states.filter(
+          (s) => s.entity_id.startsWith("camera.") && !EXCLUDED_CAMERA_ENTITIES.has(s.entity_id)
+        );
         setCameras(cams);
         setLoadError(null);
       } catch (e) {
@@ -75,7 +80,8 @@ export default function CamerasView() {
       <p className="text-xs text-skydark-text-secondary mb-4 shrink-0 max-w-3xl">
         Live streams use the same Home Assistant pipeline as Lovelace picture-entity (HLS via{" "}
         <span className="font-mono">camera/stream</span>, then MJPEG <span className="font-mono">camera_proxy_stream</span> if
-        needed).
+        needed). Tiles are 16:9 with the full frame letterboxed when the camera aspect differs. Streams pause when scrolled
+        off screen to save CPU and bandwidth.
       </p>
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-4">
@@ -86,10 +92,7 @@ export default function CamerasView() {
                 key={cam.entity_id}
                 className="rounded-[18px] border border-gray-200 bg-white overflow-hidden shadow-skydark flex flex-col"
               >
-                <div
-                  className="relative w-full bg-black overflow-hidden shrink-0"
-                  style={{ height: 272, minHeight: 272, maxHeight: 272 }}
-                >
+                <div className="relative w-full shrink-0 aspect-video bg-black overflow-hidden">
                   <HaCameraLive
                     entityId={cam.entity_id}
                     title={name}

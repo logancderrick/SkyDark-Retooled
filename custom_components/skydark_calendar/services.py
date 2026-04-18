@@ -28,6 +28,8 @@ SERVICE_ADD_REWARD = "add_reward"
 SERVICE_DELETE_REWARD = "delete_reward"
 SERVICE_REDEEM_REWARD = "redeem_reward"
 SERVICE_ADD_LIST_ITEM = "add_list_item"
+SERVICE_DELETE_LIST = "delete_list"
+SERVICE_DELETE_LIST_ITEM = "delete_list_item"
 SERVICE_CREATE_LIST = "create_list"
 SERVICE_ADD_MEAL_RECIPE = "add_meal_recipe"
 SERVICE_ADD_MEAL = "add_meal"
@@ -206,6 +208,20 @@ ADD_LIST_ITEM_SCHEMA = vol.Schema(
     {
         vol.Required("list_id"): cv.string,
         vol.Required("content"): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+DELETE_LIST_SCHEMA = vol.Schema(
+    {
+        vol.Required("list_id"): cv.string,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
+DELETE_LIST_ITEM_SCHEMA = vol.Schema(
+    {
+        vol.Required("item_id"): cv.string,
     },
     extra=vol.PREVENT_EXTRA,
 )
@@ -606,6 +622,30 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         except Exception as e:
             _LOGGER.exception("add_list_item failed: %s", e)
 
+    async def delete_list(call: ServiceCall) -> None:
+        """Delete a list and its items."""
+        if DOMAIN not in hass.data:
+            return
+        db = hass.data[DOMAIN].get("db")
+        if not db:
+            return
+        try:
+            await hass.async_add_executor_job(db.delete_list, call.data["list_id"])
+        except Exception as e:
+            _LOGGER.exception("delete_list failed: %s", e)
+
+    async def delete_list_item(call: ServiceCall) -> None:
+        """Delete one list item."""
+        if DOMAIN not in hass.data:
+            return
+        db = hass.data[DOMAIN].get("db")
+        if not db:
+            return
+        try:
+            await hass.async_add_executor_job(db.delete_list_item, call.data["item_id"])
+        except Exception as e:
+            _LOGGER.exception("delete_list_item failed: %s", e)
+
     async def send_notification(call: ServiceCall) -> None:
         """Send notification to display."""
         title = call.data.get("title", "Skydark")
@@ -646,6 +686,12 @@ async def async_setup_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_ADD_LIST_ITEM, add_list_item, schema=ADD_LIST_ITEM_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DELETE_LIST, delete_list, schema=DELETE_LIST_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DELETE_LIST_ITEM, delete_list_item, schema=DELETE_LIST_ITEM_SCHEMA
     )
     hass.services.async_register(
         DOMAIN, SERVICE_CREATE_LIST, create_list, schema=CREATE_LIST_SCHEMA

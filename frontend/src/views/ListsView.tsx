@@ -5,7 +5,12 @@ import PinPrompt from "../components/Common/PinPrompt";
 import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { usePinGate } from "../hooks/usePinGate";
-import { serviceCreateList, serviceAddListItem } from "../lib/skyDarkApi";
+import {
+  serviceCreateList,
+  serviceAddListItem,
+  serviceDeleteList,
+  serviceDeleteListItem,
+} from "../lib/skyDarkApi";
 import { SKYDARK_COLORS } from "../config/theme";
 
 export interface ListData {
@@ -48,11 +53,11 @@ export default function ListsView() {
   const [newListColor, setNewListColor] = useState<string>(SKYDARK_COLORS[0] ?? "#C8E6F5");
   const [newListOwnerId, setNewListOwnerId] = useState<string>("");
   const [localToggles, setLocalToggles] = useState<Set<string>>(new Set());
-  const [localDeletedItems, setLocalDeletedItems] = useState<Set<string>>(new Set());
-  const [localDeletedLists, setLocalDeletedLists] = useState<Set<string>>(new Set());
   const [localLists, setLocalLists] = useState<ListData[]>(FALLBACK_LISTS);
   const [createListSaving, setCreateListSaving] = useState(false);
   const [createListError, setCreateListError] = useState<string | null>(null);
+  const [listsError, setListsError] = useState<string | null>(null);
+  const [listDeleteSaving, setListDeleteSaving] = useState(false);
 
   const serverLists = useMemo(() => {
     if (!skydark?.data?.connection || !skydark.data.lists) return [];
@@ -60,17 +65,13 @@ export default function ListsView() {
   }, [skydark?.data?.connection, skydark?.data?.lists, skydark?.data?.listItems]);
 
   const lists = skydark?.data?.connection
-    ? serverLists
-        .filter((l) => !localDeletedLists.has(l.id))
-        .map((list) => ({
-          ...list,
-          items: list.items
-            .filter((i) => !localDeletedItems.has(i.id))
-            .map((i) => ({
-              ...i,
-              completed: localToggles.has(i.id) ? !i.completed : i.completed,
-            })),
-        }))
+    ? serverLists.map((list) => ({
+        ...list,
+        items: list.items.map((i) => ({
+          ...i,
+          completed: localToggles.has(i.id) ? !i.completed : i.completed,
+        })),
+      }))
     : localLists;
 
   const addItem = (listId: string, content: string) => {
@@ -117,8 +118,31 @@ export default function ListsView() {
   };
 
   const deleteItem = (listId: string, itemId: string) => {
-    if (skydark?.data?.connection) setLocalDeletedItems((prev) => new Set(prev).add(itemId));
-    else setLocalLists((prev) => prev.map((list) => (list.id !== listId ? list : { ...list, items: list.items.filter((i) => i.id !== itemId) })));
+    runIfUnlocked("addItemsToLists", () => doDeleteItem(listId, itemId));
+  };
+
+  const doDeleteItem = async (listId: string, itemId: string) => {
+    const conn = skydark?.data?.connection;
+    if (conn) {
+      setListsError(null);
+      try {
+        await serviceDeleteListItem(conn, itemId);
+        setLocalToggles((prev) => {
+          const next = new Set(prev);
+          next.delete(itemId);
+          return next;
+        });
+        await skydark?.refetchLists?.();
+      } catch (e) {
+        setListsError(e instanceof Error ? e.message : "Could not delete item.");
+      }
+      return;
+    }
+    setLocalLists((prev) =>
+      prev.map((list) =>
+        list.id !== listId ? list : { ...list, items: list.items.filter((i) => i.id !== itemId) }
+      )
+    );
   };
 
   const requestDeleteList = (listId: string) => {
@@ -127,10 +151,25 @@ export default function ListsView() {
 
   const confirmDeleteList = () => {
     if (!listToDelete) return;
-    runIfUnlocked("deleteLists", () => {
-      if (skydark?.data?.connection) setLocalDeletedLists((prev) => new Set(prev).add(listToDelete));
-      else setLocalLists((prev) => prev.filter((l) => l.id !== listToDelete));
-      setListToDelete(null);
+    const id = listToDelete;
+    runIfUnlocked("deleteLists", async () => {
+      const conn = skydark?.data?.connection;
+      if (!conn) {
+        setLocalLists((prev) => prev.filter((l) => l.id !== id));
+        setListToDelete(null);
+        return;
+      }
+      setListsError(null);
+      setListDeleteSaving(true);
+      try {
+        await serviceDeleteList(conn, id);
+        await skydark?.refetchLists?.();
+        setListToDelete(null);
+      } catch (e) {
+        setListsError(e instanceof Error ? e.message : "Could not delete list.");
+      } finally {
+        setListDeleteSaving(false);
+      }
     });
   };
 
@@ -179,6 +218,17 @@ export default function ListsView() {
 
   return (
     <div className="min-h-full">
+      {listsError && (
+        <div
+          className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-800 flex justify-between gap-2 items-start"
+          role="alert"
+        >
+          <span>{listsError}</span>
+          <button type="button" className="shrink-0 text-red-700 underline" onClick={() => setListsError(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-lg font-semibold text-skydark-text">Lists</h2>
         <div className="flex items-center gap-2 flex-wrap">
@@ -308,16 +358,26 @@ export default function ListsView() {
       </Modal>
       <Modal
         open={listToDelete !== null}
-        onClose={() => setListToDelete(null)}
+        onClose={() => !listDeleteSaving && setListToDelete(null)}
         title="Delete list"
       >
         <p className="text-skydark-text mb-4">Delete this list and all its items?</p>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setListToDelete(null)} className="btn-secondary flex-1">
+          <button
+            type="button"
+            onClick={() => setListToDelete(null)}
+            disabled={listDeleteSaving}
+            className="btn-secondary flex-1 disabled:opacity-60"
+          >
             Cancel
           </button>
-          <button type="button" onClick={confirmDeleteList} className="btn-primary flex-1 bg-red-500 hover:bg-red-600">
-            Delete
+          <button
+            type="button"
+            onClick={confirmDeleteList}
+            disabled={listDeleteSaving}
+            className="btn-primary flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-60"
+          >
+            {listDeleteSaving ? "Deleting…" : "Delete"}
           </button>
         </div>
       </Modal>

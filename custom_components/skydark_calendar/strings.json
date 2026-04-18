@@ -79,6 +79,14 @@
       "name": "Add list item",
       "description": "Add an item to a list."
     },
+    "delete_list": {
+      "name": "Delete list",
+      "description": "Delete a list and all of its items."
+    },
+    "delete_list_item": {
+      "name": "Delete list item",
+      "description": "Remove a single item from a list."
+    },
     "add_meal_recipe": {
       "name": "Add meal recipe",
       "description": "Add a meal recipe with optional ingredients."

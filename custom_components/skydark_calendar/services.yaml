@@ -283,6 +283,28 @@ add_list_item:
       selector:
         text:
 
+delete_list:
+  name: Delete list
+  description: Delete a list and all of its items.
+  fields:
+    list_id:
+      name: List ID
+      description: ID of the list to remove
+      required: true
+      selector:
+        text:
+
+delete_list_item:
+  name: Delete list item
+  description: Remove a single item from a list.
+  fields:
+    item_id:
+      name: Item ID
+      description: ID of the list item row to delete
+      required: true
+      selector:
+        text:
+
 add_meal_recipe:
   name: Add meal recipe
   description: Add a meal recipe with optional ingredients.

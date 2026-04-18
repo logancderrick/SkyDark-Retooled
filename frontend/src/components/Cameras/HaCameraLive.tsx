@@ -4,6 +4,8 @@ import type HlsType from "hls.js";
 import { getHassAccessToken } from "../../lib/haAuth";
 import { buildCameraProxyStreamUrl } from "../../lib/haCameraAuth";
 
+const IO_ROOT_MARGIN = "72px";
+
 type CameraStreamResult = { result?: { url?: string } };
 
 /**
@@ -22,10 +24,14 @@ export default function HaCameraLive({
   /** From camera state `attributes.entity_picture` — carries HA stream auth token for iframe/proxy. */
   entityPicture?: string | null;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HlsType | null>(null);
+  const inViewRef = useRef(true);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
   const [useMjpeg, setUseMjpeg] = useState(false);
+  /** Drives iframe src; ref is for HLS init path before re-render. */
+  const [inView, setInView] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +66,35 @@ export default function HaCameraLive({
   }, [connection, entityId]);
 
   useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        const vis = e?.isIntersecting ?? true;
+        inViewRef.current = vis;
+        setInView(vis);
+      },
+      { root: null, rootMargin: IO_ROOT_MARGIN, threshold: 0.02 }
+    );
+    io.observe(root);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (useMjpeg) return;
+    const video = videoRef.current;
+    const hls = hlsRef.current;
+    if (!video || !hlsUrl) return;
+    if (!inView) {
+      video.pause();
+      hls?.stopLoad();
+      return;
+    }
+    hls?.startLoad(-1);
+    void video.play().catch(() => {});
+  }, [inView, useMjpeg, hlsUrl]);
+
+  useEffect(() => {
     if (!hlsUrl || useMjpeg) return;
     const video = videoRef.current;
     if (!video) return;
@@ -78,7 +113,13 @@ export default function HaCameraLive({
         const bearer = getHassAccessToken(connection);
         const hls = new Hls({
           enableWorker: true,
-          lowLatencyMode: true,
+          // HA camera feeds are usually regular live HLS, not LL-HLS; LL mode can stutter.
+          lowLatencyMode: false,
+          maxBufferLength: 14,
+          maxMaxBufferLength: 28,
+          liveSyncDuration: 3,
+          liveMaxLatencyDuration: 10,
+          maxLiveSyncPlaybackRate: 1.15,
           xhrSetup(xhr) {
             if (bearer) xhr.setRequestHeader("Authorization", `Bearer ${bearer}`);
           },
@@ -86,6 +127,10 @@ export default function HaCameraLive({
         hlsRef.current = hls;
         hls.loadSource(hlsUrl);
         hls.attachMedia(el);
+        if (!inViewRef.current) {
+          el.pause();
+          hls.stopLoad();
+        }
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (data.fatal) {
             hls.destroy();
@@ -105,7 +150,11 @@ export default function HaCameraLive({
         return;
       }
 
-      void el.play().catch(() => {});
+      if (inViewRef.current) {
+        void el.play().catch(() => {});
+      } else {
+        el.pause();
+      }
     })();
 
     return () => {
@@ -118,33 +167,33 @@ export default function HaCameraLive({
 
   const mjpegSrc = buildCameraProxyStreamUrl(entityId, connection, entityPicture);
 
-  if (useMjpeg) {
-    return (
-      <iframe
-        title={title}
-        src={mjpegSrc}
-        className="absolute inset-0 h-full w-full border-0 bg-black object-cover"
-        allow="autoplay; fullscreen"
-      />
-    );
-  }
-
   return (
-    <div className="absolute inset-0 bg-black">
-      {!useMjpeg && !hlsUrl && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-gray-400">
-          Requesting stream…
-        </div>
+    <div ref={containerRef} className="absolute inset-0 bg-black">
+      {useMjpeg ? (
+        <iframe
+          title={title}
+          src={inView ? mjpegSrc : "about:blank"}
+          className="absolute inset-0 h-full w-full border-0 bg-black"
+          allow="autoplay; fullscreen"
+        />
+      ) : (
+        <>
+          {!hlsUrl && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-gray-400">
+              Requesting stream…
+            </div>
+          )}
+          <video
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full object-contain bg-black [transform:translateZ(0)]"
+            playsInline
+            muted
+            autoPlay
+            controls={false}
+            aria-label={title}
+          />
+        </>
       )}
-      <video
-        ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
-        playsInline
-        muted
-        autoPlay
-        controls={false}
-        aria-label={title}
-      />
     </div>
   );
 }
