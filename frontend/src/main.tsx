@@ -7,6 +7,7 @@ import { PhotosProvider } from "./contexts/PhotosContext";
 import { ViewportSimulatorProvider } from "./contexts/ViewportSimulatorContext";
 import ErrorBoundary from "./components/Common/ErrorBoundary";
 import App from "./App";
+import "@fontsource/bitcount-grid-single";
 import "./index.css";
 
 const rootEl = document.getElementById("root");

@@ -4,7 +4,9 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { buildDemoSkydarkState } from "../dev/demoSkydarkData";
 import { getHAConnection } from "../lib/haConnection";
+import { isSkydarkDemo } from "../lib/demoMode";
 import type { Connection } from "home-assistant-js-websocket";
 import {
   fetchAppSettings,
@@ -148,6 +150,10 @@ export function useSkydarkData(
   );
 
   const refetch = useCallback(async () => {
+    if (isSkydarkDemo) {
+      setData(buildDemoSkydarkState());
+      return;
+    }
     setData((prev) => ({ ...prev, loading: true, error: null }));
     try {
       const conn = await getHAConnection();
@@ -164,6 +170,7 @@ export function useSkydarkData(
 
   const refetchEvents = useCallback(
     async (startDate?: string, endDate?: string) => {
+      if (isSkydarkDemo) return;
       const conn = data.connection;
       if (!conn) return;
       try {
@@ -184,6 +191,7 @@ export function useSkydarkData(
   );
 
   const refetchLists = useCallback(async () => {
+    if (isSkydarkDemo) return;
     const conn = data.connection;
     if (!conn) return;
     try {
@@ -201,6 +209,10 @@ export function useSkydarkData(
   }, [data.connection]);
 
   useEffect(() => {
+    if (isSkydarkDemo) {
+      setData(buildDemoSkydarkState());
+      return;
+    }
     let cancelled = false;
     (async () => {
       setData((prev) => ({ ...prev, loading: true, error: null }));

@@ -23,7 +23,22 @@ npm install
 npm run dev
 ```
 
-Opens a Vite dev server. The app can run without a backend (e.g. uses localStorage for some data). To talk to a real Home Assistant instance, open the app through HA (e.g. `/skydark`) or configure the connection as your setup requires.
+Opens a Vite dev server at (typically) `http://localhost:5173/skydark/`. Without Home Assistant, the panel will try OAuth against whatever origin the dev server is on; use **demo mode** below to preview the full dashboard with sample data instead.
+
+### Demo mode (full UI, no HA, no push)
+
+Use this to review calendar, chores, lists, and top cards on a branch before merging or installing into Home Assistant:
+
+```bash
+cd frontend
+npm run dev:demo
+```
+
+Then open **`http://localhost:5173/skydark/#/calendar`** (hash router). This loads `.env.demo`, which sets `VITE_SKYDARK_DEMO=true`. The app skips the HA WebSocket and uses **built-in sample events, tasks, lists, and family data** (`src/dev/demoSkydarkData.ts`). Weather widgets still call **Open-Meteo** from your browser (ZIP or geolocation). Live **camera** tiles need a real HA connection; in demo mode the camera card shows the “configure cameras” placeholder unless you point a dev build at HA.
+
+A yellow **“Demo mode”** banner appears under the header so you do not confuse this with production.
+
+To talk to a real Home Assistant instance from the dev server, use `npm run dev` (not `dev:demo`) and sign in, or open the built panel through HA (e.g. `/skydark`).
 
 ### Full stack (frontend + Home Assistant)
 

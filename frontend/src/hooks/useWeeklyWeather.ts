@@ -12,6 +12,10 @@ export interface WeeklyDay {
 export interface CurrentWeather {
   temperature: number;
   condition: WeeklyDay["condition"];
+  /** Relative humidity 0–100 when provided by the API. */
+  humidity?: number;
+  /** Wind speed in mph when provided by the API. */
+  windMph?: number;
 }
 
 interface WeatherData {
@@ -186,7 +190,12 @@ async function getCoordsFromZip(
 }
 
 function forecastFromOpenMeteo(payload: {
-  current?: { temperature_2m?: number; weather_code?: number };
+  current?: {
+    temperature_2m?: number;
+    weather_code?: number;
+    relative_humidity_2m?: number;
+    wind_speed_10m?: number;
+  };
   daily?: {
     time?: string[];
     temperature_2m_max?: number[];
@@ -222,6 +231,12 @@ function forecastFromOpenMeteo(payload: {
       ? {
           temperature: Math.round(payload.current.temperature_2m),
           condition: mapWeatherCode(payload.current.weather_code),
+          ...(typeof payload.current.relative_humidity_2m === "number"
+            ? { humidity: Math.round(payload.current.relative_humidity_2m) }
+            : {}),
+          ...(typeof payload.current.wind_speed_10m === "number"
+            ? { windMph: Math.round(payload.current.wind_speed_10m) }
+            : {}),
         }
       : null;
 
@@ -251,7 +266,11 @@ export function useWeatherData(): WeatherDataWithMeta {
         const url = new URL("https://api.open-meteo.com/v1/forecast");
         url.searchParams.set("latitude", String(lat));
         url.searchParams.set("longitude", String(lon));
-        url.searchParams.set("current", "temperature_2m,weather_code");
+        url.searchParams.set(
+          "current",
+          "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+        );
+        url.searchParams.set("wind_speed_unit", "mph");
         url.searchParams.set(
           "daily",
           "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
@@ -261,7 +280,12 @@ export function useWeatherData(): WeatherDataWithMeta {
         const response = await fetch(url.toString());
         if (!response.ok) throw new Error(`Weather fetch failed: ${response.status}`);
         const json = (await response.json()) as {
-          current?: { temperature_2m?: number; weather_code?: number };
+          current?: {
+            temperature_2m?: number;
+            weather_code?: number;
+            relative_humidity_2m?: number;
+            wind_speed_10m?: number;
+          };
           daily?: {
             time?: string[];
             temperature_2m_max?: number[];

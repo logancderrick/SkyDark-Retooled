@@ -19,8 +19,8 @@ export default {
       colors: {
         skydark: {
           bg: "#F8FAFB",
-          text: "#2B3A4A",
-          "text-secondary": "#6B7C8F",
+          text: "#000000",
+          "text-secondary": "#404040",
           accent: "#3B9BBF",
           "accent-bg": "rgba(59, 155, 191, 0.1)",
           pink: "#FFD4D4",
@@ -40,11 +40,10 @@ export default {
       },
       fontFamily: {
         sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Segoe UI"',
-          "Roboto",
-          "sans-serif",
+          '"Bitcount Grid Single"',
+          "ui-monospace",
+          "Cambria Math",
+          "monospace",
         ],
       },
       boxShadow: {
@@ -70,6 +69,20 @@ export default {
       spacing: {
         "18": "4.5rem",
         "22": "5.5rem",
+      },
+      keyframes: {
+        skydarkWeatherDrift: {
+          "0%, 100%": { transform: "translate(-8%, -6%) rotate(0deg)" },
+          "50%": { transform: "translate(10%, 8%) rotate(6deg)" },
+        },
+        skydarkWeatherPulse: {
+          "0%, 100%": { opacity: "0.35" },
+          "50%": { opacity: "0.65" },
+        },
+      },
+      animation: {
+        "skydark-weather-drift": "skydarkWeatherDrift 16s ease-in-out infinite",
+        "skydark-weather-pulse": "skydarkWeatherPulse 7s ease-in-out infinite",
       },
     },
   },

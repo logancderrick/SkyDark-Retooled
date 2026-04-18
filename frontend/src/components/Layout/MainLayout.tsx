@@ -6,6 +6,7 @@ import Header from "./Header";
 import { useAppContext } from "../../contexts/AppContext";
 import { usePhotosContext } from "../../contexts/PhotosContext";
 import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
+import { isSkydarkDemo } from "../../lib/demoMode";
 import { useIdleDetection } from "../../hooks/useIdleDetection";
 import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl";
 import { useWeeklyWeather, getWeatherIcon } from "../../hooks/useWeeklyWeather";
@@ -296,6 +297,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <div className="shrink-0">
           <Header />
         </div>
+        {isSkydarkDemo && (
+          <div
+            role="status"
+            className="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950"
+          >
+            Demo mode — no Home Assistant connection. Sample data for layout review; changes are not saved to HA.
+          </div>
+        )}
         <main
           className={`flex-1 p-5 sm:p-6 ${
             desktopShellLock ? "min-h-0" : ""

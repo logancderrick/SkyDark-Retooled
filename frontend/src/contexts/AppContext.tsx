@@ -21,6 +21,7 @@ import {
   saveAppSettings,
   updateFamilyMemberWS,
 } from "../lib/skyDarkApi";
+import { isSkydarkDemo } from "../lib/demoMode";
 
 const STORAGE_KEY_SETTINGS = "skydark_app_settings";
 const STORAGE_KEY_MEMBERS = "skydark_family_members";
@@ -268,9 +269,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLocked, setIsLockedState] = useState(false);
   const didMigrateLegacyLocalRef = useRef(false);
 
-  // Seed shared state from HA-backed WebSocket data.
+  // Seed shared state from HA-backed WebSocket data (or demo sample data when VITE_SKYDARK_DEMO is set).
   useEffect(() => {
-    if (!skydark?.data?.connection) return;
+    if (!skydark?.data) return;
+    const conn = skydark.data.connection;
+    if (!conn && !isSkydarkDemo) return;
     if (Array.isArray(skydark.data.familyMembers) && skydark.data.familyMembers.length > 0) {
       const valid = skydark.data.familyMembers.filter((m) => isValidMember(m));
       if (valid.length > 0) setFamilyMembersState(valid);

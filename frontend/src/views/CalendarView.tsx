@@ -5,7 +5,7 @@ import WeekView, { type WeekViewRef } from "../components/Calendar/WeekView";
 import DayView, { type DayViewRef } from "../components/Calendar/DayView";
 import EventModal from "../components/Calendar/EventModal";
 import CalendarRemoteToggles from "../components/Calendar/CalendarRemoteToggles";
-import CalendarCameraPreview from "../components/Calendar/CalendarCameraPreview";
+import CalendarDashboardTopCards from "../components/Calendar/CalendarDashboardTopCards";
 import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
@@ -255,6 +255,11 @@ export default function CalendarView() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
+      <CalendarDashboardTopCards
+        connection={calendarPreviewConn}
+        cameraEntityIds={calendarPreviewIds}
+        rotateIntervalSec={settings.calendarPreviewRotateSeconds}
+      />
       <div className="mb-3 flex shrink-0 flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-skydark-text">
@@ -365,16 +370,6 @@ export default function CalendarView() {
             />
           )}
         </div>
-
-        {calendarPreviewConn && calendarPreviewIds.length > 0 && (
-          <aside className="w-full min-w-0 shrink-0 xl:sticky xl:top-2 xl:w-[min(420px,40vw)] xl:max-w-lg">
-            <CalendarCameraPreview
-              connection={calendarPreviewConn}
-              cameraEntityIds={calendarPreviewIds}
-              rotateIntervalSec={settings.calendarPreviewRotateSeconds}
-            />
-          </aside>
-        )}
       </div>
 
       <EventModal

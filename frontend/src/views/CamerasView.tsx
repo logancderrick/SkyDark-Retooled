@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
-import { getStates } from "home-assistant-js-websocket";
 import type { HassEntity } from "home-assistant-js-websocket";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
+import { getStatesOrDemo } from "../lib/demoHassStates";
+import { isSkydarkDemo } from "../lib/demoMode";
 import HaCameraLive from "../components/Cameras/HaCameraLive";
 
 /** Hidden from the grid (e.g. vacuum map render entities, not real security feeds). */
@@ -14,11 +15,11 @@ export default function CamerasView() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!conn) return;
+    if (!conn && !isSkydarkDemo) return;
     let cancelled = false;
     (async () => {
       try {
-        const states = await getStates(conn);
+        const states = await getStatesOrDemo(conn);
         if (cancelled) return;
         const cams = states.filter(
           (s) => s.entity_id.startsWith("camera.") && !EXCLUDED_CAMERA_ENTITIES.has(s.entity_id)
@@ -34,7 +35,7 @@ export default function CamerasView() {
     return () => {
       cancelled = true;
     };
-  }, [conn]);
+  }, [conn, isSkydarkDemo]);
 
   const sorted = useMemo(
     () =>
@@ -46,7 +47,7 @@ export default function CamerasView() {
     [cameras],
   );
 
-  if (!conn) {
+  if (!conn && !isSkydarkDemo) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center text-skydark-text-secondary text-sm">
         Connect to Home Assistant to view cameras.
@@ -87,16 +88,24 @@ export default function CamerasView() {
                 className="rounded-[18px] border border-gray-200 bg-white overflow-hidden shadow-skydark flex flex-col"
               >
                 <div className="relative w-full shrink-0 overflow-hidden">
-                  <HaCameraLive
-                    entityId={cam.entity_id}
-                    title={name}
-                    connection={conn}
-                    entityPicture={
-                      typeof cam.attributes?.entity_picture === "string"
-                        ? cam.attributes.entity_picture
-                        : undefined
-                    }
-                  />
+                  {conn ? (
+                    <HaCameraLive
+                      entityId={cam.entity_id}
+                      title={name}
+                      connection={conn}
+                      entityPicture={
+                        typeof cam.attributes?.entity_picture === "string"
+                          ? cam.attributes.entity_picture
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-3 text-center">
+                      <p className="text-xs leading-snug text-gray-400">
+                        Demo entity — live stream when connected to Home Assistant.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="px-3 py-2 border-t border-gray-100">
                   <p className="text-sm font-medium text-skydark-text truncate" title={name}>

@@ -1,20 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { getStates } from "home-assistant-js-websocket";
 import type { Connection, HassEntity } from "home-assistant-js-websocket";
+import { getStatesOrDemo } from "../../lib/demoHassStates";
 import HaCameraLive from "../Cameras/HaCameraLive";
 
 interface CalendarCameraPreviewProps {
-  connection: Connection;
+  /** Null in demo mode: entity names still load; live stream shows a placeholder. */
+  connection: Connection | null;
   /** Home Assistant `camera.*` entity IDs; two or more rotate on an interval. */
   cameraEntityIds: string[];
   /** Seconds between switches when more than one camera is configured. */
   rotateIntervalSec: number;
+  /** When nested in a parent card, drop outer border/radius so the shell does not double-frame. */
+  embedded?: boolean;
 }
 
 export default function CalendarCameraPreview({
   connection,
   cameraEntityIds,
   rotateIntervalSec,
+  embedded = false,
 }: CalendarCameraPreviewProps) {
   const ids = useMemo(
     () => cameraEntityIds.filter((id) => typeof id === "string" && id.trim().startsWith("camera.")).map((id) => id.trim()),
@@ -29,7 +33,7 @@ export default function CalendarCameraPreview({
 
   useEffect(() => {
     if (ids.length <= 1) return;
-    const ms = Math.min(120, Math.max(10, rotateIntervalSec)) * 1000;
+    const ms = Math.max(10, Math.min(120, rotateIntervalSec)) * 1000;
     const id = window.setInterval(() => {
       setActiveIndex((i) => (i + 1) % ids.length);
     }, ms);
@@ -41,7 +45,7 @@ export default function CalendarCameraPreview({
     let cancelled = false;
     void (async () => {
       try {
-        const states = await getStates(connection);
+        const states = await getStatesOrDemo(connection);
         if (cancelled) return;
         const next: Record<string, HassEntity> = {};
         for (const e of states) {
@@ -67,7 +71,11 @@ export default function CalendarCameraPreview({
 
   return (
     <div
-      className="flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-950 shadow-skydark"
+      className={
+        embedded
+          ? "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-none border-0 bg-gray-950 shadow-none"
+          : "flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-950 shadow-skydark"
+      }
       aria-label="Calendar camera preview"
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-900/95 border-b border-gray-800 shrink-0">
@@ -80,14 +88,39 @@ export default function CalendarCameraPreview({
           </span>
         )}
       </div>
-      <div className="relative w-full min-w-0 shrink-0 overflow-hidden">
-        <HaCameraLive
-          key={activeId}
-          entityId={activeId}
-          title={title}
-          connection={connection}
-          entityPicture={entityPicture}
-        />
+      <div
+        className={
+          embedded
+            ? "relative min-h-0 flex-1 w-full min-w-0 overflow-hidden bg-black"
+            : "relative w-full min-w-0 shrink-0 overflow-hidden bg-black"
+        }
+      >
+        {connection ? (
+          <HaCameraLive
+            key={activeId}
+            entityId={activeId}
+            title={title}
+            connection={connection}
+            entityPicture={entityPicture}
+            compact={embedded}
+          />
+        ) : (
+          <div
+            className={
+              embedded
+                ? "relative flex h-full min-h-0 w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-3 text-center"
+                : "relative flex aspect-video w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-4 text-center"
+            }
+          >
+            <p
+              className={
+                embedded ? "text-xs leading-snug text-gray-400" : "max-w-[18rem] text-sm leading-snug text-gray-400"
+              }
+            >
+              Demo camera entity — connect to Home Assistant for a live stream.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
