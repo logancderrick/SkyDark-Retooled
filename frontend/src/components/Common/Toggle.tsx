@@ -22,6 +22,7 @@ export default function Toggle({
 }: ToggleProps) {
   return (
     <Switch.Root
+      data-compact
       checked={checked}
       onCheckedChange={onChange}
       disabled={disabled}

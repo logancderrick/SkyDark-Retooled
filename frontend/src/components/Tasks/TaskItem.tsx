@@ -46,8 +46,9 @@ export default function TaskItem({ task, color, onToggle, onEdit, onDelete }: Ta
     >
       <button
         type="button"
+        data-compact
         onClick={onToggle}
-        className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors"
+        className="shrink-0 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors p-0"
         style={{
           borderColor: color,
           backgroundColor: completed ? "#9EE5CC" : "white",
@@ -97,11 +98,12 @@ export default function TaskItem({ task, color, onToggle, onEdit, onDelete }: Ta
       {onDelete && (
         <button
           type="button"
+          data-compact
           onClick={(e) => {
             e.stopPropagation();
             onDelete(task.id);
           }}
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-skydark-text-secondary hover:bg-red-50 hover:text-red-600 transition-colors"
+          className="shrink-0 h-8 w-8 rounded-lg flex items-center justify-center p-0 text-skydark-text-secondary hover:bg-red-50 hover:text-red-600 transition-colors"
           aria-label="Delete task"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>

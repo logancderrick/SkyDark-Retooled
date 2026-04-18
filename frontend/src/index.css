@@ -48,9 +48,12 @@ a[data-compact],
 
 @layer components {
   .input-skydark {
-    @apply w-full rounded-xl border border-gray-200 px-3 py-2.5 bg-white;
+    @apply w-full rounded-xl border border-gray-300 px-3 py-2.5 bg-white shadow-sm;
     color: #2b3a4a;
     min-height: 44px;
+  }
+  .input-skydark:focus {
+    @apply outline-none ring-2 ring-skydark-accent/25 border-skydark-accent;
   }
   .input-skydark::placeholder {
     color: #6b7c8f;

@@ -8,6 +8,14 @@ import Toggle from "../Common/Toggle";
 
 const EMOJI_OPTIONS = ["📋", "🧹", "🍽️", "📚", "🐕", "🗑️", "💊", "⭐", ""];
 
+/** True when the task repeats on a schedule; false = one-time task with a due date only. */
+function taskIsRepeating(t: Task | null | undefined): boolean {
+  if (!t) return true;
+  if (t.frequency !== "custom") return true;
+  const sched = t.custom_schedule ?? (t.due_date ? "date" : undefined);
+  return sched !== "date";
+}
+
 interface TaskModalProps {
   open: boolean;
   onClose: () => void;
@@ -32,8 +40,6 @@ export default function TaskModal({
   const [taskType, setTaskType] = useState<"chore" | "routine">("chore");
   const [emoji, setEmoji] = useState("");
   const [points, setPoints] = useState(0);
-  const [hasDate, setHasDate] = useState(true);
-  const [hasTime, setHasTime] = useState(false);
   const [repeats, setRepeats] = useState(true);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [customDueDate, setCustomDueDate] = useState("");
@@ -64,6 +70,7 @@ export default function TaskModal({
       setCustomMonth(task.custom_month ?? 1);
       setCustomWeekday(task.custom_weekday ?? 1);
       setCustomWeekOfMonth(task.custom_week_of_month ?? 1);
+      setRepeats(taskIsRepeating(task));
     } else {
       setTitle("");
       setAssigneeId(familyMembers[0]?.id || "");
@@ -72,8 +79,6 @@ export default function TaskModal({
       setTaskType("chore");
       setEmoji("");
       setPoints(0);
-      setHasDate(true);
-      setHasTime(false);
       setRepeats(true);
       const today = new Date().getDay();
       setWeekdays([today]);
@@ -102,8 +107,39 @@ export default function TaskModal({
     );
   };
 
+  const handleRepeatsChange = (next: boolean) => {
+    if (next && frequency === "custom" && customSchedule === "date") {
+      setFrequency("daily");
+    }
+    setRepeats(next);
+    if (!next) {
+      setCustomDueDate((d) => d || new Date().toISOString().slice(0, 10));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!repeats) {
+      onSave({
+        ...(task?.id && { id: task.id }),
+        title,
+        assignee_id: assigneeId,
+        category: category || undefined,
+        frequency: "custom",
+        custom_schedule: "date",
+        due_date: customDueDate ? `${customDueDate}T23:59:59.000Z` : undefined,
+        weekdays: undefined,
+        custom_monthday: undefined,
+        custom_month: undefined,
+        custom_weekday: undefined,
+        custom_week_of_month: undefined,
+        icon: emoji || undefined,
+        points,
+      });
+      onClose();
+      return;
+    }
+
     onSave({
       ...(task?.id && { id: task.id }),
       title,
@@ -150,6 +186,7 @@ export default function TaskModal({
                 <button
                   key={e}
                   type="button"
+                  data-compact
                   onClick={() => setEmoji(emoji === e ? "" : e)}
                   className={`w-10 h-10 rounded-xl border-2 text-xl flex items-center justify-center transition-colors ${
                     emoji === e
@@ -163,6 +200,7 @@ export default function TaskModal({
               ))}
               <button
                 type="button"
+                data-compact
                 onClick={() => setEmoji("")}
                 className={`w-10 h-10 rounded-xl border-2 text-sm flex items-center justify-center ${
                   !emoji ? "border-skydark-accent bg-skydark-accent-bg" : "border-gray-200"
@@ -181,9 +219,12 @@ export default function TaskModal({
                 <button
                   key={m.id}
                   type="button"
+                  data-compact
                   onClick={() => setAssigneeId(m.id)}
-                  className={`flex flex-col items-center gap-1.5 rounded-full ${
-                    assigneeId === m.id ? "ring-2 ring-skydark-accent ring-offset-2" : ""
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-1.5 transition-colors ${
+                    assigneeId === m.id
+                      ? "border-skydark-accent bg-white shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                 >
                   <div
@@ -197,10 +238,11 @@ export default function TaskModal({
               ))}
               <button
                 type="button"
-                className="flex flex-col items-center gap-1.5 text-skydark-text-secondary hover:text-skydark-accent"
+                data-compact
+                className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-2 py-1.5 text-skydark-text-secondary hover:border-skydark-accent hover:text-skydark-accent"
                 aria-label="Add profile"
               >
-                <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-xl font-light">
+                <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-xl font-light text-gray-400">
                   +
                 </div>
                 <span className="text-xs font-medium">Add</span>
@@ -259,17 +301,28 @@ export default function TaskModal({
             />
           </div>
 
-          <div className="flex items-center justify-between py-1">
-            <span className="text-sm font-medium text-skydark-text">Date</span>
-            <Toggle checked={hasDate} onChange={setHasDate} aria-label="Include date" />
-          </div>
-          <div className="flex items-center justify-between py-1">
-            <span className="text-sm font-medium text-skydark-text">Time</span>
-            <Toggle checked={hasTime} onChange={setHasTime} aria-label="Include time" />
-          </div>
-          <div className="flex items-center justify-between py-1">
-            <span className="text-sm font-medium text-skydark-text">Repeats</span>
-            <Toggle checked={repeats} onChange={setRepeats} aria-label="Repeats" />
+          <div className="rounded-xl border border-gray-200 bg-gray-50/90 p-3 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 pr-2">
+                <span className="text-sm font-medium text-skydark-text">Repeating chore</span>
+                <p className="text-xs text-skydark-text-secondary mt-1 leading-snug">
+                  Turn off for a one-time chore due on a single date.
+                </p>
+              </div>
+              <Toggle checked={repeats} onChange={handleRepeatsChange} aria-label="Repeating chore" />
+            </div>
+            {!repeats && (
+              <div>
+                <label className="block text-sm font-medium text-skydark-text mb-1.5">Due date</label>
+                <input
+                  type="date"
+                  value={customDueDate}
+                  onChange={(e) => setCustomDueDate(e.target.value)}
+                  className="input-skydark"
+                  required
+                />
+              </div>
+            )}
           </div>
 
           {repeats && (
@@ -297,6 +350,7 @@ export default function TaskModal({
                   <button
                     key={day}
                     type="button"
+                    data-compact
                     onClick={() => toggleWeekday(day)}
                     className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                       weekdays.includes(day)
@@ -387,6 +441,7 @@ export default function TaskModal({
                         <button
                           key={day}
                           type="button"
+                          data-compact
                           onClick={() => setCustomWeekday(day)}
                           className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                             customWeekday === day ? "bg-skydark-accent text-white" : "bg-gray-100 text-skydark-text-secondary hover:bg-gray-200"
