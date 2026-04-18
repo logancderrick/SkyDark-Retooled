@@ -255,14 +255,14 @@ export default function CalendarView() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      <div className="flex flex-shrink-0 flex-col gap-3 mb-6">
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="mb-3 flex shrink-0 flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-skydark-text">
             {viewMode === "month" && format(currentDate, "MMMM yyyy")}
             {viewMode === "week" && `Week of ${format(currentDate, "MMM d")}`}
             {viewMode === "day" && format(currentDate, "EEEE, MMM d")}
           </h2>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <select
               value={viewMode}
               onChange={(e) => {
@@ -281,7 +281,7 @@ export default function CalendarView() {
             <button
               type="button"
               onClick={goPrev}
-              className="p-2 rounded-xl hover:bg-gray-100 min-h-0 min-w-0"
+              className="min-h-0 min-w-0 rounded-xl p-2 hover:bg-gray-100"
               aria-label="Previous"
             >
               ←
@@ -289,87 +289,93 @@ export default function CalendarView() {
             <button
               type="button"
               onClick={goToday}
-              className="px-3 py-2.5 rounded-xl bg-gray-100 text-skydark-text font-medium text-sm min-h-0 min-w-0"
+              className="min-h-0 min-w-0 rounded-xl bg-gray-100 px-3 py-2.5 text-sm font-medium text-skydark-text"
             >
               Today
             </button>
             <button
               type="button"
               onClick={goNext}
-              className="p-2 rounded-xl hover:bg-gray-100 min-h-0 min-w-0"
+              className="min-h-0 min-w-0 rounded-xl p-2 hover:bg-gray-100"
               aria-label="Next"
             >
               →
             </button>
           </div>
         </div>
+      </div>
+      <div className="mb-4 shrink-0">
         <CalendarRemoteToggles />
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row xl:items-start xl:gap-6">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          {viewMode === "month" && (
+            <MonthView
+              currentDate={currentDate}
+              events={filteredEvents}
+              familyMembers={familyMembers}
+              remoteCalendarColors={settings.remoteCalendarColors}
+              onDateClick={(d) => {
+                setCurrentDate(d);
+                openCreateEventModal(d);
+              }}
+              onEventClick={(e) => {
+                setDefaultEventStartDate(null);
+                setSelectedEvent(e);
+                setEventModalOpen(true);
+              }}
+            />
+          )}
+          {viewMode === "week" && (
+            <WeekView
+              ref={weekViewRef}
+              currentDate={currentDate}
+              events={filteredEvents}
+              familyMembers={familyMembers}
+              remoteCalendarColors={settings.remoteCalendarColors}
+              onDateClick={(d) => {
+                setCurrentDate(d);
+                openCreateEventModal(d);
+              }}
+              onEventClick={(e) => {
+                setDefaultEventStartDate(null);
+                setSelectedEvent(e);
+                setEventModalOpen(true);
+              }}
+              onEventMove={handleEventMove}
+            />
+          )}
+          {viewMode === "day" && (
+            <DayView
+              ref={dayViewRef}
+              currentDate={currentDate}
+              events={filteredEvents}
+              familyMembers={familyMembers}
+              remoteCalendarColors={settings.remoteCalendarColors}
+              onDateClick={(d) => {
+                setCurrentDate(d);
+                openCreateEventModal(d);
+              }}
+              onEventClick={(e) => {
+                setDefaultEventStartDate(null);
+                setSelectedEvent(e);
+                setEventModalOpen(true);
+              }}
+            />
+          )}
+        </div>
+
         {calendarPreviewConn && calendarPreviewIds.length > 0 && (
-          <div className="w-full flex justify-stretch sm:justify-end">
-            <div className="w-full max-w-xl sm:max-w-2xl">
-              <CalendarCameraPreview
-                connection={calendarPreviewConn}
-                cameraEntityIds={calendarPreviewIds}
-                rotateIntervalSec={settings.calendarPreviewRotateSeconds}
-              />
-            </div>
-          </div>
+          <aside className="w-full min-w-0 shrink-0 xl:sticky xl:top-2 xl:w-[min(420px,40vw)] xl:max-w-lg">
+            <CalendarCameraPreview
+              connection={calendarPreviewConn}
+              cameraEntityIds={calendarPreviewIds}
+              rotateIntervalSec={settings.calendarPreviewRotateSeconds}
+            />
+          </aside>
         )}
       </div>
-      {viewMode === "month" && (
-        <MonthView
-          currentDate={currentDate}
-          events={filteredEvents}
-          familyMembers={familyMembers}
-          remoteCalendarColors={settings.remoteCalendarColors}
-          onDateClick={(d) => {
-            setCurrentDate(d);
-            openCreateEventModal(d);
-          }}
-          onEventClick={(e) => {
-            setDefaultEventStartDate(null);
-            setSelectedEvent(e);
-            setEventModalOpen(true);
-          }}
-        />
-      )}
-      {viewMode === "week" && (
-        <WeekView
-          ref={weekViewRef}
-          currentDate={currentDate}
-          events={filteredEvents}
-          familyMembers={familyMembers}
-          remoteCalendarColors={settings.remoteCalendarColors}
-          onDateClick={(d) => {
-            setCurrentDate(d);
-            openCreateEventModal(d);
-          }}
-          onEventClick={(e) => {
-            setDefaultEventStartDate(null);
-            setSelectedEvent(e);
-            setEventModalOpen(true);
-          }}
-          onEventMove={handleEventMove}
-        />
-      )}
-      {viewMode === "day" && (
-        <DayView
-          ref={dayViewRef}
-          currentDate={currentDate}
-          events={filteredEvents}
-          familyMembers={familyMembers}
-          remoteCalendarColors={settings.remoteCalendarColors}
-          onDateClick={(d) => {
-            setCurrentDate(d);
-            openCreateEventModal(d);
-          }}
-          onEventClick={(e) => {
-            setDefaultEventStartDate(null);
-            setSelectedEvent(e);
-            setEventModalOpen(true);
-          }}
-        />
-      )}
 
       <EventModal
         open={eventModalOpen}

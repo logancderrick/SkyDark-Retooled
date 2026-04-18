@@ -86,7 +86,7 @@ export default function CamerasView() {
                 key={cam.entity_id}
                 className="rounded-[18px] border border-gray-200 bg-white overflow-hidden shadow-skydark flex flex-col"
               >
-                <div className="relative w-full shrink-0 bg-black overflow-hidden">
+                <div className="relative w-full shrink-0 overflow-hidden">
                   <HaCameraLive
                     entityId={cam.entity_id}
                     title={name}

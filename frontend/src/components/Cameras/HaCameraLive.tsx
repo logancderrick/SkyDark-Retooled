@@ -11,18 +11,23 @@ type CameraStreamResult = { result?: { url?: string } };
 /**
  * Live camera tile aligned with Lovelace picture-entity (camera_view: live):
  * uses Home Assistant WebSocket `camera/stream` (HLS), then falls back to MJPEG `camera_proxy_stream`.
+ *
+ * `fit="cover"` (default): 16:9 frame, stream fills it (no letterboxing in the card; may crop edges).
+ * `fit="intrinsic"`: width 100%, height follows stream aspect (can leave empty space if parent is taller).
  */
 export default function HaCameraLive({
   entityId,
   title,
   connection,
   entityPicture,
+  fit = "cover",
 }: {
   entityId: string;
   title: string;
   connection: Connection;
   /** From camera state `attributes.entity_picture` — carries HA stream auth token for iframe/proxy. */
   entityPicture?: string | null;
+  fit?: "cover" | "intrinsic";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -167,28 +172,43 @@ export default function HaCameraLive({
 
   const mjpegSrc = buildCameraProxyStreamUrl(entityId, connection, entityPicture);
 
+  const coverShell = fit === "cover";
+  const shellClass = coverShell
+    ? "relative w-full aspect-video overflow-hidden bg-zinc-950 leading-none"
+    : `relative w-full overflow-hidden bg-zinc-950 leading-none ${!useMjpeg && !hlsUrl ? "min-h-[200px]" : ""}`;
+
+  const videoCover = "absolute inset-0 z-0 h-full w-full object-cover [transform:translateZ(0)]";
+  const videoIntrinsic = "relative z-0 block h-auto w-full max-w-full bg-black [transform:translateZ(0)]";
+
   return (
-    <div
-      ref={containerRef}
-      className={`relative w-full bg-black ${!useMjpeg && !hlsUrl ? "min-h-[200px]" : ""}`}
-    >
+    <div ref={containerRef} className={shellClass}>
       {useMjpeg ? (
         <iframe
           title={title}
           src={inView ? mjpegSrc : "about:blank"}
-          className="block w-full max-h-[85vh] border-0 bg-black aspect-video"
+          className={
+            coverShell
+              ? "absolute inset-0 z-0 h-full w-full border-0 bg-black"
+              : "block h-auto w-full max-w-full border-0 bg-black min-h-[200px]"
+          }
           allow="autoplay; fullscreen"
         />
       ) : (
         <>
           {!hlsUrl && (
-            <div className="absolute inset-0 z-10 flex min-h-[200px] items-center justify-center text-sm text-gray-400">
+            <div
+              className={
+                coverShell
+                  ? "absolute inset-0 z-10 flex items-center justify-center text-sm text-gray-400"
+                  : "absolute inset-0 z-10 flex min-h-[200px] items-center justify-center text-sm text-gray-400"
+              }
+            >
               Requesting stream…
             </div>
           )}
           <video
             ref={videoRef}
-            className="block h-auto w-full max-h-[85vh] bg-black [transform:translateZ(0)]"
+            className={coverShell ? videoCover : videoIntrinsic}
             playsInline
             muted
             autoPlay
