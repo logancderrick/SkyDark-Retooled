@@ -53,7 +53,7 @@ export default function PhotosView() {
     <div className="h-full">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h2 className="text-lg font-semibold text-skydark-text">Photos</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
           <input
             ref={uploadRef}
             type="file"
@@ -66,7 +66,7 @@ export default function PhotosView() {
           <button
             type="button"
             onClick={handleImportClick}
-            className="btn-secondary"
+            className="btn-secondary shrink-0 whitespace-nowrap"
           >
             Import photos
           </button>
@@ -74,7 +74,17 @@ export default function PhotosView() {
             type="button"
             onClick={() => setScreensaverTriggered(true)}
             disabled={photos.length === 0}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              photos.length === 0
+                ? "Add at least one photo to start sleep mode (photo slideshow)."
+                : "Start sleep mode now (full-screen photo slideshow)."
+            }
+            aria-label={
+              photos.length === 0
+                ? "Sleep mode: add photos first"
+                : "Start sleep mode slideshow"
+            }
+            className="btn-primary shrink-0 whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
           >
             Sleep
           </button>

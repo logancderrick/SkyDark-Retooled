@@ -24,10 +24,12 @@ body {
   display: none;
 }
 
-/* Touch targets minimum 44px for tablet */
-button, a, [role="button"] {
+/* Touch targets: at least 44×44pt, but never shrink below label width (min-width: 44px alone caused flex clipping). */
+button,
+a,
+[role="button"] {
   min-height: 44px;
-  min-width: 44px;
+  min-width: max(44px, fit-content);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -43,7 +45,7 @@ button, a, [role="button"] {
     color: #6b7c8f;
   }
   .btn-primary {
-    @apply py-3.5 rounded-xl bg-skydark-accent text-white font-semibold text-base hover:opacity-90 transition-opacity;
+    @apply px-4 py-3.5 rounded-xl bg-skydark-accent text-white font-semibold text-base hover:opacity-90 transition-opacity;
   }
   .btn-secondary {
     @apply px-4 py-2.5 rounded-xl border border-gray-200 text-sm hover:bg-gray-50 transition-colors;

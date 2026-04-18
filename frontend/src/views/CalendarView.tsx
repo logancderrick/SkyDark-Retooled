@@ -5,6 +5,7 @@ import WeekView, { type WeekViewRef } from "../components/Calendar/WeekView";
 import DayView, { type DayViewRef } from "../components/Calendar/DayView";
 import EventModal from "../components/Calendar/EventModal";
 import CalendarRemoteToggles from "../components/Calendar/CalendarRemoteToggles";
+import CalendarCameraPreview from "../components/Calendar/CalendarCameraPreview";
 import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
@@ -27,6 +28,8 @@ export default function CalendarView() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [defaultEventStartDate, setDefaultEventStartDate] = useState<Date | null>(null);
   const { familyMembers, settings } = useAppContext();
+  const calendarPreviewConn = skydark?.data?.connection ?? null;
+  const calendarPreviewIds = settings.calendarPreviewCameras ?? [];
   const haCalendarEntityIds = useMemo(() => {
     const ids: string[] = [];
     const seen = new Set<string>();
@@ -301,6 +304,17 @@ export default function CalendarView() {
           </div>
         </div>
         <CalendarRemoteToggles />
+        {calendarPreviewConn && calendarPreviewIds.length > 0 && (
+          <div className="w-full flex justify-stretch sm:justify-end">
+            <div className="w-full max-w-xl sm:max-w-2xl">
+              <CalendarCameraPreview
+                connection={calendarPreviewConn}
+                cameraEntityIds={calendarPreviewIds}
+                rotateIntervalSec={settings.calendarPreviewRotateSeconds}
+              />
+            </div>
+          </div>
+        )}
       </div>
       {viewMode === "month" && (
         <MonthView

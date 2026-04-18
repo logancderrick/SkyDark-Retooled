@@ -277,26 +277,30 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const isCalendar = pathname.includes("calendar");
   // Keep desktop calendar locked to viewport; allow mobile pages to scroll naturally.
   const shouldLockToViewport = isCalendar && !isPortrait;
+  /** Desktop: fixed viewport height so only the main column scrolls; sidebar stays put. */
+  const desktopShellLock = !isPortrait;
 
   return (
     <div
       className={`flex bg-skydark-bg font-sans text-skydark-text max-w-full ${
-        isPortrait ? "flex-col" : ""
-      } ${
-        shouldLockToViewport ? "h-screen overflow-hidden" : "min-h-screen"
+        isPortrait ? "min-h-screen flex-col" : "h-screen max-h-screen overflow-hidden"
       }`}
     >
       {!isPortrait && <Sidebar />}
       <div
         className={`flex flex-1 flex-col min-w-0 ${
-          shouldLockToViewport ? "min-h-0 overflow-hidden" : "min-h-screen"
+          desktopShellLock ? "min-h-0 overflow-hidden" : "min-h-screen"
         }`}
       >
         {!isPortrait && <MobileNav />}
-        <Header />
+        <div className="shrink-0">
+          <Header />
+        </div>
         <main
           className={`flex-1 p-5 sm:p-6 ${
-            shouldLockToViewport ? "min-h-0 overflow-hidden" : "overflow-y-auto"
+            desktopShellLock ? "min-h-0" : ""
+          } ${
+            shouldLockToViewport ? "overflow-hidden" : "overflow-y-auto"
           } ${isPortrait ? "pb-24" : ""}`}
         >
           {children}

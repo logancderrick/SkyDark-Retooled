@@ -121,6 +121,10 @@ export interface AppSettings {
    * so the event appears on that calendar (Google / iCal sync, etc.).
    */
   pushEventsToCalendarEntityId?: string;
+  /** Optional `camera.*` entity IDs shown as a live strip on the calendar page (rotates if more than one). */
+  calendarPreviewCameras: string[];
+  /** Seconds between cameras when `calendarPreviewCameras` has multiple entries (clamped 10–120). */
+  calendarPreviewRotateSeconds: number;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -142,6 +146,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   weatherZipCode: "",
   showTopWeeklyForecast: false,
   shoppingChecked: {},
+  calendarPreviewCameras: [],
+  calendarPreviewRotateSeconds: 20,
 };
 
 interface AppState {
@@ -236,6 +242,20 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
   ) {
     merged.pushEventsToCalendarEntityId = undefined;
   }
+  if (!Array.isArray(merged.calendarPreviewCameras)) {
+    merged.calendarPreviewCameras = [];
+  } else {
+    merged.calendarPreviewCameras = merged.calendarPreviewCameras
+      .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+      .map((id) => id.trim())
+      .filter((id) => id.startsWith("camera."))
+      .slice(0, 6);
+  }
+  let rotateSec = merged.calendarPreviewRotateSeconds;
+  if (typeof rotateSec !== "number" || Number.isNaN(rotateSec)) {
+    rotateSec = DEFAULT_SETTINGS.calendarPreviewRotateSeconds;
+  }
+  merged.calendarPreviewRotateSeconds = Math.min(120, Math.max(10, rotateSec));
   return merged;
 }
 

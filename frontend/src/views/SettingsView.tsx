@@ -21,6 +21,7 @@ import { VIEWPORT_PRESETS } from "../lib/viewportPresets";
 import { useWeatherData } from "../hooks/useWeeklyWeather";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { REMOTE_CALENDAR_DEFAULT_COLORS } from "../components/Calendar/EventColorPattern";
+import { CameraIcon } from "../components/Layout/SidebarIcons";
 
 export default function SettingsView() {
   const {
@@ -437,6 +438,61 @@ export default function SettingsView() {
                 <span className="font-mono">calendar.create_event</span> on the calendar you choose when saving a new event. Use a
                 calendar you can write to. If you merge the same calendar as a remote source, events may appear twice until you hide
                 one source.
+              </p>
+            </SettingsSection>
+
+            <SettingsSection title="Calendar camera preview" icon={<CameraIcon className="w-5 h-5 text-skydark-text-secondary" />}>
+              <p className="text-sm text-skydark-text-secondary mb-3">
+                Show a live camera strip at the top of the Calendar page (same streams as Cameras). Enter one or two{" "}
+                <span className="font-mono text-skydark-text">camera.*</span> entity IDs; with two, the preview alternates
+                between them.
+              </p>
+              <label className="block text-sm font-medium text-skydark-text mb-1.5">Camera entity 1</label>
+              <input
+                type="text"
+                className="input-skydark w-full max-w-lg font-mono text-sm mb-4"
+                placeholder="e.g. camera.front_porch_high_resolution_channel"
+                value={settings.calendarPreviewCameras?.[0] ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  const second = settings.calendarPreviewCameras?.[1]?.trim() ?? "";
+                  const next = [v, second].filter(Boolean);
+                  setSettings({ calendarPreviewCameras: next });
+                }}
+                spellCheck={false}
+                aria-label="First calendar preview camera entity ID"
+              />
+              <label className="block text-sm font-medium text-skydark-text mb-1.5">Camera entity 2 (optional)</label>
+              <input
+                type="text"
+                className="input-skydark w-full max-w-lg font-mono text-sm mb-4"
+                placeholder="e.g. camera.carport_high_resolution_channel"
+                value={settings.calendarPreviewCameras?.[1] ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value.trim();
+                  const first = settings.calendarPreviewCameras?.[0]?.trim() ?? "";
+                  const next = [first, v].filter(Boolean);
+                  setSettings({ calendarPreviewCameras: next });
+                }}
+                spellCheck={false}
+                aria-label="Second calendar preview camera entity ID"
+              />
+              <label className="block text-sm font-medium text-skydark-text mb-1.5">Rotate every (seconds)</label>
+              <input
+                type="number"
+                min={10}
+                max={120}
+                className="input-skydark w-full max-w-[140px] mb-2"
+                value={settings.calendarPreviewRotateSeconds}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (Number.isNaN(n)) return;
+                  setSettings({ calendarPreviewRotateSeconds: Math.min(120, Math.max(10, n)) });
+                }}
+                aria-label="Seconds between alternating cameras"
+              />
+              <p className="text-xs text-skydark-text-secondary max-w-lg">
+                Clear both fields to hide the preview. Values are saved with your other SkyDark settings.
               </p>
             </SettingsSection>
 

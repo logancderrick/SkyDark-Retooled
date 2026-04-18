@@ -250,7 +250,7 @@ export default function ListsView() {
           <button
             type="button"
             onClick={() => setAddListOpen(true)}
-            className="btn-primary"
+            className="btn-primary shrink-0 whitespace-nowrap"
           >
             + New list
           </button>

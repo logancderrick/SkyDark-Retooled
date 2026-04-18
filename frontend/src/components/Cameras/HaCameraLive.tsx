@@ -168,24 +168,27 @@ export default function HaCameraLive({
   const mjpegSrc = buildCameraProxyStreamUrl(entityId, connection, entityPicture);
 
   return (
-    <div ref={containerRef} className="absolute inset-0 bg-black">
+    <div
+      ref={containerRef}
+      className={`relative w-full bg-black ${useMjpeg ? "" : "min-h-[160px]"}`}
+    >
       {useMjpeg ? (
         <iframe
           title={title}
           src={inView ? mjpegSrc : "about:blank"}
-          className="absolute inset-0 h-full w-full border-0 bg-black"
+          className="block w-full max-h-[85vh] border-0 bg-black aspect-video"
           allow="autoplay; fullscreen"
         />
       ) : (
         <>
           {!hlsUrl && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center text-sm text-gray-400">
+            <div className="absolute inset-0 z-10 flex min-h-[200px] items-center justify-center text-sm text-gray-400">
               Requesting stream…
             </div>
           )}
           <video
             ref={videoRef}
-            className="absolute inset-0 h-full w-full object-contain bg-black [transform:translateZ(0)]"
+            className="block h-auto w-full max-h-[85vh] bg-black [transform:translateZ(0)]"
             playsInline
             muted
             autoPlay
