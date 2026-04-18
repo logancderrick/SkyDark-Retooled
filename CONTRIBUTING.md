@@ -6,7 +6,7 @@ This doc is for anyone who wants to run, build, or change the code — new or ex
 
 ## Before you start
 
-- **Users** (just installing): see the [README](README.md#install-via-hacs).
+- **Users** (just installing): see the [README](README.md#install-hacs-recommended).
 - **Developers**: this file + the [Repository structure](README.md#repository-structure) in the README.
 
 ---
@@ -89,4 +89,4 @@ Changing data or HA behavior: work in `custom_components/skydark_calendar/` (dat
 
 ## Questions or issues
 
-Open an issue or discussion on [GitHub](https://github.com/HunterJacobs/SkyDark). For install/config problems, check the [README Troubleshooting](README.md#troubleshooting) section first.
+Open an issue or discussion on [this fork’s GitHub](https://github.com/logancderrick/SkyDark-Retooled). For install/config problems, check the [README Troubleshooting](README.md#troubleshooting) section first. The original project is [HunterJacobs/SkyDark](https://github.com/HunterJacobs/SkyDark).

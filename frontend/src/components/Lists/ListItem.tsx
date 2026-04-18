@@ -12,8 +12,9 @@ export default function ListItem({ item, onToggle, onDelete }: ListItemProps) {
     <li className="flex items-center gap-2 group">
       <button
         type="button"
+        data-compact
         onClick={onToggle}
-        className={`flex-shrink-0 w-5 h-5 rounded border-2 border-gray-300 flex items-center justify-center ${item.completed ? "bg-skydark-checkbox-completed" : "bg-white"}`}
+        className={`h-5 w-5 shrink-0 rounded border-2 border-gray-300 p-0 ${item.completed ? "bg-skydark-checkbox-completed" : "bg-white"}`}
         aria-label={item.completed ? "Mark incomplete" : "Mark complete"}
       >
         {item.completed && <span className="text-white text-xs font-bold">✓</span>}
@@ -27,8 +28,9 @@ export default function ListItem({ item, onToggle, onDelete }: ListItemProps) {
       </span>
       <button
         type="button"
+        data-compact
         onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 p-1 text-skydark-text-secondary hover:text-red-500 text-sm"
+        className="opacity-0 group-hover:opacity-100 h-8 w-8 shrink-0 rounded p-0 text-skydark-text-secondary hover:bg-gray-100 hover:text-red-500"
         aria-label="Remove"
       >
         <CloseIcon className="w-4 h-4" />

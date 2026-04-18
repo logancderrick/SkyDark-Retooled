@@ -25,11 +25,22 @@ body {
 }
 
 /* Touch targets: at least 44×44pt, but never shrink below label width (min-width: 44px alone caused flex clipping). */
-button,
-a,
-[role="button"] {
+button:not([data-compact]),
+a:not([data-compact]),
+[role="button"]:not([data-compact]) {
   min-height: 44px;
   min-width: max(44px, fit-content);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Small controls (e.g. list checkboxes) opt out so width/height utilities stay square. */
+button[data-compact],
+a[data-compact],
+[role="button"][data-compact] {
+  min-height: unset;
+  min-width: unset;
   display: inline-flex;
   align-items: center;
   justify-content: center;

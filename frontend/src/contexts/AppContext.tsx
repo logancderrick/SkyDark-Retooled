@@ -245,10 +245,10 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
   if (!Array.isArray(merged.calendarPreviewCameras)) {
     merged.calendarPreviewCameras = [];
   } else {
+    // Keep partial entity ids while typing in Settings (do not require camera.* prefix here).
     merged.calendarPreviewCameras = merged.calendarPreviewCameras
       .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
       .map((id) => id.trim())
-      .filter((id) => id.startsWith("camera."))
       .slice(0, 6);
   }
   let rotateSec = merged.calendarPreviewRotateSeconds;

@@ -170,7 +170,7 @@ export default function HaCameraLive({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full bg-black ${useMjpeg ? "" : "min-h-[160px]"}`}
+      className={`relative w-full bg-black ${!useMjpeg && !hlsUrl ? "min-h-[200px]" : ""}`}
     >
       {useMjpeg ? (
         <iframe

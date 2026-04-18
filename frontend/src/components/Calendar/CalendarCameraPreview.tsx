@@ -67,7 +67,7 @@ export default function CalendarCameraPreview({
 
   return (
     <div
-      className="rounded-2xl border border-gray-200 bg-gray-950 overflow-hidden shadow-skydark w-full max-h-[min(42vh,360px)] flex flex-col"
+      className="rounded-2xl border border-gray-200 bg-gray-950 overflow-hidden shadow-skydark w-full max-w-xl flex flex-col"
       aria-label="Calendar camera preview"
     >
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-900/95 border-b border-gray-800 shrink-0">
@@ -80,7 +80,7 @@ export default function CalendarCameraPreview({
           </span>
         )}
       </div>
-      <div className="relative w-full flex-1 min-h-[180px] bg-black">
+      <div className="relative w-full shrink-0 overflow-hidden bg-black">
         <HaCameraLive
           key={activeId}
           entityId={activeId}

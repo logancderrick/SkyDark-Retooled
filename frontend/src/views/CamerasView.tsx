@@ -78,7 +78,7 @@ export default function CamerasView() {
     <div className="h-full flex flex-col min-h-0">
       <h2 className="text-lg font-semibold text-skydark-text mb-4 shrink-0">Cameras</h2>
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-4">
+        <div className="grid grid-cols-1 items-start sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-4">
           {sorted.map((cam) => {
             const name = String(cam.attributes?.friendly_name ?? cam.entity_id);
             return (
