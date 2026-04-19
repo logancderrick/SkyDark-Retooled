@@ -177,23 +177,23 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex flex-1 min-h-0 flex-col">
+      <div className="flex flex-1 min-h-0 flex-col bg-skydark-bg">
         {/* Row 1: day headers */}
         <div
-          className="flex flex-shrink-0 bg-skydark-bg border-b border-gray-100"
+          className="flex flex-shrink-0 bg-skydark-bg border-b border-skydark-border"
           style={{ height: DAY_HEADER_HEIGHT, scrollbarGutter: "stable" }}
         >
-          <div className="w-14 flex-shrink-0" aria-hidden />
-          <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200 min-w-0">
+          <div className="w-14 flex-shrink-0 bg-skydark-surface-muted" aria-hidden />
+          <div className="flex-1 grid grid-cols-7 gap-px bg-skydark-grid-line min-w-0">
             {days.map((d) => (
               <div
                 key={d.toISOString()}
-                className="bg-skydark-bg flex flex-col items-center justify-center"
+                className="bg-skydark-surface flex flex-col items-center justify-center"
               >
                 <button
                   type="button"
                   onClick={() => onDateClick?.(d)}
-                  className="w-full h-full flex flex-col items-center justify-center hover:bg-gray-50"
+                  className="w-full h-full flex flex-col items-center justify-center hover:bg-skydark-surface-muted"
                 >
                   <span className="text-sm font-semibold text-skydark-text">{format(d, "EEE")}</span>
                   <span className="text-xs text-skydark-text-secondary">{format(d, "d")}</span>
@@ -204,11 +204,11 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
         </div>
         {/* Row 2: all-day events (max 2 rows, then +N overflow) */}
         <div
-          className="flex flex-shrink-0 bg-skydark-bg border-b border-gray-100"
+          className="flex flex-shrink-0 bg-skydark-bg border-b border-skydark-border"
           style={{ scrollbarGutter: "stable" }}
         >
-          <div className="w-14 flex-shrink-0 border-r border-gray-200" aria-hidden />
-          <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200 min-w-0">
+          <div className="w-14 flex-shrink-0 border-r border-skydark-border bg-skydark-surface-muted" aria-hidden />
+          <div className="flex-1 grid grid-cols-7 gap-px bg-skydark-grid-line min-w-0">
             {days.map((d) => {
               const dayEvents = events.filter((e) => {
                 const start = parseISO(e.start_time);
@@ -222,7 +222,7 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
               return (
                 <div
                   key={d.toISOString()}
-                  className="bg-skydark-bg px-1 py-1 flex flex-col gap-0.5"
+                  className="bg-skydark-surface px-1 py-1 flex flex-col gap-0.5"
                   onClick={() => onDateClick?.(d)}
                 >
                   {visibleEvents.map((event) => {
@@ -299,7 +299,7 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
           >
             {Array.from({ length: DAY_BLOCKS }, (_, blockIndex) => (
               <div key={blockIndex} className="flex" style={{ height: fullDayHeight }}>
-                <div className="flex flex-col flex-shrink-0 w-14 border-r border-gray-200 pr-2">
+                <div className="flex flex-col flex-shrink-0 w-14 border-r border-skydark-border bg-skydark-surface-muted pr-2">
                   {HOURS.map((h) => (
                     <div
                       key={h}
@@ -310,7 +310,7 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                     </div>
                   ))}
                 </div>
-                <div className="flex-1 grid grid-cols-7 gap-px bg-gray-200 min-w-0">
+                <div className="flex-1 grid grid-cols-7 gap-px bg-skydark-grid-line min-w-0">
                   {days.map((d) => {
                     const dayEvents = events.filter((e) => {
                       const start = parseISO(e.start_time);
@@ -320,7 +320,7 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                     return (
                       <div
                         key={d.toISOString()}
-                        className="bg-skydark-bg relative"
+                        className="bg-skydark-surface relative"
                         style={{ minHeight: fullDayHeight }}
                         onClick={() => onDateClick?.(d)}
                       >
@@ -335,7 +335,7 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                         {HOURS.slice(1).map((h) => (
                           <div
                             key={h}
-                            className="border-t border-gray-100"
+                            className="border-t border-skydark-border"
                             style={{ height: pixelsPerHour - 1 }}
                           />
                         ))}

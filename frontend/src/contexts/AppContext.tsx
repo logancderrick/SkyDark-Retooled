@@ -22,6 +22,7 @@ import {
   updateFamilyMemberWS,
 } from "../lib/skyDarkApi";
 import { isSkydarkDemo } from "../lib/demoMode";
+import { readStoredThemePreference, writeStoredThemePreference } from "../lib/themePreferenceStorage";
 
 const STORAGE_KEY_SETTINGS = "skydark_app_settings";
 const STORAGE_KEY_MEMBERS = "skydark_family_members";
@@ -126,6 +127,8 @@ export interface AppSettings {
   calendarPreviewCameras: string[];
   /** Seconds between cameras when `calendarPreviewCameras` has multiple entries (clamped 10–120). */
   calendarPreviewRotateSeconds: number;
+  /** Overall UI palette: light (default) or dark. */
+  themePreference: "light" | "dark";
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -149,6 +152,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   shoppingChecked: {},
   calendarPreviewCameras: [],
   calendarPreviewRotateSeconds: 20,
+  themePreference: "light",
 };
 
 interface AppState {
@@ -257,13 +261,21 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
     rotateSec = DEFAULT_SETTINGS.calendarPreviewRotateSeconds;
   }
   merged.calendarPreviewRotateSeconds = Math.min(120, Math.max(10, rotateSec));
+  if (merged.themePreference !== "light" && merged.themePreference !== "dark") {
+    merged.themePreference = "light";
+  }
   return merged;
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const skydark = useSkydarkDataContext();
   const [familyMembers, setFamilyMembersState] = useState<FamilyMember[]>(DEFAULT_MEMBERS);
-  const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettingsState] = useState<AppSettings>(() =>
+    normalizeSettings({
+      ...DEFAULT_SETTINGS,
+      themePreference: readStoredThemePreference() ?? DEFAULT_SETTINGS.themePreference,
+    })
+  );
   const [isAuthenticated, setAuthenticatedState] = useState(false);
   const [screensaverTriggered, setScreensaverTriggered] = useState(false);
   const [isLocked, setIsLockedState] = useState(false);
@@ -279,9 +291,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (valid.length > 0) setFamilyMembersState(valid);
     }
     if (skydark.data.appSettings && typeof skydark.data.appSettings === "object") {
-      setSettingsState(normalizeSettings(skydark.data.appSettings as Partial<AppSettings>));
+      const fromServer = skydark.data.appSettings as Partial<AppSettings>;
+      const storedTheme = readStoredThemePreference();
+      setSettingsState(
+        normalizeSettings({
+          ...fromServer,
+          themePreference: storedTheme ?? fromServer.themePreference ?? DEFAULT_SETTINGS.themePreference,
+        })
+      );
     }
   }, [skydark?.data?.connection, skydark?.data?.familyMembers, skydark?.data?.appSettings]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const dark = settings.themePreference === "dark";
+    document.documentElement.classList.toggle("dark", dark);
+    writeStoredThemePreference(dark ? "dark" : "light");
+  }, [settings.themePreference]);
 
   // One-time migration: copy old local settings/members into backend settings once connected.
   useEffect(() => {

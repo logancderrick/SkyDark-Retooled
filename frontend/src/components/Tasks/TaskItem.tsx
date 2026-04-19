@@ -40,7 +40,7 @@ export default function TaskItem({ task, color, onToggle, onEdit, onDelete }: Ta
   return (
     <motion.li
       layout
-      className="flex items-center gap-3 p-3 rounded-card-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+      className="flex items-center gap-3 p-3 rounded-card-lg bg-skydark-surface-muted hover:bg-skydark-surface-hover transition-colors"
       initial={false}
       animate={{ opacity: completed ? 0.7 : 1 }}
     >
@@ -51,7 +51,7 @@ export default function TaskItem({ task, color, onToggle, onEdit, onDelete }: Ta
         className="shrink-0 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors p-0"
         style={{
           borderColor: color,
-          backgroundColor: completed ? "#9EE5CC" : "white",
+          backgroundColor: completed ? "#9EE5CC" : "var(--sd-surface)",
         }}
         aria-label={completed ? "Mark incomplete" : "Mark complete"}
       >

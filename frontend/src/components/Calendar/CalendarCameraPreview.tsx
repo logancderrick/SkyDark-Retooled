@@ -74,7 +74,7 @@ export default function CalendarCameraPreview({
       className={
         embedded
           ? "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-none border-0 bg-gray-950 shadow-none"
-          : "flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-gray-950 shadow-skydark"
+          : "flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-skydark-border bg-gray-950 shadow-skydark"
       }
       aria-label="Calendar camera preview"
     >

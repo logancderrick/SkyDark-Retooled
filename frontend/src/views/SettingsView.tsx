@@ -182,7 +182,7 @@ export default function SettingsView() {
                   {members.map((m) => (
                     <li
                       key={m.id}
-                      className="flex items-center gap-3 p-3 rounded-card-lg bg-white shadow-skydark"
+                      className="flex items-center gap-3 p-3 rounded-card-lg bg-skydark-surface shadow-skydark"
                     >
                       <div
                         className="w-10 h-10 aspect-square rounded-full shrink-0 flex items-center justify-center text-white font-semibold"
@@ -545,7 +545,7 @@ export default function SettingsView() {
                   {(settings.remoteCalendarEntities ?? []).map((eid, i) => (
                     <div
                       key={eid}
-                      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 border-b border-skydark-border pb-3 last:border-0 last:pb-0"
                     >
                       <span
                         className="text-xs text-skydark-text-secondary font-mono truncate flex-1 min-w-0 sm:max-w-[14rem]"
@@ -587,7 +587,7 @@ export default function SettingsView() {
                             },
                           })
                         }
-                        className="h-9 w-14 cursor-pointer rounded border border-gray-200 bg-white p-0.5 shrink-0"
+                        className="h-9 w-14 cursor-pointer rounded border border-skydark-border bg-skydark-surface p-0.5 shrink-0"
                       />
                     </div>
                   ))}
@@ -600,6 +600,19 @@ export default function SettingsView() {
         {activeSection === "display" && (
           <>
             <h2 className="text-xl font-semibold text-skydark-text mb-6">Display</h2>
+            <SettingsSection title="Appearance" icon={<DisplayIcon className="w-5 h-5 text-skydark-text-secondary" />}>
+              <SettingRow
+                label="Dark theme"
+                value="Applies across the whole panel (calendar, chores, lists, settings)."
+                control={
+                  <Toggle
+                    checked={settings.themePreference === "dark"}
+                    onChange={(checked) => setSettings({ themePreference: checked ? "dark" : "light" })}
+                    aria-label="Use dark theme"
+                  />
+                }
+              />
+            </SettingsSection>
             <SettingsSection title="Screen Saver" icon={<DisplayIcon className="w-5 h-5 text-skydark-text-secondary" />}>
               <SettingRow
                 label="Show photo screen saver after inactivity"
@@ -728,7 +741,7 @@ export default function SettingsView() {
                         setSettings({ screensaverTimeDisplayScale: n });
                       }
                     }}
-                    className="flex-1 h-2 rounded-lg appearance-none bg-gray-200 accent-skydark-accent"
+                    className="flex-1 h-2 rounded-lg appearance-none bg-skydark-surface-muted accent-skydark-accent"
                   />
                   <span className="text-xs text-skydark-text-secondary shrink-0">Large</span>
                 </div>
@@ -748,7 +761,7 @@ export default function SettingsView() {
                         setSettings({ screensaverWeatherDisplayScale: n });
                       }
                     }}
-                    className="flex-1 h-2 rounded-lg appearance-none bg-gray-200 accent-skydark-accent"
+                    className="flex-1 h-2 rounded-lg appearance-none bg-skydark-surface-muted accent-skydark-accent"
                   />
                   <span className="text-xs text-skydark-text-secondary shrink-0">Large</span>
                 </div>

@@ -167,10 +167,10 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
   );
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div className="flex flex-1 min-h-0 flex-col bg-skydark-bg">
       {/* All-day events header - fixed */}
       <div
-        className="flex-shrink-0 border-b border-gray-100 px-3 py-2 flex flex-col gap-1.5 bg-skydark-bg"
+        className="flex-shrink-0 border-b border-skydark-border px-3 py-2 flex flex-col gap-1.5 bg-skydark-surface-muted"
         style={{ scrollbarGutter: "stable" }}
         onClick={() => onDateClick?.(currentDate)}
       >
@@ -238,7 +238,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
           {Array.from({ length: DAY_BLOCKS }, (_, blockIndex) => (
             <div key={blockIndex} className="flex" style={{ height: fullDayHeight }}>
               {/* Time labels column */}
-              <div className="flex flex-col flex-shrink-0 w-14 border-r border-gray-200 pr-2">
+              <div className="flex flex-col flex-shrink-0 w-14 border-r border-skydark-border bg-skydark-surface-muted pr-2">
                 {HOURS.map((h) => (
                   <div
                     key={h}
@@ -258,7 +258,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
 
               {/* Event grid */}
               <div
-                className="flex-1 relative border-l border-gray-100 bg-skydark-bg"
+                className="flex-1 relative border-l border-skydark-border bg-skydark-surface"
                 style={{ minHeight: fullDayHeight }}
                 onClick={() => onDateClick?.(currentDate)}
               >
@@ -276,7 +276,7 @@ const DayView = forwardRef<DayViewRef, DayViewProps>(function DayView(
                 {HOURS.slice(1).map((h) => (
                   <div
                     key={h}
-                    className="absolute left-0 right-0 border-t border-gray-100"
+                    className="absolute left-0 right-0 border-t border-skydark-border"
                     style={{ top: h * pixelsPerHour }}
                   />
                 ))}

@@ -23,7 +23,7 @@ export const navItems = [
 export default function Sidebar() {
   return (
     <aside
-      className="hidden md:flex flex-col items-center py-4 flex-shrink-0 border-r border-gray-200 bg-white w-20"
+      className="hidden md:flex flex-col items-center py-4 flex-shrink-0 border-r border-skydark-border bg-skydark-surface w-20"
       style={{ width: 80 }}
       aria-label="Main navigation"
     >
@@ -39,7 +39,7 @@ export default function Sidebar() {
               `flex items-center justify-center w-12 h-12 rounded-full transition-colors ${
                 isActive
                   ? "bg-[rgba(59,155,191,0.1)] text-skydark-accent"
-                  : "text-skydark-text-secondary hover:bg-gray-100"
+                  : "text-skydark-text-secondary hover:bg-skydark-surface-muted"
               }`
             }
             title={label}

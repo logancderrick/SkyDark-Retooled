@@ -66,12 +66,12 @@ export default function AddProfileModal({ open, onClose, onAdd }: AddProfileModa
           </div>
 
           {showAppMessage && (
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 border border-gray-100 px-3 py-2.5 text-sm text-skydark-text-secondary">
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-skydark-surface-muted border border-skydark-border px-3 py-2.5 text-sm text-skydark-text-secondary">
               <span>You can add a profile picture in the Skydark App.</span>
               <button
                 type="button"
                 onClick={() => setShowAppMessage(false)}
-                className="shrink-0 p-1 rounded-lg hover:bg-gray-200 text-skydark-text-secondary"
+                className="shrink-0 p-1 rounded-lg hover:bg-skydark-surface-hover text-skydark-text-secondary"
                 aria-label="Dismiss"
               >
                 <CloseIcon className="w-4 h-4" />

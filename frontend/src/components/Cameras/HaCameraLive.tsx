@@ -193,8 +193,8 @@ export default function HaCameraLive({
             <div
               className={
                 compact
-                  ? "absolute inset-0 z-10 flex items-center justify-center text-xs text-gray-400"
-                  : "absolute inset-0 z-10 flex min-h-[200px] items-center justify-center text-sm text-gray-400"
+                  ? "absolute inset-0 z-10 flex items-center justify-center text-xs text-skydark-text-secondary opacity-70"
+                  : "absolute inset-0 z-10 flex min-h-[200px] items-center justify-center text-sm text-skydark-text-secondary opacity-70"
               }
             >
               Requesting stream…

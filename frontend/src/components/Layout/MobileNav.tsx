@@ -21,7 +21,7 @@ export default function MobileNav({
 
   return (
     <nav
-      className={`${visibilityClass} items-center gap-1 px-2 py-2 overflow-x-auto ${edgeBorderClass} border-gray-200 bg-white shrink-0 ${bottomPositionClass}`}
+      className={`${visibilityClass} items-center gap-1 px-2 py-2 overflow-x-auto ${edgeBorderClass} border-skydark-border bg-skydark-surface shrink-0 ${bottomPositionClass}`}
       aria-label="Main navigation"
     >
       {navItems.map(({ path, label, Icon }) => (
@@ -32,7 +32,7 @@ export default function MobileNav({
             `${iconOnly ? "flex-1 justify-center px-2" : "px-3"} flex items-center gap-1.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               isActive
                 ? "bg-[rgba(59,155,191,0.1)] text-skydark-accent"
-                : "text-skydark-text-secondary hover:bg-gray-100"
+                : "text-skydark-text-secondary hover:bg-skydark-surface-muted"
             }`
           }
           aria-label={label}

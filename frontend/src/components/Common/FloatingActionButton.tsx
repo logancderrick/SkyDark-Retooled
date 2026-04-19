@@ -48,7 +48,7 @@ export default function FloatingActionButton({ items }: FloatingActionButtonProp
                 item.onClick();
                 setOpen(false);
               }}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-skydark hover:shadow-skydark-hover text-skydark-text text-sm font-medium"
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-skydark-surface shadow-skydark hover:shadow-skydark-hover text-skydark-text text-sm font-medium"
             >
               {item.icon}
               {item.label}

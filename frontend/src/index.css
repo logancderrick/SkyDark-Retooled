@@ -2,6 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+  --sd-bg: #f8fafb;
+  --sd-text: #000000;
+  --sd-text-secondary: #404040;
+  --sd-accent: #3b9bbf;
+  --sd-accent-bg: rgba(59, 155, 191, 0.1);
+  --sd-surface: #ffffff;
+  --sd-surface-muted: #f3f4f6;
+  --sd-surface-hover: #e5e7eb;
+  --sd-surface-elevated: rgba(255, 255, 255, 0.92);
+  --sd-border: #e5e7eb;
+  --sd-grid-line: #e5e7eb;
+  --sd-toggle-track: #d1d5db;
+  --sd-input-bg: #ffffff;
+  --sd-input-text: #2b3a4a;
+  --sd-input-border: #d1d5db;
+  --sd-placeholder: #6b7c8f;
+}
+
+/* Class is toggled on `document.documentElement` (see AppContext). */
+html.dark {
+  color-scheme: dark;
+  /* Canvas behind cards — clearly darker than surfaces */
+  --sd-bg: #06080d;
+  --sd-text: #f1f5f9;
+  --sd-text-secondary: #94a3b8;
+  --sd-accent: #5fc4e8;
+  --sd-accent-bg: rgba(95, 196, 232, 0.18);
+  /* Day cells / panels */
+  --sd-surface: #121a24;
+  --sd-surface-muted: #0d1218;
+  --sd-surface-hover: #1c2836;
+  --sd-surface-elevated: rgba(18, 26, 36, 0.97);
+  --sd-border: #2a3545;
+  --sd-grid-line: #243041;
+  --sd-toggle-track: #3d4d63;
+  --sd-input-bg: #1a2432;
+  --sd-input-text: #f1f5f9;
+  --sd-input-border: #3d5166;
+  --sd-placeholder: #94a3b8;
+}
+
 /* Skydark base - match reference UI (font stack from Tailwind theme / Google Fonts) */
 body {
   @apply font-sans antialiased bg-skydark-bg text-skydark-text;
@@ -9,6 +52,7 @@ body {
 
 #root {
   min-height: 100vh;
+  background-color: var(--sd-bg);
 }
 
 .hide-scrollbar {
@@ -44,26 +88,38 @@ a[data-compact],
 
 @layer components {
   .input-skydark {
-    @apply w-full rounded-xl border border-gray-300 px-3 py-2.5 bg-white shadow-sm;
-    color: #2b3a4a;
+    @apply w-full rounded-xl border px-3 py-2.5 shadow-sm;
+    background-color: var(--sd-input-bg);
+    border-color: var(--sd-input-border);
+    color: var(--sd-input-text);
     min-height: 44px;
   }
   .input-skydark:focus {
-    @apply outline-none ring-2 ring-skydark-accent/25 border-skydark-accent;
+    outline: none;
+    border-color: var(--sd-accent);
+    box-shadow: 0 0 0 3px var(--sd-accent-bg);
   }
   .input-skydark::placeholder {
-    color: #6b7c8f;
+    color: var(--sd-placeholder);
   }
   .btn-primary {
     @apply px-4 py-3.5 rounded-xl bg-skydark-accent text-white font-semibold text-base hover:opacity-90 transition-opacity;
   }
   .btn-secondary {
-    @apply px-4 py-2.5 rounded-xl border border-gray-200 text-sm hover:bg-gray-50 transition-colors;
-    color: #2b3a4a;
+    @apply px-4 py-2.5 rounded-xl border font-medium text-sm transition-colors;
+    border-color: var(--sd-border);
+    color: var(--sd-input-text);
+    background-color: var(--sd-surface-muted);
+  }
+  .btn-secondary:hover {
+    background-color: var(--sd-surface-hover);
   }
   select.input-skydark {
     @apply pr-8 appearance-none bg-no-repeat bg-right;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7C8F' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-position: right 12px center;
+  }
+  html.dark select.input-skydark {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   }
 }

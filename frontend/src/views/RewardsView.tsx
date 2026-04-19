@@ -182,7 +182,7 @@ export default function RewardsView() {
             {familyMembers.map((m) => (
               <div
                 key={m.id}
-                className="flex items-center gap-3 p-3 rounded-card bg-white shadow-skydark"
+                className="flex items-center gap-3 p-3 rounded-card bg-skydark-surface shadow-skydark"
               >
                 <div
                   className="w-10 h-10 aspect-square rounded-full shrink-0 flex items-center justify-center text-white font-semibold"
@@ -194,7 +194,7 @@ export default function RewardsView() {
                   <div className="font-medium text-skydark-text">{m.name}</div>
                   <div className="flex items-center gap-2">
                     <div
-                      className="h-2 flex-1 rounded-full bg-gray-200 overflow-hidden"
+                      className="h-2 flex-1 rounded-full bg-skydark-surface-muted overflow-hidden"
                     >
                       <div
                         className="h-full rounded-full transition-all"
@@ -221,7 +221,7 @@ export default function RewardsView() {
               return (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between gap-2 p-3 rounded-card bg-white shadow-skydark"
+                  className="flex items-center justify-between gap-2 p-3 rounded-card bg-skydark-surface shadow-skydark"
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-skydark-text font-medium">{r.name}</span>

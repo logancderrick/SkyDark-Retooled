@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}", "./src/**/*.css"],
   theme: {
     screens: {
@@ -18,11 +19,18 @@ export default {
     extend: {
       colors: {
         skydark: {
-          bg: "#F8FAFB",
-          text: "#000000",
-          "text-secondary": "#404040",
-          accent: "#3B9BBF",
-          "accent-bg": "rgba(59, 155, 191, 0.1)",
+          bg: "var(--sd-bg)",
+          text: "var(--sd-text)",
+          "text-secondary": "var(--sd-text-secondary)",
+          accent: "var(--sd-accent)",
+          "accent-bg": "var(--sd-accent-bg)",
+          surface: "var(--sd-surface)",
+          "surface-muted": "var(--sd-surface-muted)",
+          "surface-hover": "var(--sd-surface-hover)",
+          "surface-elevated": "var(--sd-surface-elevated)",
+          border: "var(--sd-border)",
+          "grid-line": "var(--sd-grid-line)",
+          "toggle-track": "var(--sd-toggle-track)",
           pink: "#FFD4D4",
           "pink-dark": "#FFBABA",
           blue: "#C8E6F5",
@@ -79,10 +87,28 @@ export default {
           "0%, 100%": { opacity: "0.35" },
           "50%": { opacity: "0.65" },
         },
+        /** Vertical rain streak sheets (background-position loop). */
+        skydarkRainSheets: {
+          "0%": { backgroundPosition: "0 0, 12px 0" },
+          "100%": { backgroundPosition: "0 72px, 12px 72px" },
+        },
+        /** Gentle snowfall drift (background-position loop). */
+        skydarkSnowSheets: {
+          "0%": { backgroundPosition: "0 0, 18px 8px, 8px 20px" },
+          "100%": { backgroundPosition: "0 96px, 18px 104px, 8px 116px" },
+        },
+        /** Sunny haze breathing. */
+        skydarkSunPulse: {
+          "0%, 100%": { opacity: "0.55", transform: "scale(1) translate(0, 0)" },
+          "50%": { opacity: "0.85", transform: "scale(1.06) translate(2%, -1%)" },
+        },
       },
       animation: {
         "skydark-weather-drift": "skydarkWeatherDrift 16s ease-in-out infinite",
         "skydark-weather-pulse": "skydarkWeatherPulse 7s ease-in-out infinite",
+        "skydark-rain-sheets": "skydarkRainSheets 0.75s linear infinite",
+        "skydark-snow-sheets": "skydarkSnowSheets 14s linear infinite",
+        "skydark-sun-pulse": "skydarkSunPulse 8s ease-in-out infinite",
       },
     },
   },

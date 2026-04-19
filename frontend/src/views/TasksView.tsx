@@ -218,14 +218,14 @@ export default function TasksView() {
         </div>
       </div>
 
-      <div className="flex gap-0 border-b border-gray-200 mb-4">
+      <div className="flex gap-0 border-b border-skydark-border mb-4">
         <button
           type="button"
           onClick={() => setActiveTab("byPerson")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "byPerson"
               ? "text-skydark-accent border-b-2 border-skydark-accent bg-[rgba(59,155,191,0.06)]"
-              : "text-skydark-text-secondary hover:text-skydark-text hover:bg-gray-50"
+              : "text-skydark-text-secondary hover:text-skydark-text hover:bg-skydark-surface-muted"
           }`}
         >
           By person
@@ -236,7 +236,7 @@ export default function TasksView() {
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "allChores"
               ? "text-skydark-accent border-b-2 border-skydark-accent bg-[rgba(59,155,191,0.06)]"
-              : "text-skydark-text-secondary hover:text-skydark-text hover:bg-gray-50"
+              : "text-skydark-text-secondary hover:text-skydark-text hover:bg-skydark-surface-muted"
           }`}
         >
           All chores
@@ -266,9 +266,9 @@ export default function TasksView() {
 
       {activeTab === "allChores" && (
         <div className="overflow-auto">
-          <table className="w-full border-collapse bg-white rounded-card shadow-skydark overflow-hidden min-w-[700px]">
+          <table className="w-full border-collapse bg-skydark-surface rounded-card shadow-skydark overflow-hidden min-w-[700px]">
             <thead>
-              <tr className="bg-skydark-bg border-b border-gray-200">
+              <tr className="bg-skydark-bg border-b border-skydark-border">
                 <th className="text-left p-3 text-skydark-text-secondary font-medium">Chore</th>
                 <th className="text-left p-3 text-skydark-text-secondary font-medium">Assigned to</th>
                 <th className="text-left p-3 text-skydark-text-secondary font-medium">Frequency</th>
@@ -293,7 +293,7 @@ export default function TasksView() {
                   return (
                     <tr
                       key={task.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 align-middle"
+                      className="border-b border-skydark-border hover:bg-skydark-surface-muted align-middle"
                     >
                       <td className="p-3">
                         <span className="font-medium text-skydark-text">{task.icon && `${task.icon} `}{task.title}</span>
@@ -348,7 +348,7 @@ export default function TasksView() {
                           <button
                             type="button"
                             onClick={() => requestOpenTaskModal({ edit: task })}
-                            className="px-2 py-1.5 rounded-lg text-sm text-skydark-text-secondary hover:bg-gray-100"
+                            className="px-2 py-1.5 rounded-lg text-sm text-skydark-text-secondary hover:bg-skydark-surface-muted"
                           >
                             Edit
                           </button>

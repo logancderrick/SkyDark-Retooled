@@ -31,7 +31,7 @@ export default function PersonColumn({
   const hasMoreThanFive = displayTasks.length > 5;
 
   return (
-    <div className="flex flex-col flex-1 min-w-[260px] sm:min-w-0 rounded-card-lg bg-white shadow-skydark overflow-hidden">
+    <div className="flex flex-col flex-1 min-w-[260px] sm:min-w-0 rounded-card-lg bg-skydark-surface shadow-skydark overflow-hidden">
       <div
         className="p-4 border-b flex items-center gap-3"
         style={{ backgroundColor: `${member.color}40` }}
@@ -72,7 +72,7 @@ export default function PersonColumn({
           </ul>
         )}
         {hasMoreThanFive && (
-          <div className="mt-2 pt-2 border-t border-gray-100">
+          <div className="mt-2 pt-2 border-t border-skydark-border">
             <button
               type="button"
               onClick={() => setExpanded((e) => !e)}

@@ -82,7 +82,7 @@ export default function SimulatedViewport({ children }: SimulatedViewportProps) 
       aria-label="Simulated device viewport"
     >
       <div
-        className="relative bg-white rounded-lg shadow-2xl overflow-hidden flex-shrink-0"
+        className="relative bg-skydark-surface rounded-lg shadow-2xl overflow-hidden flex-shrink-0"
         style={{
           width: frameWidth,
           height: frameHeight,

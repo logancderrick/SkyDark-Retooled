@@ -40,7 +40,7 @@ export default function CalendarRemoteToggles() {
             className={`px-3 py-2 rounded-xl text-sm font-medium min-h-0 min-w-0 max-w-[11rem] truncate transition-colors border ${
               on
                 ? "text-skydark-text shadow-sm"
-                : "bg-gray-100 text-skydark-text-secondary border-gray-200 opacity-80"
+                : "bg-skydark-surface-muted text-skydark-text-secondary border-skydark-border opacity-80"
             } ${!hasConnection ? "opacity-50 cursor-not-allowed" : ""}`}
             style={
               on

@@ -58,19 +58,19 @@ export default function Modal({ open, onClose, title, children, variant = "cente
               transition={{ type: "tween", duration: 0.25, ease: "easeInOut" }}
               className={
                 isSlideRight
-                  ? "bg-white w-full max-w-md sm:max-w-lg flex flex-col h-full overflow-hidden pointer-events-auto rounded-l-2xl shadow-skydark-modal"
-                  : "bg-white rounded-modal shadow-skydark-modal max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto"
+                  ? "bg-skydark-surface w-full max-w-md sm:max-w-lg flex flex-col h-full overflow-hidden pointer-events-auto rounded-l-2xl shadow-skydark-modal"
+                  : "bg-skydark-surface rounded-modal shadow-skydark-modal max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col pointer-events-auto"
               }
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="modal-title"
             >
-              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 p-4 border-b border-gray-200 shrink-0">
+              <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 p-4 border-b border-skydark-border shrink-0">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 -ml-2 rounded-lg hover:bg-gray-100 text-skydark-text-secondary"
+                  className="p-2 -ml-2 rounded-lg hover:bg-skydark-surface-muted text-skydark-text-secondary"
                   aria-label="Back"
                 >
                   ←

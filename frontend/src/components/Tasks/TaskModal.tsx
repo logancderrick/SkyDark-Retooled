@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 import type { FamilyMember } from "../../types/calendar";
 import type { Task } from "../../types/tasks";
 import type { CustomScheduleType } from "../../types/tasks";
 import { TASK_CATEGORIES, TASK_FREQUENCIES, WEEKDAY_LABELS, MONTH_LABELS } from "../../types/tasks";
+import { useAppContext } from "../../contexts/AppContext";
 import Modal from "../Common/Modal";
 import Toggle from "../Common/Toggle";
-
-const EMOJI_OPTIONS = ["📋", "🧹", "🍽️", "📚", "🐕", "🗑️", "💊", "⭐", ""];
 
 /** True when the task repeats on a schedule; false = one-time task with a due date only. */
 function taskIsRepeating(t: Task | null | undefined): boolean {
@@ -33,6 +34,8 @@ export default function TaskModal({
   onSave,
   onDelete,
 }: TaskModalProps) {
+  const { settings } = useAppContext();
+  const emojiMartTheme = settings.themePreference === "dark" ? "dark" : "light";
   const [title, setTitle] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [category, setCategory] = useState("");
@@ -180,35 +183,41 @@ export default function TaskModal({
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
         <div className="space-y-5 flex-1">
           <div>
-            <label className="block text-sm font-medium text-skydark-text mb-1">Emoji (optional)</label>
-            <div className="flex gap-2 flex-wrap">
-              {EMOJI_OPTIONS.filter(Boolean).map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  data-compact
-                  onClick={() => setEmoji(emoji === e ? "" : e)}
-                  className={`w-10 h-10 rounded-xl border-2 text-xl flex items-center justify-center transition-colors ${
-                    emoji === e
-                      ? "border-skydark-accent bg-skydark-accent-bg"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                  aria-label={`Select ${e}`}
-                >
-                  {e}
-                </button>
-              ))}
-              <button
-                type="button"
-                data-compact
-                onClick={() => setEmoji("")}
-                className={`w-10 h-10 rounded-xl border-2 text-sm flex items-center justify-center ${
-                  !emoji ? "border-skydark-accent bg-skydark-accent-bg" : "border-gray-200"
-                }`}
-                aria-label="Clear emoji"
+            <label className="block text-sm font-medium text-skydark-text mb-1.5">Chore emoji (optional)</label>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-skydark-border bg-skydark-surface-muted text-2xl"
+                aria-hidden
               >
-                —
+                {emoji || "–"}
+              </span>
+              <input
+                type="text"
+                value={emoji}
+                onChange={(e) => setEmoji(e.target.value)}
+                className="input-skydark min-w-0 flex-1 font-sans text-lg"
+                placeholder="Pick below or paste any emoji"
+                aria-label="Chore emoji"
+                autoComplete="off"
+              />
+              <button type="button" data-compact className="btn-secondary shrink-0 px-3 py-2 text-xs" onClick={() => setEmoji("")}>
+                Clear
               </button>
+            </div>
+            <p className="text-xs text-skydark-text-secondary mb-2">
+              Full Unicode emoji set (search and categories — same characters as phone emoji keyboards).
+            </p>
+            <div className="w-full max-h-[min(52vh,340px)] min-h-[260px] overflow-y-auto overflow-x-hidden rounded-xl border border-skydark-border bg-skydark-surface">
+              <Picker
+                data={data}
+                theme={emojiMartTheme}
+                previewPosition="bottom"
+                skinTonePosition="search"
+                perLine={8}
+                maxFrequentRows={2}
+                style={{ width: "100%" }}
+                onEmojiSelect={(item: { native: string }) => setEmoji(item.native)}
+              />
             </div>
           </div>
 
@@ -223,8 +232,8 @@ export default function TaskModal({
                   onClick={() => setAssigneeId(m.id)}
                   className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-1.5 transition-colors ${
                     assigneeId === m.id
-                      ? "border-skydark-accent bg-white shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-skydark-accent bg-skydark-surface shadow-sm"
+                      : "border-skydark-border bg-skydark-surface hover:border-skydark-accent"
                   }`}
                 >
                   <div
@@ -239,10 +248,10 @@ export default function TaskModal({
               <button
                 type="button"
                 data-compact
-                className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-2 py-1.5 text-skydark-text-secondary hover:border-skydark-accent hover:text-skydark-accent"
+                className="flex flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-skydark-border px-2 py-1.5 text-skydark-text-secondary hover:border-skydark-accent hover:text-skydark-accent"
                 aria-label="Add profile"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-xl font-light text-gray-400">
+                <div className="w-12 h-12 rounded-full bg-skydark-surface-muted flex items-center justify-center text-xl font-light text-skydark-text-secondary">
                   +
                 </div>
                 <span className="text-xs font-medium">Add</span>
@@ -259,7 +268,7 @@ export default function TaskModal({
                 className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   taskType === "chore"
                     ? "bg-skydark-text text-white"
-                    : "bg-gray-100 text-skydark-text-secondary hover:bg-gray-200"
+                    : "bg-skydark-surface-muted text-skydark-text-secondary hover:bg-skydark-surface-hover"
                 }`}
               >
                 Chore
@@ -270,7 +279,7 @@ export default function TaskModal({
                 className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   taskType === "routine"
                     ? "bg-skydark-text text-white"
-                    : "bg-gray-100 text-skydark-text-secondary hover:bg-gray-200"
+                    : "bg-skydark-surface-muted text-skydark-text-secondary hover:bg-skydark-surface-hover"
                 }`}
               >
                 Routine
@@ -301,7 +310,7 @@ export default function TaskModal({
             />
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50/90 p-3 space-y-3">
+          <div className="rounded-xl border border-skydark-border bg-skydark-surface-muted p-3 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 pr-2">
                 <span className="text-sm font-medium text-skydark-text">Repeating chore</span>
@@ -355,7 +364,7 @@ export default function TaskModal({
                     className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                       weekdays.includes(day)
                         ? "bg-skydark-accent text-white"
-                        : "bg-gray-100 text-skydark-text-secondary hover:bg-gray-200"
+                        : "bg-skydark-surface-muted text-skydark-text-secondary hover:bg-skydark-surface-hover"
                     }`}
                   >
                     {label}
@@ -444,7 +453,7 @@ export default function TaskModal({
                           data-compact
                           onClick={() => setCustomWeekday(day)}
                           className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                            customWeekday === day ? "bg-skydark-accent text-white" : "bg-gray-100 text-skydark-text-secondary hover:bg-gray-200"
+                            customWeekday === day ? "bg-skydark-accent text-white" : "bg-skydark-surface-muted text-skydark-text-secondary hover:bg-skydark-surface-hover"
                           }`}
                         >
                           {label}

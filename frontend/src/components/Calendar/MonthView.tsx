@@ -69,11 +69,11 @@ export default function MonthView({
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
+    <div className="grid grid-cols-7 gap-px bg-skydark-grid-line rounded-lg overflow-hidden">
       {weekDays.map((wd) => (
         <div
           key={wd}
-          className="bg-skydark-bg p-2 text-center text-sm font-semibold text-skydark-text"
+          className="bg-skydark-surface-muted p-2 text-center text-sm font-semibold text-skydark-text"
         >
           {wd}
         </div>
@@ -89,7 +89,7 @@ export default function MonthView({
         return (
           <div
             key={d.toISOString()}
-            className="bg-skydark-bg min-h-[100px] p-1 flex flex-col"
+            className="bg-skydark-surface min-h-[100px] p-1 flex flex-col"
             onClick={() => onDateClick?.(d)}
           >
             <button
@@ -99,8 +99,8 @@ export default function MonthView({
                 onDateClick?.(d);
               }}
               className={`text-left text-sm w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
-                !isCurrentMonth ? "text-gray-400" : "text-skydark-text"
-              } ${isToday(d) ? "bg-red-100 text-red-700 font-semibold" : ""}`}
+                !isCurrentMonth ? "text-skydark-text-secondary opacity-60" : "text-skydark-text"
+              } ${isToday(d) ? "bg-red-100 text-red-700 font-semibold dark:bg-red-950/70 dark:text-red-200" : ""}`}
             >
               {format(d, "d")}
             </button>

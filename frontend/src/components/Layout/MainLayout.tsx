@@ -306,7 +306,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
         )}
         <main
-          className={`flex-1 p-5 sm:p-6 ${
+          className={`flex-1 bg-skydark-bg p-5 sm:p-6 ${
             desktopShellLock ? "min-h-0" : ""
           } ${
             shouldLockToViewport ? "overflow-hidden" : "overflow-y-auto"

@@ -36,7 +36,7 @@ interface SettingRowProps {
 
 export function SettingRow({ label, icon, value, control }: SettingRowProps) {
   return (
-    <div className="flex items-center justify-between gap-4 py-3 px-0 border-b border-gray-100 last:border-b-0">
+    <div className="flex items-center justify-between gap-4 py-3 px-0 border-b border-skydark-border last:border-b-0">
       <div className="flex items-center gap-3 min-w-0">
         {icon && <span className="shrink-0 text-skydark-text-secondary">{icon}</span>}
         <div className="min-w-0">

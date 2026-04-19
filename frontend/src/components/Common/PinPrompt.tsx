@@ -122,10 +122,10 @@ export default function PinPrompt({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-xl max-w-xs w-full p-6"
+              className="bg-skydark-surface rounded-2xl shadow-xl max-w-xs w-full p-6"
             >
               <h3 className="text-lg font-semibold text-skydark-text mb-2">{title}</h3>
-              <div className="flex items-center justify-center gap-1 mb-4 h-12 rounded-xl bg-gray-100 px-3">
+              <div className="flex items-center justify-center gap-1 mb-4 h-12 rounded-xl bg-skydark-surface-muted px-3">
                 <span className="text-xl font-mono tracking-widest text-skydark-text">
                   {pin.replace(/./g, "•")}
                 </span>
@@ -145,8 +145,8 @@ export default function PinPrompt({
                     className={`
                       h-14 rounded-xl text-xl font-medium transition-colors
                       ${d === "⌫"
-                        ? "bg-gray-200 text-skydark-text hover:bg-gray-300"
-                        : "bg-gray-100 text-skydark-text hover:bg-gray-200"}
+                        ? "bg-skydark-surface-hover text-skydark-text hover:bg-skydark-border"
+                        : "bg-skydark-surface-muted text-skydark-text hover:bg-skydark-surface-hover"}
                       disabled:opacity-60
                     `}
                     aria-label={d === "⌫" ? "Backspace" : d || undefined}

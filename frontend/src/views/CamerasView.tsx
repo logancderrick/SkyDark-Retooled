@@ -85,7 +85,7 @@ export default function CamerasView() {
             return (
               <div
                 key={cam.entity_id}
-                className="rounded-[18px] border border-gray-200 bg-white overflow-hidden shadow-skydark flex flex-col"
+                className="rounded-[18px] border border-skydark-border bg-skydark-surface overflow-hidden shadow-skydark flex flex-col"
               >
                 <div className="relative w-full shrink-0 overflow-hidden">
                   {conn ? (
@@ -101,13 +101,13 @@ export default function CamerasView() {
                     />
                   ) : (
                     <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-3 text-center">
-                      <p className="text-xs leading-snug text-gray-400">
+                      <p className="text-xs leading-snug text-skydark-text-secondary opacity-80">
                         Demo entity — live stream when connected to Home Assistant.
                       </p>
                     </div>
                   )}
                 </div>
-                <div className="px-3 py-2 border-t border-gray-100">
+                <div className="px-3 py-2 border-t border-skydark-border">
                   <p className="text-sm font-medium text-skydark-text truncate" title={name}>
                     {name}
                   </p>

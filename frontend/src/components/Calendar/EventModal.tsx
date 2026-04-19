@@ -131,7 +131,7 @@ export default function EventModal({
             <button
               type="button"
               onClick={() => setMode("edit")}
-              className="p-2 rounded-lg hover:bg-gray-100 text-skydark-text-secondary"
+              className="p-2 rounded-lg hover:bg-skydark-surface-muted text-skydark-text-secondary"
               aria-label="Edit event"
               title="Edit"
             >
