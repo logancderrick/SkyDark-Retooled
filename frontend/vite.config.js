@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 export default defineConfig({
     plugins: [react()],
+    server: {
+        /** Show Network URL in terminal; wall displays often hit the machine by LAN IP. */
+        host: true,
+        port: 5173,
+    },
     resolve: {
         alias: {
             "@": resolve(__dirname, "./src"),

@@ -25,7 +25,7 @@ export default function CalendarRemoteToggles() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 justify-end w-full">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {entities.map((eid) => {
         const on = vis[eid] !== false;
         const accent = colorForRemoteCalendarEntity(eid, settings.remoteCalendarColors);

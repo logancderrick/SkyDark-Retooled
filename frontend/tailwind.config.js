@@ -102,6 +102,56 @@ export default {
           "0%, 100%": { opacity: "0.55", transform: "scale(1) translate(0, 0)" },
           "50%": { opacity: "0.85", transform: "scale(1.06) translate(2%, -1%)" },
         },
+        /** A single raindrop falling vertically (uses translate from above the card to below). */
+        skydarkRainDrop: {
+          "0%": { transform: "translate3d(0, -20%, 0)", opacity: "0" },
+          "10%": { opacity: "0.85" },
+          "90%": { opacity: "0.85" },
+          "100%": { transform: "translate3d(-8%, 110%, 0)", opacity: "0" },
+        },
+        /** A snowflake drifting downward with a sinusoidal sway. */
+        skydarkSnowFlake: {
+          "0%": { transform: "translate3d(0, -10%, 0) rotate(0deg)", opacity: "0" },
+          "10%": { opacity: "0.95" },
+          "50%": { transform: "translate3d(14px, 50%, 0) rotate(180deg)" },
+          "90%": { opacity: "0.95" },
+          "100%": { transform: "translate3d(-10px, 110%, 0) rotate(360deg)", opacity: "0" },
+        },
+        /** Slow rotation of the sun rays. */
+        skydarkSunSpin: {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
+        /** Glowing pulse for the sun core. */
+        skydarkSunGlow: {
+          "0%, 100%": { opacity: "0.85", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.06)" },
+        },
+        /** Twinkling stars. */
+        skydarkStarTwinkle: {
+          "0%, 100%": { opacity: "0.25", transform: "scale(0.8)" },
+          "50%": { opacity: "1", transform: "scale(1.1)" },
+        },
+        /** Lightning flash sequence. */
+        skydarkLightningFlash: {
+          "0%, 92%, 100%": { opacity: "0" },
+          "93%": { opacity: "0.85" },
+          "94%": { opacity: "0" },
+          "95%": { opacity: "0.6" },
+          "96%": { opacity: "0" },
+          "97%": { opacity: "0.4" },
+          "98%": { opacity: "0" },
+        },
+        /** Subtle horizontal cloud drift. */
+        skydarkCloudDrift: {
+          "0%": { transform: "translate3d(-12%, 0, 0)" },
+          "100%": { transform: "translate3d(12%, 0, 0)" },
+        },
+        /** Very slow sky opacity so night / static gradients still feel alive. */
+        skydarkSkyBreath: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.88" },
+        },
       },
       animation: {
         "skydark-weather-drift": "skydarkWeatherDrift 16s ease-in-out infinite",
@@ -109,6 +159,14 @@ export default {
         "skydark-rain-sheets": "skydarkRainSheets 0.75s linear infinite",
         "skydark-snow-sheets": "skydarkSnowSheets 14s linear infinite",
         "skydark-sun-pulse": "skydarkSunPulse 8s ease-in-out infinite",
+        "skydark-rain-drop": "skydarkRainDrop 1.05s linear infinite",
+        "skydark-snow-flake": "skydarkSnowFlake 9s linear infinite",
+        "skydark-sun-spin": "skydarkSunSpin 100s linear infinite",
+        "skydark-sun-glow": "skydarkSunGlow 6s ease-in-out infinite",
+        "skydark-star-twinkle": "skydarkStarTwinkle 3.6s ease-in-out infinite",
+        "skydark-lightning-flash": "skydarkLightningFlash 7s ease-in-out infinite",
+        "skydark-cloud-drift": "skydarkCloudDrift 28s ease-in-out infinite alternate",
+        "skydark-sky-breath": "skydarkSkyBreath 14s ease-in-out infinite",
       },
     },
   },

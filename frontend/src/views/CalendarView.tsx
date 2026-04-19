@@ -254,57 +254,53 @@ export default function CalendarView() {
   return (
     <div className="h-full flex flex-col min-h-0 bg-skydark-bg">
       <CalendarDashboardTopCards />
-      <div className="mb-3 flex shrink-0 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-skydark-text">
-            {viewMode === "month" && format(currentDate, "MMMM yyyy")}
-            {viewMode === "week" && `Week of ${format(currentDate, "MMM d")}`}
-            {viewMode === "day" && format(currentDate, "EEEE, MMM d")}
-          </h2>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <select
-              value={viewMode}
-              onChange={(e) => {
-                const mode = e.target.value as "month" | "week" | "day";
-                setViewMode(mode);
-                const now = new Date();
-                if (mode === "week") setCurrentDate(startOfWeek(now));
-                else if (mode === "day") setCurrentDate(now);
-              }}
-              className="input-skydark"
-            >
-              <option value="month">Month</option>
-              <option value="week">Week</option>
-              <option value="day">Day</option>
-            </select>
-            <button
-              type="button"
-              onClick={goPrev}
-              className="min-h-0 min-w-0 rounded-xl p-2 hover:bg-skydark-surface-muted"
-              aria-label="Previous"
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              onClick={goToday}
-              className="min-h-0 min-w-0 rounded-xl bg-skydark-surface-muted px-3 py-2.5 text-sm font-medium text-skydark-text"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={goNext}
-              className="min-h-0 min-w-0 rounded-xl p-2 hover:bg-skydark-surface-muted"
-              aria-label="Next"
-            >
-              →
-            </button>
-          </div>
+      <div className="mb-3 flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <h2 className="shrink-0 text-lg font-semibold text-skydark-text">
+          {viewMode === "month" && format(currentDate, "MMMM yyyy")}
+          {viewMode === "week" && `Week of ${format(currentDate, "MMM d")}`}
+          {viewMode === "day" && format(currentDate, "EEEE, MMM d")}
+        </h2>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+          <CalendarRemoteToggles />
+          <select
+            value={viewMode}
+            onChange={(e) => {
+              const mode = e.target.value as "month" | "week" | "day";
+              setViewMode(mode);
+              const now = new Date();
+              if (mode === "week") setCurrentDate(startOfWeek(now));
+              else if (mode === "day") setCurrentDate(now);
+            }}
+            className="input-skydark"
+          >
+            <option value="month">Month</option>
+            <option value="week">Week</option>
+            <option value="day">Day</option>
+          </select>
+          <button
+            type="button"
+            onClick={goPrev}
+            className="min-h-0 min-w-0 rounded-xl p-2 hover:bg-skydark-surface-muted"
+            aria-label="Previous"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={goToday}
+            className="min-h-0 min-w-0 rounded-xl bg-skydark-surface-muted px-3 py-2.5 text-sm font-medium text-skydark-text"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            className="min-h-0 min-w-0 rounded-xl p-2 hover:bg-skydark-surface-muted"
+            aria-label="Next"
+          >
+            →
+          </button>
         </div>
-      </div>
-      <div className="mb-4 shrink-0">
-        <CalendarRemoteToggles />
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row xl:items-start xl:gap-6">

@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import type { HassEntity } from "home-assistant-js-websocket";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { getStatesOrDemo } from "../lib/demoHassStates";
@@ -13,6 +14,23 @@ export default function CamerasView() {
   const conn = skydark?.data?.connection ?? null;
   const [cameras, setCameras] = useState<HassEntity[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [fullscreenCam, setFullscreenCam] = useState<HassEntity | null>(null);
+
+  const closeFullscreen = useCallback(() => setFullscreenCam(null), []);
+
+  useEffect(() => {
+    if (!fullscreenCam) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeFullscreen();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [fullscreenCam, closeFullscreen]);
 
   useEffect(() => {
     if (!conn && !isSkydarkDemo) return;
@@ -75,20 +93,77 @@ export default function CamerasView() {
     );
   }
 
+  const fullscreenOverlay =
+    fullscreenCam &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <div
+        className="fixed inset-0 z-[200] flex flex-col bg-black"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Fullscreen camera: ${String(fullscreenCam.attributes?.friendly_name ?? fullscreenCam.entity_id)}`}
+      >
+        <div
+          className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-black/90 px-4 py-3 text-white"
+          style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0px))" }}
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {String(fullscreenCam.attributes?.friendly_name ?? fullscreenCam.entity_id)}
+            </p>
+            <p className="truncate font-mono text-xs text-white/60">{fullscreenCam.entity_id}</p>
+          </div>
+          <button
+            type="button"
+            onClick={closeFullscreen}
+            className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-skydark-accent"
+          >
+            Exit fullscreen
+          </button>
+        </div>
+        <div className="relative min-h-0 flex-1">
+          {conn ? (
+            <HaCameraLive
+              entityId={fullscreenCam.entity_id}
+              title={String(fullscreenCam.attributes?.friendly_name ?? fullscreenCam.entity_id)}
+              connection={conn}
+              entityPicture={
+                typeof fullscreenCam.attributes?.entity_picture === "string"
+                  ? fullscreenCam.attributes.entity_picture
+                  : undefined
+              }
+              compact
+            />
+          ) : (
+            <div className="flex h-full min-h-[40vh] items-center justify-center bg-gradient-to-b from-zinc-900 to-black px-6 text-center">
+              <p className="text-sm text-white/70">
+                Demo — connect to Home Assistant for a live stream in fullscreen.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
+
   return (
     <div className="h-full flex flex-col min-h-0">
+      {fullscreenOverlay}
       <h2 className="text-lg font-semibold text-skydark-text mb-4 shrink-0">Cameras</h2>
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-1 items-start sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-4">
           {sorted.map((cam) => {
             const name = String(cam.attributes?.friendly_name ?? cam.entity_id);
+            const isFs = fullscreenCam?.entity_id === cam.entity_id;
             return (
-              <div
+              <button
                 key={cam.entity_id}
-                className="rounded-[18px] border border-skydark-border bg-skydark-surface overflow-hidden shadow-skydark flex flex-col"
+                type="button"
+                onClick={() => setFullscreenCam(cam)}
+                className="rounded-[18px] border border-skydark-border bg-skydark-surface overflow-hidden shadow-skydark flex flex-col text-left transition-shadow hover:shadow-skydark-hover focus:outline-none focus:ring-2 focus:ring-skydark-accent"
               >
                 <div className="relative w-full shrink-0 overflow-hidden">
-                  {conn ? (
+                  {conn && !isFs ? (
                     <HaCameraLive
                       entityId={cam.entity_id}
                       title={name}
@@ -99,6 +174,10 @@ export default function CamerasView() {
                           : undefined
                       }
                     />
+                  ) : conn && isFs ? (
+                    <div className="relative flex aspect-video w-full items-center justify-center bg-skydark-surface-muted px-3 text-center">
+                      <p className="text-xs font-medium text-skydark-text-secondary">Playing in fullscreen…</p>
+                    </div>
                   ) : (
                     <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-3 text-center">
                       <p className="text-xs leading-snug text-skydark-text-secondary opacity-80">
@@ -113,7 +192,7 @@ export default function CamerasView() {
                   </p>
                   <p className="text-xs text-skydark-text-secondary font-mono truncate">{cam.entity_id}</p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

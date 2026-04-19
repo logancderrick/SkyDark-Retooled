@@ -18,8 +18,28 @@ import {
 const HASS_URL_KEY = "hassUrl";
 const HASS_TOKENS_KEY = "hassTokens";
 
+/** HA origin for API + OAuth. Prefer `VITE_HASS_URL` in dev so we do not treat Vite as HA. */
 function getHassUrl(): string {
+  const fromEnv = import.meta.env.VITE_HASS_URL;
+  if (typeof fromEnv === "string") {
+    const trimmed = fromEnv.trim().replace(/\/+$/, "");
+    if (trimmed) return trimmed;
+  }
   return window.location.origin;
+}
+
+/**
+ * `getAuth()` redirects to `${hassUrl}/auth/authorize`. On `npm run dev`, hassUrl was
+ * `http://localhost:5173`, which is not Home Assistant — users see a broken "auth" URL.
+ * Block that path when demo mode is off but no real HA URL is configured.
+ */
+function isBlockedLocalViteOAuth(): boolean {
+  if (!import.meta.env.DEV) return false;
+  const host = window.location.hostname;
+  if (host !== "localhost" && host !== "127.0.0.1") return false;
+  const fromEnv = import.meta.env.VITE_HASS_URL;
+  if (typeof fromEnv === "string" && fromEnv.trim()) return false;
+  return true;
 }
 
 interface AuthDataLike {
@@ -98,6 +118,14 @@ export async function getHAConnection(): Promise<Connection> {
     }
 
     // 2. Establish own connection via stored tokens / OAuth
+    if (isBlockedLocalViteOAuth()) {
+      throw new Error(
+        "SkyDark: Vite is not Home Assistant — opening /auth/authorize here will not work. " +
+          "Use `npm run dev:demo` for local sample data, or create `frontend/.env.local` with " +
+          "`VITE_HASS_URL=https://YOUR_HA_HOST:8123` and restart dev, or open the panel inside Home Assistant.",
+      );
+    }
+
     const hassUrl = getHassUrl();
     const auth = await getAuth({
       hassUrl,
@@ -118,7 +146,10 @@ export async function getHAConnection(): Promise<Connection> {
       console.debug("[SkyDark] HA WebSocket disconnected");
     });
     return conn;
-  })();
+  })().catch((err) => {
+    connectionPromise = null;
+    throw err;
+  });
 
   return connectionPromise;
 }
