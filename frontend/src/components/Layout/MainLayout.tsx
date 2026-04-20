@@ -294,11 +294,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
         }`}
       >
         {!isPortrait && <MobileNav />}
-        {pathname !== "/calendar" && (
-          <div className="shrink-0">
-            <Header />
-          </div>
-        )}
+        <div className="shrink-0">
+          <Header />
+        </div>
         {isSkydarkDemo && (
           <div
             role="status"

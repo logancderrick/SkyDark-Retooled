@@ -10,6 +10,7 @@ import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
+import ThemeToggleButton from "../components/Common/ThemeToggleButton";
 import { usePinGate } from "../hooks/usePinGate";
 import { pushEventToHaCalendar, serviceAddEvent } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
@@ -257,7 +258,7 @@ export default function CalendarView() {
               id="cal-month"
               value={monthIndex}
               onChange={(e) => onMonthYearChange(Number(e.target.value), yearIndex)}
-              className="input-skydark w-[4.5rem] shrink-0 py-2 text-sm"
+              className="input-skydark !w-max max-w-full shrink-0 py-2 text-sm [field-sizing:content]"
             >
               {MONTH_OPTIONS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -272,7 +273,7 @@ export default function CalendarView() {
               id="cal-year"
               value={yearIndex}
               onChange={(e) => onMonthYearChange(monthIndex, Number(e.target.value))}
-              className="input-skydark w-[4.25rem] shrink-0 py-2 text-sm tabular-nums"
+              className="input-skydark !w-max max-w-full shrink-0 py-2 text-sm tabular-nums [field-sizing:content]"
             >
               {yearOptions.map((y) => (
                 <option key={y} value={y}>
@@ -326,6 +327,7 @@ export default function CalendarView() {
           <option value="week">Week</option>
           <option value="day">Day</option>
         </select>
+        <ThemeToggleButton />
         <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"

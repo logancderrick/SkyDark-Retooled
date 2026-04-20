@@ -4,7 +4,8 @@ DOMAIN = "skydark_calendar"
 
 # Panel
 PANEL_URL = "/skydark"
-PANEL_TITLE = "Skydark Calendar"
+# HA iframe toolbar uses this as panel.title; use ZWSP so the top bar does not show "Skydark" (sidebar entry stays)
+PANEL_TITLE = "\u200b"
 PANEL_ICON = "mdi:calendar-month"
 
 # Config keys
