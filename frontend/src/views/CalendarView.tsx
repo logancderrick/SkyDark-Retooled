@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfWeek } from "date-fns";
+import { format, addWeeks, subWeeks, addDays, subDays, startOfWeek, startOfMonth } from "date-fns";
 import MonthView from "../components/Calendar/MonthView";
 import WeekView, { type WeekViewRef } from "../components/Calendar/WeekView";
 import DayView, { type DayViewRef } from "../components/Calendar/DayView";
@@ -15,6 +15,11 @@ import { pushEventToHaCalendar, serviceAddEvent } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
 
 const FALLBACK_EVENTS: CalendarEvent[] = [];
+
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: i,
+  label: format(new Date(2000, i, 1), "MMM"),
+}));
 
 export default function CalendarView() {
   const skydark = useSkydarkDataContext();
@@ -60,19 +65,13 @@ export default function CalendarView() {
     .filter((e) => !localOverrides.deleted.has(e.id))
     .map((e) => localOverrides.events.find((o) => o.id === e.id) ?? e);
 
-  // When switching to week or day view, scroll to current time after the component mounts
+  // Day view: scroll to current time after mount. Week view scrolls the current day into view internally.
   useEffect(() => {
-    if (viewMode === "week" || viewMode === "day") {
-      // Small delay to ensure the view has mounted and measured
-      const timer = setTimeout(() => {
-        if (viewMode === "week") {
-          weekViewRef.current?.scrollToNow();
-        } else {
-          dayViewRef.current?.scrollToNow();
-        }
-      }, 50);
-      return () => clearTimeout(timer);
-    }
+    if (viewMode !== "day") return;
+    const timer = setTimeout(() => {
+      dayViewRef.current?.scrollToNow();
+    }, 50);
+    return () => clearTimeout(timer);
   }, [viewMode]);
 
   const filteredEvents = events.filter((e) => {
@@ -191,28 +190,6 @@ export default function CalendarView() {
     setDefaultEventStartDate(null);
   };
 
-  const handleEventMove = (eventId: string, newStart: Date, newEnd: Date) => {
-    runIfUnlocked("editDeleteEvents", () =>
-      setLocalOverrides((prev) => ({
-        ...prev,
-        events: prev.events.some((e) => e.id === eventId)
-          ? prev.events.map((e) =>
-              e.id === eventId
-                ? { ...e, start_time: newStart.toISOString(), end_time: newEnd.toISOString() }
-                : e
-            )
-          : [
-              ...prev.events,
-              {
-                ...serverEvents.find((e) => e.id === eventId)!,
-                start_time: newStart.toISOString(),
-                end_time: newEnd.toISOString(),
-              },
-            ],
-      }))
-    );
-  };
-
   const handleDeleteEvent = (eventId: string) => {
     runIfUnlocked("editDeleteEvents", () => doDeleteEvent(eventId));
   };
@@ -232,51 +209,124 @@ export default function CalendarView() {
   };
 
   const goPrev = () => {
-    if (viewMode === "month") setCurrentDate((d) => subMonths(d, 1));
+    if (viewMode === "month") setCurrentDate((d) => subWeeks(startOfWeek(d), 4));
     else if (viewMode === "week") setCurrentDate((d) => subWeeks(d, 1));
     else setCurrentDate((d) => subDays(d, 1));
   };
   const goNext = () => {
-    if (viewMode === "month") setCurrentDate((d) => addMonths(d, 1));
+    if (viewMode === "month") setCurrentDate((d) => addWeeks(startOfWeek(d), 4));
     else if (viewMode === "week") setCurrentDate((d) => addWeeks(d, 1));
     else setCurrentDate((d) => addDays(d, 1));
   };
   const goToday = () => {
-    setCurrentDate(new Date());
-    // In week or day view, also scroll to current time
+    const now = new Date();
     if (viewMode === "week") {
-      weekViewRef.current?.scrollToNow();
-    } else if (viewMode === "day") {
-      dayViewRef.current?.scrollToNow();
+      setCurrentDate(startOfWeek(now));
+      queueMicrotask(() => weekViewRef.current?.scrollToNow());
+    } else {
+      setCurrentDate(now);
+      if (viewMode === "day") queueMicrotask(() => dayViewRef.current?.scrollToNow());
     }
+  };
+
+  const weekStart = startOfWeek(currentDate);
+  const focusMonthDate =
+    viewMode === "month" ? addDays(weekStart, 14) : viewMode === "week" ? addDays(weekStart, 3) : currentDate;
+  const monthIndex = focusMonthDate.getMonth();
+  const yearIndex = focusMonthDate.getFullYear();
+  const yearOptions = useMemo(() => {
+    const y = new Date().getFullYear();
+    return Array.from({ length: 9 }, (_, i) => y - 3 + i);
+  }, []);
+
+  const onMonthYearChange = (nextMonth: number, nextYear: number) => {
+    const first = startOfMonth(new Date(nextYear, nextMonth, 1));
+    setCurrentDate(startOfWeek(first));
   };
 
   return (
     <div className="h-full flex flex-col min-h-0 bg-skydark-bg">
       <CalendarDashboardTopCards />
-      <div className="mb-3 flex min-w-0 shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
-        <h2 className="shrink-0 text-lg font-semibold text-skydark-text">
-          {viewMode === "month" && format(currentDate, "MMMM yyyy")}
-          {viewMode === "week" && `Week of ${format(currentDate, "MMM d")}`}
-          {viewMode === "day" && format(currentDate, "EEEE, MMM d")}
-        </h2>
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+      <div className="mb-3 flex min-h-10 min-w-0 shrink-0 flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
+        {viewMode === "month" && (
+          <>
+            <label className="sr-only" htmlFor="cal-month">
+              Month
+            </label>
+            <select
+              id="cal-month"
+              value={monthIndex}
+              onChange={(e) => onMonthYearChange(Number(e.target.value), yearIndex)}
+              className="input-skydark w-[4.5rem] shrink-0 py-2 text-sm"
+            >
+              {MONTH_OPTIONS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <label className="sr-only" htmlFor="cal-year">
+              Year
+            </label>
+            <select
+              id="cal-year"
+              value={yearIndex}
+              onChange={(e) => onMonthYearChange(monthIndex, Number(e.target.value))}
+              className="input-skydark w-[4.25rem] shrink-0 py-2 text-sm tabular-nums"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        {viewMode === "week" && (
+          <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-skydark-text">
+            {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}
+          </span>
+        )}
+        {viewMode === "day" && (
+          <>
+            <label className="sr-only" htmlFor="cal-day">
+              Date
+            </label>
+            <input
+              id="cal-day"
+              type="date"
+              value={format(currentDate, "yyyy-MM-dd")}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) return;
+                const [y, mo, d] = v.split("-").map(Number);
+                setCurrentDate(new Date(y, mo - 1, d));
+              }}
+              className="input-skydark w-[10.75rem] shrink-0 py-2 text-sm"
+            />
+          </>
+        )}
+        <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
           <CalendarRemoteToggles />
-          <select
-            value={viewMode}
-            onChange={(e) => {
-              const mode = e.target.value as "month" | "week" | "day";
-              setViewMode(mode);
-              const now = new Date();
-              if (mode === "week") setCurrentDate(startOfWeek(now));
-              else if (mode === "day") setCurrentDate(now);
-            }}
-            className="input-skydark"
-          >
-            <option value="month">Month</option>
-            <option value="week">Week</option>
-            <option value="day">Day</option>
-          </select>
+        </div>
+        <select
+          value={viewMode}
+          onChange={(e) => {
+            const mode = e.target.value as "month" | "week" | "day";
+            setViewMode(mode);
+            const now = new Date();
+            if (mode === "month") setCurrentDate(now);
+            else if (mode === "week") setCurrentDate(startOfWeek(now));
+            else if (mode === "day") setCurrentDate(now);
+          }}
+          className="input-skydark w-[7rem] shrink-0 py-2 text-sm"
+          aria-label="Calendar view"
+        >
+          <option value="month">4 weeks</option>
+          <option value="week">Week</option>
+          <option value="day">Day</option>
+        </select>
+        <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
             onClick={goPrev}
@@ -288,7 +338,7 @@ export default function CalendarView() {
           <button
             type="button"
             onClick={goToday}
-            className="min-h-0 min-w-0 rounded-xl bg-skydark-surface-muted px-3 py-2.5 text-sm font-medium text-skydark-text"
+            className="min-h-0 min-w-0 whitespace-nowrap rounded-xl bg-skydark-surface-muted px-3 py-2 text-sm font-medium text-skydark-text"
           >
             Today
           </button>
@@ -338,7 +388,6 @@ export default function CalendarView() {
                 setSelectedEvent(e);
                 setEventModalOpen(true);
               }}
-              onEventMove={handleEventMove}
             />
           )}
           {viewMode === "day" && (

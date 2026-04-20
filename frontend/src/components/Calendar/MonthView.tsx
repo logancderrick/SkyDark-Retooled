@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   format,
-  startOfMonth,
-  endOfMonth,
   startOfWeek,
-  endOfWeek,
   addDays,
   isSameMonth,
   isToday,
@@ -35,22 +32,15 @@ export default function MonthView({
   onEventClick,
 }: MonthViewProps) {
   const [expandedDayKeys, setExpandedDayKeys] = useState<Set<string>>(() => new Set());
-  const monthKey = format(currentDate, "yyyy-MM");
+  /** Rolling four-week window aligned to week start (current week + 3 weeks). */
+  const weekStart = startOfWeek(currentDate);
+  const focusMonth = addDays(weekStart, 14);
+  const periodKey = format(weekStart, "yyyy-MM-dd");
   useEffect(() => {
     setExpandedDayKeys(new Set());
-  }, [monthKey]);
+  }, [periodKey]);
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
-
-  const days: Date[] = [];
-  let day = calendarStart;
-  while (day <= calendarEnd) {
-    days.push(day);
-    day = addDays(day, 1);
-  }
+  const days: Date[] = Array.from({ length: 28 }, (_, i) => addDays(weekStart, i));
 
   const getEventsForDay = (d: Date) => {
     const dStr = format(d, "yyyy-MM-dd");
@@ -84,7 +74,7 @@ export default function MonthView({
         const isExpanded = expandedDayKeys.has(dayKey);
         const visibleEvents = isExpanded ? dayEvents : dayEvents.slice(0, MAX_VISIBLE_EVENTS);
         const moreCount = isExpanded ? 0 : Math.max(0, dayEvents.length - MAX_VISIBLE_EVENTS);
-        const isCurrentMonth = isSameMonth(d, currentDate);
+        const isCurrentMonth = isSameMonth(d, focusMonth);
 
         return (
           <div

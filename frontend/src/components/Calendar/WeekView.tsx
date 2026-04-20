@@ -1,55 +1,16 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import {
   format,
   startOfWeek,
   addDays,
   parseISO,
-  differenceInMinutes,
   isSameDay,
+  isToday,
 } from "date-fns";
 import type { CalendarEvent } from "../../types/calendar";
 import type { FamilyMember } from "../../types/calendar";
-import DraggableEventCard from "./DraggableEventCard";
-import DropTargetCell from "./DropTargetCell";
 import { getEventColorStyleForDisplay } from "./EventColorPattern";
-import { getInitialScrollTopForFourHourWindow, isAllDayEvent } from "./calendarScrollUtils";
-
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const DEFAULT_FOUR_HOUR_VIEWPORT_PX = 240;
-const MIN_EVENT_HEIGHT = 40;
-const DAY_BLOCKS = 3;
-
-// Helper to normalize scroll position to middle block range [fullDayHeight, 2*fullDayHeight)
-function normalizeScrollToMiddleBlock(offset: number, dayHeight: number): number {
-  let scroll = dayHeight + offset;
-  // Handle negative offsets (early morning times wanting to show previous day's late hours)
-  while (scroll < dayHeight) {
-    scroll += dayHeight;
-  }
-  // Handle offsets that push past the middle block
-  while (scroll >= 2 * dayHeight) {
-    scroll -= dayHeight;
-  }
-  return scroll;
-}
-
-function getEventPosition(event: CalendarEvent, pixelsPerHour: number) {
-  const start = parseISO(event.start_time);
-  const end = event.end_time ? parseISO(event.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
-  const startMinutes = start.getHours() * 60 + start.getMinutes();
-  const durationMinutes = Math.max(
-    differenceInMinutes(end, start),
-    30
-  );
-  const top = (startMinutes / 60) * pixelsPerHour;
-  const height = Math.max(
-    (durationMinutes / 60) * pixelsPerHour,
-    MIN_EVENT_HEIGHT
-  );
-  return { top, height };
-}
+import { isAllDayEvent } from "./calendarScrollUtils";
 
 interface WeekViewProps {
   currentDate: Date;
@@ -58,174 +19,112 @@ interface WeekViewProps {
   remoteCalendarColors?: Record<string, string>;
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
-  onEventMove?: (eventId: string, newStart: Date, newEnd: Date) => void;
 }
 
 export interface WeekViewRef {
   scrollToNow: () => void;
 }
 
+function formatEventTime(iso: string) {
+  const d = parseISO(iso);
+  return format(d, "h:mm a");
+}
+
 const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
-  { currentDate, events, familyMembers, remoteCalendarColors, onDateClick, onEventClick, onEventMove },
+  { currentDate, events, familyMembers, remoteCalendarColors, onDateClick, onEventClick },
   ref
 ) {
   const weekStart = startOfWeek(currentDate);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const days = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastInitializedWeekRef = useRef<string | null>(null);
-  const fullDayHeightRef = useRef<number>(0);
-  const [now, setNow] = useState(() => new Date());
-  const [timeStripHeight, setTimeStripHeight] = useState(DEFAULT_FOUR_HOUR_VIEWPORT_PX);
-  const [expandedAllDayKeys, setExpandedAllDayKeys] = useState<Set<string>>(() => new Set());
-  const weekContainsToday = days.some((d) => isSameDay(d, now));
-  const weekKey = format(weekStart, "yyyy-MM-dd");
+  const todayColRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setExpandedAllDayKeys(new Set());
-  }, [weekKey]);
-  // Use fallback until ResizeObserver reports real height so time labels and grid render correctly
-  const pixelsPerHour =
-    timeStripHeight > 0 ? Math.max(timeStripHeight / 4, 1) : DEFAULT_FOUR_HOUR_VIEWPORT_PX / 4;
-  const fullDayHeight = HOURS.length * pixelsPerHour;
-  fullDayHeightRef.current = fullDayHeight;
-  const totalContentHeight = DAY_BLOCKS * fullDayHeight;
-  const currentTimeTop = ((now.getHours() * 60 + now.getMinutes()) / 60) * pixelsPerHour;
-
-  useEffect(() => {
-    const tick = () => setNow(new Date());
-    const timerId = window.setInterval(tick, 60_000);
-    return () => window.clearInterval(timerId);
-  }, []);
-
-  // Auto-update scroll position every minute to keep current time centered (only if today is in view)
-  useEffect(() => {
-    if (!weekContainsToday) return;
-    const el = scrollRef.current;
-    const dayHeight = fullDayHeightRef.current;
-    if (!el || dayHeight <= 0) return;
-    
-    const pph = dayHeight / 24;
-    const offset = getInitialScrollTopForFourHourWindow(now, pph);
-    el.scrollTop = normalizeScrollToMiddleBlock(offset, dayHeight);
-  }, [now, weekContainsToday]);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const updateHeight = () => {
-      if (el.clientHeight > 0) {
-        setTimeStripHeight(el.clientHeight);
-      }
-    };
-    updateHeight();
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || timeStripHeight <= 0) return;
-    if (lastInitializedWeekRef.current === weekKey) return;
-
-    const referenceDate = weekContainsToday
-      ? new Date()
-      : (() => {
-          const d = new Date();
-          d.setHours(10, 0, 0, 0);
-          return d;
-        })();
-    // Start in the middle block so we can scroll up or down seamlessly
-    const offset = getInitialScrollTopForFourHourWindow(referenceDate, pixelsPerHour);
-    el.scrollTop = normalizeScrollToMiddleBlock(offset, fullDayHeight);
-    lastInitializedWeekRef.current = weekKey;
-  }, [fullDayHeight, pixelsPerHour, timeStripHeight, weekContainsToday, weekKey]);
-
-  // Wrap scroll when leaving middle block for seamless infinite scroll
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const dayHeight = fullDayHeightRef.current;
-    if (dayHeight <= 0) return;
-
-    const scrollTop = el.scrollTop;
-    if (scrollTop < dayHeight) {
-      el.scrollTop = scrollTop + dayHeight;
-    } else if (scrollTop >= 2 * dayHeight) {
-      el.scrollTop = scrollTop - dayHeight;
-    }
-  };
-
-  // Expose scrollToNow for parent to call (e.g., when "Today" button is clicked)
   useImperativeHandle(ref, () => ({
     scrollToNow: () => {
-      const el = scrollRef.current;
-      const dayHeight = fullDayHeightRef.current;
-      if (!el || dayHeight <= 0) return;
-      const nowDate = new Date();
-      const pph = dayHeight / 24;
-      const offset = getInitialScrollTopForFourHourWindow(nowDate, pph);
-      el.scrollTop = normalizeScrollToMiddleBlock(offset, dayHeight);
+      const col = todayColRef.current;
+      const sc = scrollRef.current;
+      if (!col || !sc) return;
+      const left = col.offsetLeft - sc.clientWidth / 2 + col.clientWidth / 2;
+      sc.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
     },
   }), []);
 
-  const DAY_HEADER_HEIGHT = 40;
-  const currentDayKey = useMemo(
-    () => format(now, "yyyy-MM-dd"),
-    [now]
-  );
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      todayColRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [weekStart]);
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="flex flex-1 min-h-0 flex-col bg-skydark-bg">
-        {/* Row 1: day headers */}
-        <div
-          className="flex flex-shrink-0 bg-skydark-bg border-b border-skydark-border"
-          style={{ height: DAY_HEADER_HEIGHT, scrollbarGutter: "stable" }}
-        >
-          <div className="w-14 flex-shrink-0 bg-skydark-surface-muted" aria-hidden />
-          <div className="flex-1 grid grid-cols-7 gap-px bg-skydark-grid-line min-w-0">
-            {days.map((d) => (
-              <div
-                key={d.toISOString()}
-                className="bg-skydark-surface flex flex-col items-center justify-center"
+    <div className="flex min-h-0 flex-1 flex-col bg-skydark-bg">
+      <div
+        ref={scrollRef}
+        className="flex min-h-0 flex-1 gap-px overflow-x-auto overflow-y-hidden bg-skydark-grid-line pb-1"
+      >
+        {days.map((d) => {
+          const dayEvents = events.filter((e) => {
+            const start = parseISO(e.start_time);
+            return isSameDay(start, d);
+          });
+          const allDayEvents = dayEvents.filter((e) => isAllDayEvent(e));
+          const timedEvents = dayEvents
+            .filter((e) => !isAllDayEvent(e))
+            .slice()
+            .sort((a, b) => parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime());
+          const today = isToday(d);
+
+          return (
+            <div
+              key={d.toISOString()}
+              ref={today ? todayColRef : undefined}
+              className={`flex min-w-[7.5rem] max-w-[11rem] flex-1 flex-col border border-skydark-border bg-skydark-surface ${
+                today ? "ring-2 ring-skydark-accent/50" : ""
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onDateClick?.(d)}
+                className="flex flex-shrink-0 flex-col items-center border-b border-skydark-border bg-skydark-surface-muted px-1 py-2 text-center hover:bg-skydark-surface"
               >
-                <button
-                  type="button"
-                  onClick={() => onDateClick?.(d)}
-                  className="w-full h-full flex flex-col items-center justify-center hover:bg-skydark-surface-muted"
+                <span className="text-xs font-semibold uppercase text-skydark-text-secondary">{format(d, "EEE")}</span>
+                <span
+                  className={`text-lg font-semibold tabular-nums ${
+                    today ? "text-skydark-accent" : "text-skydark-text"
+                  }`}
                 >
-                  <span className="text-sm font-semibold text-skydark-text">{format(d, "EEE")}</span>
-                  <span className="text-xs text-skydark-text-secondary">{format(d, "d")}</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Row 2: all-day events (max 2 rows, then +N overflow) */}
-        <div
-          className="flex flex-shrink-0 bg-skydark-bg border-b border-skydark-border"
-          style={{ scrollbarGutter: "stable" }}
-        >
-          <div className="w-14 flex-shrink-0 border-r border-skydark-border bg-skydark-surface-muted" aria-hidden />
-          <div className="flex-1 grid grid-cols-7 gap-px bg-skydark-grid-line min-w-0">
-            {days.map((d) => {
-              const dayEvents = events.filter((e) => {
-                const start = parseISO(e.start_time);
-                return isSameDay(start, d);
-              });
-              const allDayEvents = dayEvents.filter((e) => isAllDayEvent(e));
-              const dayKey = format(d, "yyyy-MM-dd");
-              const allDayExpanded = expandedAllDayKeys.has(dayKey);
-              const visibleEvents = allDayExpanded ? allDayEvents : allDayEvents.slice(0, 2);
-              const overflowCount = allDayExpanded ? 0 : Math.max(0, allDayEvents.length - 2);
-              return (
-                <div
-                  key={d.toISOString()}
-                  className="bg-skydark-surface px-1 py-1 flex flex-col gap-0.5"
-                  onClick={() => onDateClick?.(d)}
-                >
-                  {visibleEvents.map((event) => {
+                  {format(d, "d")}
+                </span>
+              </button>
+              <div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
+                {allDayEvents.length > 0 && (
+                  <div className="mb-2 space-y-1">
+                    {allDayEvents.map((event) => {
+                      const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
+                        event,
+                        familyMembers,
+                        remoteCalendarColors
+                      );
+                      return (
+                        <button
+                          key={event.id}
+                          type="button"
+                          onClick={() => onEventClick?.(event)}
+                          className="w-full rounded-md border border-skydark-border px-1.5 py-1 text-left text-[11px] font-medium leading-tight"
+                          style={{ ...colorStyle, borderLeft: `3px solid ${borderColor}` }}
+                        >
+                          <span className="text-skydark-text-secondary">All day · </span>
+                          {event.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  {timedEvents.map((event) => {
                     const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
                       event,
                       familyMembers,
@@ -235,140 +134,24 @@ const WeekView = forwardRef<WeekViewRef, WeekViewProps>(function WeekView(
                       <button
                         key={event.id}
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick?.(event);
-                        }}
-                        className="text-left text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate w-full min-h-0 min-w-0 justify-start"
-                        style={{
-                          ...colorStyle,
-                          borderLeft: `3px solid ${borderColor}`,
-                        }}
+                        onClick={() => onEventClick?.(event)}
+                        className="w-full rounded-md px-1.5 py-1.5 text-left text-xs font-medium leading-snug"
+                        style={{ ...colorStyle, borderLeft: `3px solid ${borderColor}` }}
                       >
-                        {event.title}
+                        <div className="text-[10px] font-normal text-skydark-text-secondary">
+                          {formatEventTime(event.start_time)}
+                        </div>
+                        <div className="line-clamp-3 text-skydark-text">{event.title}</div>
                       </button>
-                    );
-                  })}
-                  {overflowCount > 0 && (
-                    <button
-                      type="button"
-                      className="text-[10px] text-skydark-text-secondary px-1.5 text-left hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedAllDayKeys((prev) => {
-                          const next = new Set(prev);
-                          next.add(dayKey);
-                          return next;
-                        });
-                      }}
-                    >
-                      +{overflowCount} more
-                    </button>
-                  )}
-                  {allDayExpanded && allDayEvents.length > 2 && (
-                    <button
-                      type="button"
-                      className="text-[10px] text-skydark-text-secondary px-1.5 text-left hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedAllDayKeys((prev) => {
-                          const next = new Set(prev);
-                          next.delete(dayKey);
-                          return next;
-                        });
-                      }}
-                    >
-                      Show less
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        {/* Row 3: single scroll container — 4h viewport, 3x24h content for seamless wrap */}
-        <div
-          ref={scrollRef}
-          className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto hide-scrollbar"
-          style={{ scrollbarGutter: "stable" }}
-          onScroll={handleScroll}
-        >
-          <div
-            className="flex flex-col"
-            style={{ height: totalContentHeight }}
-          >
-            {Array.from({ length: DAY_BLOCKS }, (_, blockIndex) => (
-              <div key={blockIndex} className="flex" style={{ height: fullDayHeight }}>
-                <div className="flex flex-col flex-shrink-0 w-14 border-r border-skydark-border bg-skydark-surface-muted pr-2">
-                  {HOURS.map((h) => (
-                    <div
-                      key={h}
-                      className="text-xs text-skydark-text-secondary"
-                      style={{ height: pixelsPerHour }}
-                    >
-                      {h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex-1 grid grid-cols-7 gap-px bg-skydark-grid-line min-w-0">
-                  {days.map((d) => {
-                    const dayEvents = events.filter((e) => {
-                      const start = parseISO(e.start_time);
-                      return isSameDay(start, d);
-                    });
-                    const timedEvents = dayEvents.filter((e) => !isAllDayEvent(e));
-                    return (
-                      <div
-                        key={d.toISOString()}
-                        className="bg-skydark-surface relative"
-                        style={{ minHeight: fullDayHeight }}
-                        onClick={() => onDateClick?.(d)}
-                      >
-                        {format(d, "yyyy-MM-dd") === currentDayKey && (
-                          <div
-                            className="absolute left-0 right-0 z-20 pointer-events-none"
-                            style={{ top: currentTimeTop }}
-                          >
-                            <div className="h-0.5 bg-red-500 w-full" />
-                          </div>
-                        )}
-                        {HOURS.slice(1).map((h) => (
-                          <div
-                            key={h}
-                            className="border-t border-skydark-border"
-                            style={{ height: pixelsPerHour - 1 }}
-                          />
-                        ))}
-                        {HOURS.map((h) => (
-                          <DropTargetCell key={`${blockIndex}-${h}`} date={d} hour={h} pixelsPerHour={pixelsPerHour}>
-                            <span className="opacity-0">.</span>
-                          </DropTargetCell>
-                        ))}
-                        {timedEvents.map((event) => {
-                          const { top, height } = getEventPosition(event, pixelsPerHour);
-                          return (
-                            <DraggableEventCard
-                              key={`${blockIndex}-${event.id}`}
-                              event={event}
-                              familyMembers={familyMembers}
-                              remoteCalendarColors={remoteCalendarColors}
-                              top={top}
-                              height={height}
-                              onEventClick={onEventClick}
-                              onEventMove={onEventMove}
-                            />
-                          );
-                        })}
-                      </div>
                     );
                   })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          );
+        })}
       </div>
-    </DndProvider>
+    </div>
   );
 });
 
