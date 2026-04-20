@@ -143,7 +143,7 @@ const DEMO_APP_SETTINGS: Record<string, unknown> = {
     [CAL.kaylee]: "Kaylee — Work",
     [CAL.family]: "Family",
   },
-  showTopWeeklyForecast: true,
+  showTopWeeklyForecast: false,
   calendarPreviewCameras: ["camera.demo_back_yard"],
 };
 

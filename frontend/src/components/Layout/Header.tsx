@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useAppContext } from "../../contexts/AppContext";
 import PinPrompt from "../Common/PinPrompt";
 import { useWeatherData, getWeatherIcon } from "../../hooks/useWeeklyWeather";
@@ -46,9 +47,12 @@ function MoonIcon({ className }: { className?: string }) {
 export default function Header({
   weatherEntity: _weatherEntity,
 }: HeaderProps) {
+  const { pathname } = useLocation();
   const [time, setTime] = useState("");
   const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
   const { settings, isLocked, unlockApp, setIsLocked, setSettings } = useAppContext();
+  /** Calendar body already has a full-width forecast card; skip duplicate header strip there. */
+  const hideHeaderForecastOnCalendar = pathname === "/calendar";
   const isDark = settings.themePreference === "dark";
   const weather = useWeatherData();
   const currentWeather = weather.current;
@@ -111,7 +115,9 @@ export default function Header({
           >
             {isDark ? <SunIcon className="w-6 h-6" /> : <MoonIcon className="w-6 h-6" />}
           </button>
-          {settings.showTopWeeklyForecast && weather.weekly.length > 0 && (
+          {settings.showTopWeeklyForecast &&
+            !hideHeaderForecastOnCalendar &&
+            weather.weekly.length > 0 && (
             <div
               className="flex items-center gap-2 overflow-x-auto pb-1 max-w-[52vw]"
               aria-label="Top weekly forecast"

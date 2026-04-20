@@ -2,6 +2,8 @@
 export default {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}", "./src/**/*.css"],
+  /** Weather ambient uses many `animate-skydark-*` utilities; keep them in prod CSS even if JIT misses a edge case. */
+  safelist: [{ pattern: /^animate-skydark-/ }, "motion-safe:animate-skydark-sky-breath", "motion-reduce:animate-none"],
   theme: {
     screens: {
       sm: "640px",
