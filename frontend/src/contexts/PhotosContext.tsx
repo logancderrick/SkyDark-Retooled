@@ -18,24 +18,46 @@ export interface PhotoItem {
 }
 
 const STORAGE_KEY = "skydark_photos";
+const IMAGE_EXT_RE = /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|webp)(?:$|[?#])/i;
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function looksLikeImagePath(pathOrUrl: string): boolean {
+  const normalized = safeDecode(pathOrUrl.trim());
+  if (!normalized) return false;
+  if (IMAGE_EXT_RE.test(normalized)) return true;
+  // HA media endpoints for local files, often with encoded spaces and query params.
+  if (normalized.includes("/media/local/Calendar Images/")) return true;
+  if (normalized.includes("/media/local/Calendar%20Images/")) return true;
+  return false;
+}
 
 function normalizePhotoUrl(rawUrl: string): string {
   const raw = rawUrl.trim();
   if (!raw) return "";
-  if (
-    raw.startsWith("media-source://") ||
-    raw.startsWith("data:image/") ||
-    raw.startsWith("blob:") ||
-    raw.startsWith("http://") ||
-    raw.startsWith("https://") ||
-    raw.startsWith("/") ||
-    raw.startsWith("./")
-  ) {
-    return raw;
+  if (raw.startsWith("data:image/")) return raw;
+  if (raw.startsWith("blob:")) return raw;
+  if (raw.startsWith("media-source://")) {
+    return looksLikeImagePath(raw) ? raw : "";
+  }
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return looksLikeImagePath(raw) ? raw : "";
+  }
+  if (raw.startsWith("/") || raw.startsWith("./")) {
+    if (looksLikeImagePath(raw)) return raw;
+    return "";
   }
   // Back-compat: tolerate missing leading slash for HA media paths.
   if (raw.startsWith("media/local/") || raw.startsWith("api/") || raw.startsWith("local/")) {
-    return `/${raw}`;
+    const normalized = `/${raw}`;
+    if (!looksLikeImagePath(normalized)) return "";
+    return normalized;
   }
   // Reject non-image identifiers (e.g. entity IDs) that create blank tiles.
   return "";
@@ -101,7 +123,7 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
       return lastHaAlbumRef.current;
     }
     return [];
-  }, [conn, serverPhotos, photos]);
+  }, [serverPhotos]);
 
   // Legacy cleanup: clear stale local fallback entries so they cannot reappear after refresh.
   useEffect(() => {
