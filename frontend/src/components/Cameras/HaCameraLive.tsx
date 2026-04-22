@@ -18,6 +18,7 @@ export default function HaCameraLive({
   connection,
   entityPicture,
   compact = false,
+  aspectRatio = 16 / 9,
 }: {
   entityId: string;
   title: string;
@@ -26,6 +27,8 @@ export default function HaCameraLive({
   entityPicture?: string | null;
   /** Fill a fixed-height parent (e.g. calendar top row); crops stream with object-cover. */
   compact?: boolean;
+  /** Non-compact tiles keep a shared frame shape across all cameras. */
+  aspectRatio?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -172,21 +175,27 @@ export default function HaCameraLive({
 
   const shellClass = compact
     ? "relative h-full min-h-0 w-full overflow-hidden bg-black"
-    : `relative w-full bg-black ${!useMjpeg && !hlsUrl ? "min-h-[200px]" : ""}`;
+    : `relative w-full overflow-hidden ${!useMjpeg && !hlsUrl ? "min-h-[200px]" : ""}`;
 
   return (
-    <div ref={containerRef} className={shellClass}>
+    <div ref={containerRef} className={shellClass} style={compact ? undefined : { aspectRatio }}>
       {useMjpeg ? (
-        <iframe
-          title={title}
-          src={inView ? mjpegSrc : "about:blank"}
-          className={
-            compact
-              ? "absolute inset-0 z-0 h-full w-full border-0 bg-black"
-              : "block w-full max-h-[85vh] border-0 bg-black aspect-video"
-          }
-          allow="autoplay; fullscreen"
-        />
+        compact ? (
+          <iframe
+            title={title}
+            src={inView ? mjpegSrc : "about:blank"}
+            className="absolute inset-0 z-0 h-full w-full border-0 bg-black"
+            allow="autoplay; fullscreen"
+          />
+        ) : (
+          <img
+            src={inView ? mjpegSrc : undefined}
+            alt={title}
+            className="absolute inset-0 block h-full w-full object-contain"
+            loading="lazy"
+            decoding="async"
+          />
+        )
       ) : (
         <>
           {!hlsUrl && (
@@ -194,7 +203,7 @@ export default function HaCameraLive({
               className={
                 compact
                   ? "absolute inset-0 z-10 flex items-center justify-center text-xs text-skydark-text-secondary opacity-70"
-                  : "absolute inset-0 z-10 flex min-h-[200px] items-center justify-center text-sm text-skydark-text-secondary opacity-70"
+                  : "absolute inset-0 z-10 flex items-center justify-center text-sm text-skydark-text-secondary opacity-70"
               }
             >
               Requesting stream…
@@ -205,7 +214,7 @@ export default function HaCameraLive({
             className={
               compact
                 ? "absolute inset-0 z-0 h-full w-full object-cover bg-black [transform:translateZ(0)]"
-                : "block h-auto w-full max-h-[85vh] bg-black [transform:translateZ(0)]"
+                : "absolute inset-0 block h-full w-full object-contain [transform:translateZ(0)]"
             }
             playsInline
             muted

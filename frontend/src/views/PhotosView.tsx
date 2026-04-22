@@ -10,18 +10,26 @@ export default function PhotosView() {
   const { setScreensaverTriggered, isFeatureLocked, verifyPin } = useAppContext();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
+    setUploadError(null);
     const maxSizeBytes = 1.5 * 1024 * 1024; // Keep uploads reasonably small for HA media storage.
     files.forEach((file) => {
-      if (file.size > maxSizeBytes) return;
+      if (file.size > maxSizeBytes) {
+        setUploadError(`"${file.name}" is too large. Max size is 1.5 MB per photo.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
-        void addPhoto(dataUrl, "", file.name);
+        void addPhoto(dataUrl, "", file.name).catch((err) => {
+          const message = err instanceof Error ? err.message : "Upload failed";
+          setUploadError(`Could not upload "${file.name}": ${message}`);
+        });
       };
       reader.readAsDataURL(file);
     });
@@ -118,6 +126,11 @@ export default function PhotosView() {
           </div>
         ))}
       </div>
+      {uploadError && (
+        <p className="mt-3 text-sm text-red-600" role="alert">
+          {uploadError}
+        </p>
+      )}
 
       {selectedId && (
         <div

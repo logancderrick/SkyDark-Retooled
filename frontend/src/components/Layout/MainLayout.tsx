@@ -49,6 +49,7 @@ function SleepModeTime() {
 function SleepModeWeather() {
   const { settings } = useAppContext();
   const week = useWeeklyWeather();
+  const today = week[0];
   const scale = settings.screensaverWeatherDisplayScale ?? 50;
   const transformScale =
     scale <= 50
@@ -57,13 +58,21 @@ function SleepModeWeather() {
 
   return (
     <div
-      className="absolute bottom-4 left-1/2 px-4 py-3 rounded-2xl bg-black/50 text-white pointer-events-none"
+      className="absolute bottom-5 left-1/2 w-[min(92vw,740px)] rounded-2xl border border-white/20 bg-black/35 px-4 py-3 text-white shadow-[0_16px_36px_rgba(0,0,0,0.35)] backdrop-blur-md pointer-events-none"
       style={{
         transform: `translateX(-50%) scale(${transformScale})`,
         transformOrigin: "bottom center",
       }}
       aria-label="Weekly weather forecast"
     >
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <p className="text-sm font-semibold tracking-wide text-white/95">Weather</p>
+        {today ? (
+          <p className="text-sm font-medium text-white/90">
+            {getWeatherIcon(today.condition)} {today.tempMin}° / {today.tempMax}°
+          </p>
+        ) : null}
+      </div>
       <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
         {week.map((day) => (
           <div
@@ -105,6 +114,7 @@ function ScreenSaverOverlay() {
   const [index, setIndex] = useState(0);
   const [visibleLayer, setVisibleLayer] = useState(0);
   const transitionEndRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevShowRef = useRef(false);
 
   useEffect(() => {
     if (!isIdle && !screensaverTriggered) return;
@@ -128,14 +138,15 @@ function ScreenSaverOverlay() {
     };
   }, [isIdle, screensaverTriggered, photos.length, intervalMs, durationMs, transitionType]);
 
+  const show = photos.length > 0 && ((isIdle && settings.screensaverEnabled) || screensaverTriggered);
+
   useEffect(() => {
-    if ((isIdle || screensaverTriggered) && photos.length > 0) {
-      setIndex(0);
+    if (show && !prevShowRef.current && photos.length > 0) {
+      setIndex(Math.floor(Math.random() * photos.length));
       setVisibleLayer(0);
     }
-  }, [isIdle, screensaverTriggered]);
-
-  const show = photos.length > 0 && ((isIdle && settings.screensaverEnabled) || screensaverTriggered);
+    prevShowRef.current = show;
+  }, [show, photos.length]);
   const currentPhoto = photos[index];
   const nextIndex = (index + 1) % photos.length;
   const nextPhoto = photos[nextIndex];

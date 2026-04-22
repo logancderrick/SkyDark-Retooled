@@ -31,6 +31,28 @@ const DEFAULT_PHOTOS: PhotoItem[] = [
   { id: "8", url: `${BASE}8.png`, caption: "" },
 ];
 
+function normalizePhotoUrl(rawUrl: string): string {
+  const raw = rawUrl.trim();
+  if (!raw) return "";
+  if (
+    raw.startsWith("media-source://") ||
+    raw.startsWith("data:image/") ||
+    raw.startsWith("blob:") ||
+    raw.startsWith("http://") ||
+    raw.startsWith("https://") ||
+    raw.startsWith("/") ||
+    raw.startsWith("./")
+  ) {
+    return raw;
+  }
+  // Back-compat: tolerate missing leading slash for HA media paths.
+  if (raw.startsWith("media/local/") || raw.startsWith("api/") || raw.startsWith("local/")) {
+    return `/${raw}`;
+  }
+  // Reject non-image identifiers (e.g. entity IDs) that create blank tiles.
+  return "";
+}
+
 function loadStoredPhotos(): PhotoItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -74,7 +96,7 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
     return (skydark?.data?.photos ?? [])
       .map((p) => ({
         id: String(p.id),
-        url: String(p.file_path ?? ""),
+        url: normalizePhotoUrl(String(p.file_path ?? "")),
         caption: String(p.caption ?? ""),
       }))
       .filter((p) => p.url.length > 0);

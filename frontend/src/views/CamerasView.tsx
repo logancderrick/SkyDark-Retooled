@@ -9,6 +9,13 @@ import HaCameraLive from "../components/Cameras/HaCameraLive";
 /** Hidden from the grid (e.g. vacuum map render entities, not real security feeds). */
 const EXCLUDED_CAMERA_ENTITIES = new Set(["camera.l40_ultra_map", "camera.l40_ultra_map_1"]);
 
+function cameraAspectRatio(entity: HassEntity): number | null {
+  const w = Number(entity.attributes?.width);
+  const h = Number(entity.attributes?.height);
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+  return w / h;
+}
+
 export default function CamerasView() {
   const skydark = useSkydarkDataContext();
   const conn = skydark?.data?.connection ?? null;
@@ -64,6 +71,14 @@ export default function CamerasView() {
       }),
     [cameras],
   );
+
+  const sharedAspectRatio = useMemo(() => {
+    for (const cam of sorted) {
+      const ratio = cameraAspectRatio(cam);
+      if (ratio) return ratio;
+    }
+    return 16 / 9;
+  }, [sorted]);
 
   if (!conn && !isSkydarkDemo) {
     return (
@@ -127,6 +142,7 @@ export default function CamerasView() {
               entityId={fullscreenCam.entity_id}
               title={String(fullscreenCam.attributes?.friendly_name ?? fullscreenCam.entity_id)}
               connection={conn}
+              aspectRatio={sharedAspectRatio}
               entityPicture={
                 typeof fullscreenCam.attributes?.entity_picture === "string"
                   ? fullscreenCam.attributes.entity_picture
@@ -168,6 +184,7 @@ export default function CamerasView() {
                       entityId={cam.entity_id}
                       title={name}
                       connection={conn}
+                      aspectRatio={sharedAspectRatio}
                       entityPicture={
                         typeof cam.attributes?.entity_picture === "string"
                           ? cam.attributes.entity_picture
@@ -175,11 +192,17 @@ export default function CamerasView() {
                       }
                     />
                   ) : conn && isFs ? (
-                    <div className="relative flex aspect-video w-full items-center justify-center bg-skydark-surface-muted px-3 text-center">
+                    <div
+                      className="relative flex w-full items-center justify-center bg-skydark-surface-muted px-3 text-center"
+                      style={{ aspectRatio: sharedAspectRatio }}
+                    >
                       <p className="text-xs font-medium text-skydark-text-secondary">Playing in fullscreen…</p>
                     </div>
                   ) : (
-                    <div className="relative flex aspect-video w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-3 text-center">
+                    <div
+                      className="relative flex w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 px-3 text-center"
+                      style={{ aspectRatio: sharedAspectRatio }}
+                    >
                       <p className="text-xs leading-snug text-skydark-text-secondary opacity-80">
                         Demo entity — live stream when connected to Home Assistant.
                       </p>
