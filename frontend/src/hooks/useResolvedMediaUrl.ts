@@ -40,9 +40,8 @@ export function useResolvedMediaUrl(url: string, conn: Connection | null): strin
   const [{ resolved, boundUrl }, setState] = useState<ResolveState>(() => initialState(url));
 
   useEffect(() => {
-    if (!url || !conn) {
-      const u = url ?? "";
-      setState({ resolved: u, boundUrl: u || null });
+    if (!url) {
+      setState({ resolved: "", boundUrl: null });
       return;
     }
     if (!url.startsWith("media-source://")) {
@@ -62,6 +61,10 @@ export function useResolvedMediaUrl(url: string, conn: Connection | null): strin
     }
     if (cached && !isDisplayableMediaResolveUrl(cached, url)) {
       resolvedCache.delete(url);
+    }
+    if (!conn) {
+      setState({ resolved: url, boundUrl: url || null });
+      return;
     }
     setState({ resolved: "", boundUrl: null });
     let cancelled = false;

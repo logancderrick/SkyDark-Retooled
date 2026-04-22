@@ -91,8 +91,8 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
     if (!conn) savePhotos(photos);
   }, [photos, conn]);
 
+  /** Always derive from last loaded HA payload — do not clear when `conn` flickers null. */
   const serverPhotos: PhotoItem[] = useMemo(() => {
-    if (!conn) return [];
     return (skydark?.data?.photos ?? [])
       .map((p) => ({
         id: String(p.id),
@@ -100,7 +100,7 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
         caption: String(p.caption ?? ""),
       }))
       .filter((p) => p.url.length > 0);
-  }, [conn, skydark?.data?.photos]);
+  }, [skydark?.data?.photos]);
 
   useEffect(() => {
     if (!conn || migratedLocalPhotosRef.current) return;
@@ -154,7 +154,12 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
   );
 
   const value: PhotosContextValue = {
-    photos: conn ? serverPhotos : photos,
+    photos:
+      serverPhotos.length > 0
+        ? serverPhotos
+        : conn
+          ? serverPhotos
+          : photos,
     addPhoto,
     deletePhoto,
   };
