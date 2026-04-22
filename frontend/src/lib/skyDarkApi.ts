@@ -153,6 +153,18 @@ export async function deletePhotoWS(
   return send(conn, { type: "skydark_calendar/delete_photo", photo_id: photoId });
 }
 
+export function isDisplayableMediaResolveUrl(resolved: string, mediaContentId: string): boolean {
+  const s = resolved.trim();
+  if (!s || s === mediaContentId) return false;
+  if (s.startsWith("media-source://")) return false;
+  return (
+    s.startsWith("http://") ||
+    s.startsWith("https://") ||
+    s.startsWith("/") ||
+    s.startsWith("data:image/")
+  );
+}
+
 /** Resolve media-source URL to a displayable URL (for img src). */
 export async function resolveMediaUrl(
   conn: Connection,
@@ -165,8 +177,10 @@ export async function resolveMediaUrl(
     type: "media_source/resolve_media",
     media_content_id: mediaContentId,
   });
-  const url = res?.url;
-  if (!url) return mediaContentId;
+  const raw = res?.url;
+  if (typeof raw !== "string") return "";
+  const url = raw.trim();
+  if (!isDisplayableMediaResolveUrl(url, mediaContentId)) return "";
   return url.startsWith("/") ? `${window.location.origin}${url}` : url;
 }
 

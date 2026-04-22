@@ -5,51 +5,67 @@
 
 import { useEffect, useState } from "react";
 import type { Connection } from "home-assistant-js-websocket";
-import { resolveMediaUrl } from "../lib/skyDarkApi";
+import { isDisplayableMediaResolveUrl, resolveMediaUrl } from "../lib/skyDarkApi";
 
 const resolvedCache = new Map<string, string>();
 
-export function useResolvedMediaUrl(
-  url: string,
-  conn: Connection | null
-): string {
-  const [resolved, setResolved] = useState<string>(() => {
-    if (!url) return "";
-    if (!url.startsWith("media-source://")) return url;
-    return resolvedCache.get(url) ?? "";
-  });
+/** Drop a cached resolve (e.g. after img onError / expired signed URL). */
+export function invalidateResolvedMediaUrlCache(mediaSourceUrl: string): void {
+  resolvedCache.delete(mediaSourceUrl);
+}
+
+type ResolveState = { resolved: string; boundUrl: string | null };
+
+function initialState(url: string): ResolveState {
+  if (!url) return { resolved: "", boundUrl: null };
+  if (!url.startsWith("media-source://")) {
+    return { resolved: url, boundUrl: url };
+  }
+  const cached = resolvedCache.get(url);
+  if (cached && isDisplayableMediaResolveUrl(cached, url)) {
+    return { resolved: cached, boundUrl: url };
+  }
+  return { resolved: "", boundUrl: null };
+}
+
+export function useResolvedMediaUrl(url: string, conn: Connection | null): string {
+  const [{ resolved, boundUrl }, setState] = useState<ResolveState>(() => initialState(url));
 
   useEffect(() => {
     if (!url || !conn) {
-      setResolved(url ?? "");
+      const u = url ?? "";
+      setState({ resolved: u, boundUrl: u || null });
       return;
     }
     if (!url.startsWith("media-source://")) {
-      setResolved(url);
+      setState({ resolved: url, boundUrl: url });
       return;
     }
     const cached = resolvedCache.get(url);
-    if (cached) {
-      setResolved(cached);
+    if (cached && isDisplayableMediaResolveUrl(cached, url)) {
+      setState({ resolved: cached, boundUrl: url });
       return;
     }
-    // Avoid showing a resolved URL from a previous `url` until this one resolves.
-    setResolved("");
+    if (cached && !isDisplayableMediaResolveUrl(cached, url)) {
+      resolvedCache.delete(url);
+    }
+    setState({ resolved: "", boundUrl: null });
     let cancelled = false;
     resolveMediaUrl(conn, url)
       .then((result) => {
-        if (!cancelled && result) {
-          resolvedCache.set(url, result);
-          setResolved(result);
-        }
+        if (cancelled || !result || !isDisplayableMediaResolveUrl(result, url)) return;
+        resolvedCache.set(url, result);
+        setState({ resolved: result, boundUrl: url });
       })
       .catch(() => {
-        if (!cancelled) setResolved(url);
+        if (!cancelled) setState({ resolved: "", boundUrl: null });
       });
     return () => {
       cancelled = true;
     };
   }, [url, conn]);
 
-  return resolved || url;
+  if (!url) return "";
+  if (boundUrl === url && resolved) return resolved;
+  return url;
 }
