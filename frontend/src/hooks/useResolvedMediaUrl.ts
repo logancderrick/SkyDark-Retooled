@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import type { Connection } from "home-assistant-js-websocket";
 import {
   isDisplayableMediaResolveUrl,
-  mediaSourceHaToHttpPath,
   resolveMediaUrl,
 } from "../lib/skyDarkApi";
 
@@ -24,10 +23,6 @@ function initialState(url: string): ResolveState {
   if (!url) return { resolved: "", boundUrl: null };
   if (!url.startsWith("media-source://")) {
     return { resolved: url, boundUrl: url };
-  }
-  const direct = mediaSourceHaToHttpPath(url);
-  if (direct && isDisplayableMediaResolveUrl(direct, url)) {
-    return { resolved: direct, boundUrl: url };
   }
   const cached = resolvedCache.get(url);
   if (cached && isDisplayableMediaResolveUrl(cached, url)) {
@@ -48,12 +43,6 @@ export function useResolvedMediaUrl(url: string, conn: Connection | null): strin
       setState({ resolved: url, boundUrl: url });
       return;
     }
-    const direct = mediaSourceHaToHttpPath(url);
-    if (direct && isDisplayableMediaResolveUrl(direct, url)) {
-      resolvedCache.set(url, direct);
-      setState({ resolved: direct, boundUrl: url });
-      return;
-    }
     const cached = resolvedCache.get(url);
     if (cached && isDisplayableMediaResolveUrl(cached, url)) {
       setState({ resolved: cached, boundUrl: url });
@@ -63,7 +52,8 @@ export function useResolvedMediaUrl(url: string, conn: Connection | null): strin
       resolvedCache.delete(url);
     }
     if (!conn) {
-      setState({ resolved: url, boundUrl: url || null });
+      // Never hand `media-source://...` directly to <img>; browser cannot load it.
+      setState({ resolved: "", boundUrl: null });
       return;
     }
     setState({ resolved: "", boundUrl: null });
@@ -83,6 +73,9 @@ export function useResolvedMediaUrl(url: string, conn: Connection | null): strin
   }, [url, conn]);
 
   if (!url) return "";
+  if (url.startsWith("media-source://")) {
+    return boundUrl === url && resolved ? resolved : "";
+  }
   if (boundUrl === url && resolved) return resolved;
   return url;
 }

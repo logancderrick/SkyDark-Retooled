@@ -166,23 +166,6 @@ export function isDisplayableMediaResolveUrl(resolved: string, mediaContentId: s
   );
 }
 
-/**
- * Map HA media browser IDs to the same HTTP path HA uses in PlayMedia
- * (`/media/` + identifier). Calendar photos use this shape, for example:
- * `media-source://media_source/local/Calendar%20Images/file.png`
- * → `/media/local/Calendar%20Images/file.png`
- *
- * Using this avoids `media_source/resolve_media`, which can return empty or
- * short-lived URLs and makes thumbnails flicker or disappear.
- */
-export function mediaSourceHaToHttpPath(mediaContentId: string): string | null {
-  const prefix = "media-source://media_source/";
-  if (!mediaContentId.startsWith(prefix)) return null;
-  const identifier = mediaContentId.slice(prefix.length);
-  if (!identifier || identifier.includes("..")) return null;
-  return `/media/${identifier}`;
-}
-
 function absolutizeResolvedMediaUrl(url: string): string {
   const u = url.trim();
   if (u.startsWith("//")) return `${window.location.protocol}${u}`;
@@ -198,9 +181,6 @@ export async function resolveMediaUrl(
   if (!mediaContentId.startsWith("media-source://")) {
     return mediaContentId;
   }
-  const direct = mediaSourceHaToHttpPath(mediaContentId);
-  if (direct) return direct;
-
   const res = await send<{ url: string }>(conn, {
     type: "media_source/resolve_media",
     media_content_id: mediaContentId,
