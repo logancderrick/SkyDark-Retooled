@@ -97,12 +97,20 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
       lastHaAlbumRef.current = serverPhotos;
       return serverPhotos;
     }
-    if (!conn && lastHaAlbumRef.current.length > 0) {
+    if (lastHaAlbumRef.current.length > 0) {
       return lastHaAlbumRef.current;
     }
-    if (conn) return serverPhotos;
-    return photos;
+    return [];
   }, [conn, serverPhotos, photos]);
+
+  // Legacy cleanup: clear stale local fallback entries so they cannot reappear after refresh.
+  useEffect(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (!conn || migratedLocalPhotosRef.current) return;
