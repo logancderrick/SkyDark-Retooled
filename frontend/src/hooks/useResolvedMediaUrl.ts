@@ -33,6 +33,8 @@ export function useResolvedMediaUrl(
       setResolved(cached);
       return;
     }
+    // Avoid showing a resolved URL from a previous `url` until this one resolves.
+    setResolved("");
     let cancelled = false;
     resolveMediaUrl(conn, url)
       .then((result) => {

@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { usePhotosContext } from "../contexts/PhotosContext";
 import { useAppContext } from "../contexts/AppContext";
 import PinPrompt from "../components/Common/PinPrompt";
@@ -56,6 +57,33 @@ export default function PhotosView() {
     void deletePhoto(id);
     if (selectedId === id) setSelectedId(null);
   };
+
+  const closeLightbox = useCallback(() => setSelectedId(null), []);
+
+  const selectedPhoto = useMemo(
+    () => (selectedId ? photos.find((p) => p.id === selectedId) ?? null : null),
+    [selectedId, photos]
+  );
+
+  useEffect(() => {
+    if (selectedId && !photos.some((p) => p.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [selectedId, photos]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [selectedId, closeLightbox]);
 
   return (
     <div className="h-full">
@@ -132,19 +160,46 @@ export default function PhotosView() {
         </p>
       )}
 
-      {selectedId && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setSelectedId(null)}
-        >
-          <MediaImage
-            src={photos.find((p) => p.id === selectedId)?.url ?? ""}
-            alt=""
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+      {selectedPhoto &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[200] flex flex-col bg-black/95"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Photo viewer"
+          >
+            <div
+              className="flex shrink-0 items-center justify-end gap-3 border-b border-white/10 px-4 py-3"
+              style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0px))" }}
+            >
+              <button
+                type="button"
+                onClick={closeLightbox}
+                className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-skydark-accent"
+              >
+                Close
+              </button>
+            </div>
+            <div className="relative min-h-0 flex-1">
+              <button
+                type="button"
+                className="absolute inset-0 z-0"
+                onClick={closeLightbox}
+                aria-label="Close photo viewer"
+              />
+              <div className="relative z-10 flex h-full min-h-0 items-center justify-center p-4">
+                <MediaImage
+                  src={selectedPhoto.url}
+                  alt={selectedPhoto.caption || "Photo"}
+                  className="max-h-[min(90dvh,100%)] max-w-[min(95vw,100%)] w-auto h-auto object-contain shadow-2xl"
+                  draggable={false}
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       <PinPrompt
         open={showPinPrompt}
         onClose={() => setShowPinPrompt(false)}
