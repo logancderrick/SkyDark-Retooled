@@ -19,18 +19,6 @@ export interface PhotoItem {
 
 const STORAGE_KEY = "skydark_photos";
 
-const BASE = "/skydark/default-photos/";
-const DEFAULT_PHOTOS: PhotoItem[] = [
-  { id: "1", url: `${BASE}1.png`, caption: "Family" },
-  { id: "2", url: `${BASE}2.png`, caption: "Trip" },
-  { id: "3", url: `${BASE}3.png`, caption: "" },
-  { id: "4", url: `${BASE}4.png`, caption: "" },
-  { id: "5", url: `${BASE}5.png`, caption: "" },
-  { id: "6", url: `${BASE}6.png`, caption: "" },
-  { id: "7", url: `${BASE}7.png`, caption: "" },
-  { id: "8", url: `${BASE}8.png`, caption: "" },
-];
-
 function normalizePhotoUrl(rawUrl: string): string {
   const raw = rawUrl.trim();
   if (!raw) return "";
@@ -56,12 +44,12 @@ function normalizePhotoUrl(rawUrl: string): string {
 function loadStoredPhotos(): PhotoItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_PHOTOS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as PhotoItem[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_PHOTOS;
+    if (!Array.isArray(parsed)) return [];
     return parsed;
   } catch {
-    return DEFAULT_PHOTOS;
+    return [];
   }
 }
 
