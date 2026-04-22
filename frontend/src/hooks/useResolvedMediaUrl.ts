@@ -5,7 +5,11 @@
 
 import { useEffect, useState } from "react";
 import type { Connection } from "home-assistant-js-websocket";
-import { isDisplayableMediaResolveUrl, resolveMediaUrl } from "../lib/skyDarkApi";
+import {
+  isDisplayableMediaResolveUrl,
+  mediaSourceHaToHttpPath,
+  resolveMediaUrl,
+} from "../lib/skyDarkApi";
 
 const resolvedCache = new Map<string, string>();
 
@@ -20,6 +24,10 @@ function initialState(url: string): ResolveState {
   if (!url) return { resolved: "", boundUrl: null };
   if (!url.startsWith("media-source://")) {
     return { resolved: url, boundUrl: url };
+  }
+  const direct = mediaSourceHaToHttpPath(url);
+  if (direct && isDisplayableMediaResolveUrl(direct, url)) {
+    return { resolved: direct, boundUrl: url };
   }
   const cached = resolvedCache.get(url);
   if (cached && isDisplayableMediaResolveUrl(cached, url)) {
@@ -39,6 +47,12 @@ export function useResolvedMediaUrl(url: string, conn: Connection | null): strin
     }
     if (!url.startsWith("media-source://")) {
       setState({ resolved: url, boundUrl: url });
+      return;
+    }
+    const direct = mediaSourceHaToHttpPath(url);
+    if (direct && isDisplayableMediaResolveUrl(direct, url)) {
+      resolvedCache.set(url, direct);
+      setState({ resolved: direct, boundUrl: url });
       return;
     }
     const cached = resolvedCache.get(url);
