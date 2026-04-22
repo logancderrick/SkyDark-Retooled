@@ -86,6 +86,8 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
   const conn = skydark?.data?.connection;
   const [photos, setPhotos] = useState<PhotoItem[]>(loadStoredPhotos);
   const migratedLocalPhotosRef = useRef(false);
+  /** Last non-empty HA album; used when `conn` drops briefly so we do not flash local /skydark defaults. */
+  const lastHaAlbumRef = useRef<PhotoItem[]>([]);
 
   useEffect(() => {
     if (!conn) savePhotos(photos);
@@ -101,6 +103,18 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
       }))
       .filter((p) => p.url.length > 0);
   }, [skydark?.data?.photos]);
+
+  const displayPhotos = useMemo(() => {
+    if (serverPhotos.length > 0) {
+      lastHaAlbumRef.current = serverPhotos;
+      return serverPhotos;
+    }
+    if (!conn && lastHaAlbumRef.current.length > 0) {
+      return lastHaAlbumRef.current;
+    }
+    if (conn) return serverPhotos;
+    return photos;
+  }, [conn, serverPhotos, photos]);
 
   useEffect(() => {
     if (!conn || migratedLocalPhotosRef.current) return;
@@ -122,7 +136,7 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-  }, [conn, serverPhotos.length, skydark]);
+  }, [conn, serverPhotos.length, skydark?.refetch]);
 
   const addPhoto = useCallback(
     async (url: string, caption: string = "", filename?: string) => {
@@ -153,16 +167,14 @@ export function PhotosProvider({ children }: { children: ReactNode }) {
     [conn, skydark]
   );
 
-  const value: PhotosContextValue = {
-    photos:
-      serverPhotos.length > 0
-        ? serverPhotos
-        : conn
-          ? serverPhotos
-          : photos,
-    addPhoto,
-    deletePhoto,
-  };
+  const value: PhotosContextValue = useMemo(
+    () => ({
+      photos: displayPhotos,
+      addPhoto,
+      deletePhoto,
+    }),
+    [displayPhotos, addPhoto, deletePhoto],
+  );
   return <PhotosContext.Provider value={value}>{children}</PhotosContext.Provider>;
 }
 

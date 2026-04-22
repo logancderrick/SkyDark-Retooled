@@ -10,7 +10,6 @@ import { useAppContext } from "../contexts/AppContext";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import FloatingActionButton from "../components/Common/FloatingActionButton";
-import ThemeToggleButton from "../components/Common/ThemeToggleButton";
 import { usePinGate } from "../hooks/usePinGate";
 import { pushEventToHaCalendar, serviceAddEvent } from "../lib/skyDarkApi";
 import type { CalendarEvent } from "../types/calendar";
@@ -249,85 +248,86 @@ export default function CalendarView() {
     <div className="h-full flex flex-col min-h-0 bg-skydark-bg">
       <CalendarDashboardTopCards />
       <div className="mb-3 flex min-h-10 min-w-0 shrink-0 flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
-        {viewMode === "month" && (
-          <>
-            <label className="sr-only" htmlFor="cal-month">
-              Month
-            </label>
-            <select
-              id="cal-month"
-              value={monthIndex}
-              onChange={(e) => onMonthYearChange(Number(e.target.value), yearIndex)}
-              className="input-skydark !w-max max-w-full shrink-0 py-2 text-sm [field-sizing:content]"
-            >
-              {MONTH_OPTIONS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <label className="sr-only" htmlFor="cal-year">
-              Year
-            </label>
-            <select
-              id="cal-year"
-              value={yearIndex}
-              onChange={(e) => onMonthYearChange(monthIndex, Number(e.target.value))}
-              className="input-skydark !w-max max-w-full shrink-0 py-2 text-sm tabular-nums [field-sizing:content]"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-        {viewMode === "week" && (
-          <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-skydark-text">
-            {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}
-          </span>
-        )}
-        {viewMode === "day" && (
-          <>
-            <label className="sr-only" htmlFor="cal-day">
-              Date
-            </label>
-            <input
-              id="cal-day"
-              type="date"
-              value={format(currentDate, "yyyy-MM-dd")}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!v) return;
-                const [y, mo, d] = v.split("-").map(Number);
-                setCurrentDate(new Date(y, mo - 1, d));
-              }}
-              className="input-skydark w-[10.75rem] shrink-0 py-2 text-sm"
-            />
-          </>
-        )}
+        <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
+          <select
+            value={viewMode}
+            onChange={(e) => {
+              const mode = e.target.value as "month" | "week" | "day";
+              setViewMode(mode);
+              const now = new Date();
+              if (mode === "month") setCurrentDate(now);
+              else if (mode === "week") setCurrentDate(startOfWeek(now));
+              else if (mode === "day") setCurrentDate(now);
+            }}
+            className="input-skydark w-[7rem] shrink-0 py-2 text-sm"
+            aria-label="Calendar view"
+          >
+            <option value="month">4 weeks</option>
+            <option value="week">Week</option>
+            <option value="day">Day</option>
+          </select>
+          {viewMode === "month" && (
+            <>
+              <label className="sr-only" htmlFor="cal-month">
+                Month
+              </label>
+              <select
+                id="cal-month"
+                value={monthIndex}
+                onChange={(e) => onMonthYearChange(Number(e.target.value), yearIndex)}
+                className="input-skydark !w-max max-w-full shrink-0 py-2 text-sm [field-sizing:content]"
+              >
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <label className="sr-only" htmlFor="cal-year">
+                Year
+              </label>
+              <select
+                id="cal-year"
+                value={yearIndex}
+                onChange={(e) => onMonthYearChange(monthIndex, Number(e.target.value))}
+                className="input-skydark !w-max max-w-full shrink-0 py-2 text-sm tabular-nums [field-sizing:content]"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          {viewMode === "week" && (
+            <span className="shrink-0 whitespace-nowrap text-sm font-semibold text-skydark-text">
+              {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d, yyyy")}
+            </span>
+          )}
+          {viewMode === "day" && (
+            <>
+              <label className="sr-only" htmlFor="cal-day">
+                Date
+              </label>
+              <input
+                id="cal-day"
+                type="date"
+                value={format(currentDate, "yyyy-MM-dd")}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  const [y, mo, d] = v.split("-").map(Number);
+                  setCurrentDate(new Date(y, mo - 1, d));
+                }}
+                className="input-skydark w-[10.75rem] shrink-0 py-2 text-sm"
+              />
+            </>
+          )}
+        </div>
         <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
           <CalendarRemoteToggles />
         </div>
-        <select
-          value={viewMode}
-          onChange={(e) => {
-            const mode = e.target.value as "month" | "week" | "day";
-            setViewMode(mode);
-            const now = new Date();
-            if (mode === "month") setCurrentDate(now);
-            else if (mode === "week") setCurrentDate(startOfWeek(now));
-            else if (mode === "day") setCurrentDate(now);
-          }}
-          className="input-skydark w-[7rem] shrink-0 py-2 text-sm"
-          aria-label="Calendar view"
-        >
-          <option value="month">4 weeks</option>
-          <option value="week">Week</option>
-          <option value="day">Day</option>
-        </select>
-        <ThemeToggleButton />
         <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
