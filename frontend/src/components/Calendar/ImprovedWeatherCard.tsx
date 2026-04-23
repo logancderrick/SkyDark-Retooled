@@ -255,19 +255,19 @@ function SimpleForecastRow({ days }: { days: WeeklyDay[] }) {
         {days.map((d, i) => (
           <li
             key={`sf-${i}`}
-            className="flex min-w-[68px] flex-col items-center gap-1 rounded-lg border border-white/10 bg-slate-950/35 px-2 py-2 text-white"
+            className="flex min-w-[84px] flex-col items-center gap-1.5 rounded-lg border border-white/10 bg-slate-950/35 px-2.5 py-2.5 text-white"
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-white/85">
+            <span className="text-sm font-semibold uppercase tracking-wide text-white/85">
               {shortDay(d.dayLabel, i)}
             </span>
-            <ConditionGlyph condition={d.condition} size={32} />
-            <div className="flex flex-col items-center text-sm tabular-nums leading-tight">
+            <ConditionGlyph condition={d.condition} size={38} />
+            <div className="flex flex-col items-center text-base tabular-nums leading-tight">
               <span className="text-white">{d.tempMax}°</span>
               <span className="text-white/55">{d.tempMin}°</span>
             </div>
             {d.precipitationIn ? (
               <div
-                className="mt-0.5 rounded-md bg-sky-400/25 px-1.5 py-0.5 text-xs font-medium text-sky-100"
+                className="mt-0.5 rounded-md bg-sky-400/25 px-1.5 py-0.5 text-sm font-medium text-sky-100"
                 title={`${d.precipitationIn} in precipitation`}
               >
                 {d.precipitationIn.toFixed(2).replace(/\.?0+$/, "")} in
@@ -383,6 +383,14 @@ export default function ImprovedWeatherCard({
             {today && (
               <p className="mt-1 text-xl tabular-nums text-white/80">
                 {today.tempMax}° / {today.tempMin}°
+              </p>
+            )}
+            {cur?.humidity != null && (
+              <p className="mt-1 flex items-center justify-end gap-1 text-base tabular-nums text-white/70">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current opacity-80" aria-hidden>
+                  <path d="M12 2C8.5 7 5 11.5 5 15a7 7 0 0 0 14 0c0-3.5-3.5-8-7-13z" />
+                </svg>
+                {cur.humidity}%
               </p>
             )}
             {(today?.sunriseIso || today?.sunsetIso) && (
