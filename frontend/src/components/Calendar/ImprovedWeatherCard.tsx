@@ -123,30 +123,6 @@ function ConditionGlyph({ condition, size = 36 }: { condition: Condition; size?:
   }
 }
 
-function EyeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7Z"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-      />
-      <circle cx="12" cy="12" r="2.6" fill="rgba(255,255,255,0.85)" />
-    </svg>
-  );
-}
-
-function DropletIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 3s6 7 6 11.5A6 6 0 0 1 6 14.5C6 10 12 3 12 3Z"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-      />
-    </svg>
-  );
-}
 
 function SunriseIcon() {
   return (
@@ -279,19 +255,19 @@ function SimpleForecastRow({ days }: { days: WeeklyDay[] }) {
         {days.map((d, i) => (
           <li
             key={`sf-${i}`}
-            className="flex min-w-[56px] flex-col items-center gap-0.5 rounded-lg border border-white/10 bg-slate-950/35 px-1.5 py-1.5 text-white"
+            className="flex min-w-[68px] flex-col items-center gap-1 rounded-lg border border-white/10 bg-slate-950/35 px-2 py-2 text-white"
           >
-            <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-white/85">
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/85">
               {shortDay(d.dayLabel, i)}
             </span>
-            <ConditionGlyph condition={d.condition} size={26} />
-            <div className="flex flex-col items-center text-[0.72rem] tabular-nums leading-tight">
+            <ConditionGlyph condition={d.condition} size={32} />
+            <div className="flex flex-col items-center text-sm tabular-nums leading-tight">
               <span className="text-white">{d.tempMax}°</span>
               <span className="text-white/55">{d.tempMin}°</span>
             </div>
             {d.precipitationIn ? (
               <div
-                className="mt-0.5 rounded-md bg-sky-400/25 px-1.5 py-0.5 text-[0.62rem] font-medium text-sky-100"
+                className="mt-0.5 rounded-md bg-sky-400/25 px-1.5 py-0.5 text-xs font-medium text-sky-100"
                 title={`${d.precipitationIn} in precipitation`}
               >
                 {d.precipitationIn.toFixed(2).replace(/\.?0+$/, "")} in
@@ -378,8 +354,9 @@ export default function ImprovedWeatherCard({
       aria-label="Weather forecast"
       className={`relative isolate overflow-hidden rounded-2xl border border-white/10 text-white shadow-skydark ${className}`}
       style={{
-        backgroundImage:
-          "linear-gradient(160deg, #0E2A4A 0%, #0B1A33 55%, #0A1426 100%)",
+        backgroundImage: `url('/skydark/Weather%20Card%20Background%203.png'), linear-gradient(160deg, #0E2A4A 0%, #0B1A33 55%, #0A1426 100%)`,
+        backgroundSize: "cover, cover",
+        backgroundPosition: "center 55%, center",
       }}
     >
       {/* Animated condition effects layer */}
@@ -400,18 +377,18 @@ export default function ImprovedWeatherCard({
             </div>
           </div>
           <div className="text-right leading-tight">
-            <p className="text-3xl font-semibold tabular-nums drop-shadow">
+            <p className="text-4xl font-semibold tabular-nums drop-shadow">
               {cur ? `${cur.temperature}°` : "—"}
             </p>
             {today && (
-              <p className="mt-0.5 text-xs tabular-nums text-white/75">
+              <p className="mt-1 text-xl tabular-nums text-white/80">
                 {today.tempMax}° / {today.tempMin}°
               </p>
             )}
             {(today?.sunriseIso || today?.sunsetIso) && (
-              <p className="mt-0.5 flex flex-wrap items-center justify-end gap-1.5 text-[0.65rem] tabular-nums text-white/60">
+              <p className="mt-1 flex flex-wrap items-center justify-end gap-2 text-base tabular-nums text-white/65">
                 {today?.sunriseIso ? (
-                  <span className="inline-flex items-center gap-0.5">
+                  <span className="inline-flex items-center gap-1">
                     <SunriseIcon />
                     {formatTime(today.sunriseIso)}
                   </span>
@@ -422,7 +399,7 @@ export default function ImprovedWeatherCard({
                   </span>
                 ) : null}
                 {today?.sunsetIso ? (
-                  <span className="inline-flex items-center gap-0.5">
+                  <span className="inline-flex items-center gap-1">
                     <SunsetIcon />
                     {formatTime(today.sunsetIso)}
                   </span>
@@ -431,24 +408,6 @@ export default function ImprovedWeatherCard({
             )}
           </div>
         </div>
-
-        {/* stat rows (compact — matches earlier two-row card) */}
-        <dl className="grid grid-cols-1 gap-x-4 gap-y-0.5 text-xs sm:grid-cols-2">
-          <div className="flex items-center gap-1.5 text-white/85">
-            <EyeIcon />
-            <dt className="flex-1">Visibility</dt>
-            <dd className="tabular-nums text-white">
-              {cur?.visibilityMiles != null ? `${cur.visibilityMiles} mi` : "—"}
-            </dd>
-          </div>
-          <div className="flex items-center gap-1.5 text-white/85">
-            <DropletIcon />
-            <dt className="flex-1">Apparent</dt>
-            <dd className="tabular-nums text-white">
-              {cur?.apparentTemperature != null ? `${cur.apparentTemperature}°` : "—"}
-            </dd>
-          </div>
-        </dl>
 
         <SimpleForecastRow days={days} />
       </div>

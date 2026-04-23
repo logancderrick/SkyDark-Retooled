@@ -33,6 +33,9 @@ export default function PhotosView() {
   const sleepCameraIds = settings.calendarPreviewCameras ?? [];
   const sleepCameraRotateSec = settings.calendarPreviewRotateSeconds ?? 20;
 
+  const [isSleeping, setIsSleeping] = useState(false);
+  const photosRef = useRef<PhotoItem[]>([]);
+
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +87,26 @@ export default function PhotosView() {
     void loadPhotos();
   }, [loadPhotos]);
 
+  // Keep a ref to photos so the slideshow interval can access the latest list without re-mounting.
+  useEffect(() => {
+    photosRef.current = photos;
+  });
+
+  // Rotate to a new random photo every 60 seconds while sleep mode is active.
+  useEffect(() => {
+    if (!isSleeping) return;
+    const timerId = window.setInterval(() => {
+      setSleepPhotoId((current) => {
+        const all = photosRef.current;
+        if (all.length <= 1) return current;
+        const pool = all.filter((p) => p.id !== current);
+        const src = pool.length > 0 ? pool : all;
+        return src[Math.floor(Math.random() * src.length)].id;
+      });
+    }, 60_000);
+    return () => window.clearInterval(timerId);
+  }, [isSleeping]);
+
   useEffect(() => {
     setSleepImageError(false);
     setSleepBlobUrl((prev) => {
@@ -110,10 +133,11 @@ export default function PhotosView() {
   useEffect(() => {
     if (!sleepPhotoId) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSleepPhotoId(null);
+      if (e.key === "Escape") exitSleep();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sleepPhotoId]);
 
   const sleepPhoto = useMemo(
@@ -172,6 +196,12 @@ export default function PhotosView() {
     if (photos.length === 0) return;
     const random = photos[Math.floor(Math.random() * photos.length)];
     setSleepPhotoId(random.id);
+    setIsSleeping(true);
+  };
+
+  const exitSleep = () => {
+    setSleepPhotoId(null);
+    setIsSleeping(false);
   };
 
   return (
@@ -293,13 +323,14 @@ export default function PhotosView() {
       {sleepPhoto && (
         <div
           className="fixed inset-0 z-[200] bg-black"
-          onClick={() => setSleepPhotoId(null)}
+          onClick={exitSleep}
           role="button"
           tabIndex={0}
         >
-          {/* Background photo */}
+          {/* Background photo — cycles every 60 s */}
           {(sleepBlobUrl || sleepPhoto.displayUrl) && !sleepImageError ? (
             <img
+              key={sleepPhoto.id}
               src={
                 sleepBlobUrl
                   ? sleepBlobUrl
@@ -333,73 +364,58 @@ export default function PhotosView() {
             <div className="absolute inset-0 bg-black" />
           )}
 
-          {/* Gradient dim — stronger at edges, lighter in center */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/50" />
+          {/* Scrim — heavier at top/bottom so cards read clearly */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-black/55" />
 
-          {/* Weather card — bottom left */}
+          {/* ── Top-left panel row: camera + weather (same card size) ── */}
           <div
-            className="absolute bottom-8 left-8 z-10 w-[min(76vw,300px)] rounded-3xl border border-white/10 bg-black/55 p-5 text-white shadow-[0_8px_40px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+            className="absolute top-6 left-6 z-10 flex flex-wrap gap-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
-              {weather.locationLabel ? weather.locationLabel : "Current Conditions"}
-            </p>
+            {/* Camera card — same rounded/border style as Cameras tab */}
+            {conn && sleepCameraIds.length > 0 && (
+              <div className="w-[280px] overflow-hidden rounded-[18px] border border-white/15 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+                <CalendarCameraPreview
+                  connection={conn}
+                  cameraEntityIds={sleepCameraIds}
+                  rotateIntervalSec={sleepCameraRotateSec}
+                />
+              </div>
+            )}
 
-            <div className="mt-3 flex items-start gap-4">
-              <span className="text-6xl leading-none" aria-hidden>
-                {weather.current ? getWeatherIcon(weather.current.condition) : "—"}
-              </span>
-              <div>
-                <p className="text-5xl font-extralight tabular-nums leading-none">
+            {/* Weather card — matches camera card width and structure */}
+            <div className="flex w-[280px] flex-col overflow-hidden rounded-[18px] border border-white/15 bg-gray-950 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+              {/* "Stream" area — weather display, same 16:9 aspect as camera tiles */}
+              <div className="relative flex aspect-video flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-slate-700/70 via-slate-900 to-gray-950 px-3">
+                <span className="text-7xl leading-none drop-shadow-xl" aria-hidden>
+                  {weather.current ? getWeatherIcon(weather.current.condition) : "—"}
+                </span>
+                <p className="mt-1 text-4xl font-light tabular-nums text-white drop-shadow">
                   {weather.current ? `${weather.current.temperature}°` : "—"}
                 </p>
                 {weather.current?.condition && (
-                  <p className="mt-1 text-sm capitalize text-white/60">
+                  <p className="mt-1 text-sm capitalize text-white/65">
                     {weather.current.condition.replace(/_/g, " ")}
                   </p>
                 )}
               </div>
-            </div>
 
-            {(weather.weekly[0] || weather.current?.humidity != null || weather.current?.windMph != null) && (
-              <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-white/10 pt-4 text-sm">
-                {weather.weekly[0] && (
-                  <>
-                    <dt className="text-white/45">Today</dt>
-                    <dd className="tabular-nums">{weather.weekly[0].tempMin}° / {weather.weekly[0].tempMax}°</dd>
-                    <dt className="text-white/45">Precip</dt>
-                    <dd className="tabular-nums">{weather.weekly[0].precipitation}%</dd>
-                  </>
-                )}
-                {weather.current?.humidity != null && (
-                  <>
-                    <dt className="text-white/45">Humidity</dt>
-                    <dd className="tabular-nums">{weather.current.humidity}%</dd>
-                  </>
-                )}
-                {weather.current?.windMph != null && (
-                  <>
-                    <dt className="text-white/45">Wind</dt>
-                    <dd className="tabular-nums">{weather.current.windMph} mph</dd>
-                  </>
-                )}
-              </dl>
-            )}
+              {/* Label bar — mirrors camera name+entity_id bar */}
+              <div className="border-t border-white/10 bg-gray-900/95 px-3 py-2">
+                <p className="truncate text-sm font-medium text-gray-100">
+                  {weather.locationLabel ?? "Current Weather"}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-gray-400">
+                  {[
+                    weather.weekly[0] ? `${weather.weekly[0].tempMin}° / ${weather.weekly[0].tempMax}°` : null,
+                    weather.weekly[0] ? `${weather.weekly[0].precipitation}% precip` : null,
+                    weather.current?.humidity != null ? `${weather.current.humidity}% hum` : null,
+                    weather.current?.windMph != null ? `${weather.current.windMph} mph` : null,
+                  ].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+            </div>
           </div>
-
-          {/* Camera preview — bottom right; only when cameras configured and connected */}
-          {conn && sleepCameraIds.length > 0 && (
-            <div
-              className="absolute bottom-8 right-8 z-10 w-[min(72vw,320px)] overflow-hidden rounded-2xl border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.55)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <CalendarCameraPreview
-                connection={conn}
-                cameraEntityIds={sleepCameraIds}
-                rotateIntervalSec={sleepCameraRotateSec}
-              />
-            </div>
-          )}
 
           {/* Tap-to-exit hint */}
           <p className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 select-none text-xs text-white/35">
