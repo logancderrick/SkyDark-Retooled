@@ -377,7 +377,7 @@ export default function ImprovedWeatherCard({
             </div>
           </div>
           <div className="text-right leading-tight">
-            <p className="text-4xl font-semibold tabular-nums drop-shadow">
+            <p className="text-5xl font-bold tabular-nums drop-shadow">
               {cur ? `${cur.temperature}°` : "—"}
             </p>
             {today && (
