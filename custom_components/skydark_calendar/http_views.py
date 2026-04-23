@@ -10,7 +10,6 @@ work for the panel also work for photo images.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from aiohttp import web
@@ -19,6 +18,8 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .photo_media import CALENDAR_MEDIA_FOLDER, get_calendar_media_dir
+
+_WARN_MISSING = "skydark photo %s: %s (raw=%r media_dir=%s filename=%r)"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,48 +46,59 @@ class SkydarkPhotoView(HomeAssistantView):
         if not raw_path:
             return web.Response(status=404)
 
-        resolved = await hass.async_add_executor_job(
-            _resolve_photo_path, hass, raw_path
-        )
-        if not resolved:
-            _LOGGER.debug("skydark photo %s: could not resolve %r", photo_id, raw_path)
+        media_dir = await hass.async_add_executor_job(get_calendar_media_dir, hass)
+        filename = _extract_filename(raw_path)
+        if not filename:
+            _LOGGER.warning(
+                _WARN_MISSING, photo_id, "filename not extractable",
+                raw_path, media_dir, filename,
+            )
             return web.Response(status=404)
 
-        exists = await hass.async_add_executor_job(resolved.is_file)
-        if not exists:
-            _LOGGER.debug("skydark photo %s: missing %s", photo_id, resolved)
-            return web.Response(status=404)
-
-        return web.FileResponse(resolved)
-
-
-def _resolve_photo_path(hass: HomeAssistant, raw: str) -> Path | None:
-    """Translate any stored file_path / media URL into a real disk path."""
-    cleaned = raw.strip()
-    if not cleaned:
-        return None
-
-    media_dir = get_calendar_media_dir(hass)
-    filename = _extract_filename(cleaned)
-    if filename:
         candidate = (media_dir / filename).resolve()
         try:
-            if candidate.is_relative_to(media_dir):
-                return candidate
+            inside_media_dir = candidate.is_relative_to(media_dir)
         except (ValueError, OSError):
-            return None
-    return None
+            inside_media_dir = False
+        if not inside_media_dir:
+            _LOGGER.warning(
+                _WARN_MISSING, photo_id, "resolved path escapes media dir",
+                raw_path, media_dir, filename,
+            )
+            return web.Response(status=404)
+
+        exists = await hass.async_add_executor_job(candidate.is_file)
+        if not exists:
+            _LOGGER.warning(
+                _WARN_MISSING, photo_id, f"file not found at {candidate}",
+                raw_path, media_dir, filename,
+            )
+            return web.Response(status=404)
+
+        return web.FileResponse(candidate)
 
 
 def _extract_filename(raw: str) -> str | None:
-    """Pull the stored filename out of any Calendar Images path shape."""
-    normalized = raw.replace("\\", "/")
+    """Pull the stored filename out of any Calendar Images path shape.
+
+    Handles URL-encoded (``Calendar%20Images``), unencoded, query-strings,
+    ``media-source://`` URLs and raw disk paths so the view works against
+    every shape the DB may have ever stored.
+    """
+    cleaned = raw.strip().replace("\\", "/")
+    if not cleaned:
+        return None
+
+    path_only = cleaned.split("?", 1)[0]
+    parsed = urlparse(path_only)
+    candidate_path = parsed.path if parsed.scheme else path_only
+    decoded = unquote(candidate_path)
+
     marker = f"{CALENDAR_MEDIA_FOLDER}/"
-    idx = normalized.rfind(marker)
+    idx = decoded.rfind(marker)
     if idx < 0:
         return None
-    tail = normalized[idx + len(marker) :]
-    parsed = urlparse(tail)
-    filename = unquote(parsed.path or tail)
-    filename = filename.split("/")[-1]
+
+    tail = decoded[idx + len(marker) :]
+    filename = tail.split("/")[-1].strip()
     return filename or None
