@@ -208,7 +208,12 @@ function withHassAccessToken(url: string, conn: Connection | null): string {
   ) {
     return absolute;
   }
-  if (!parsed.searchParams.has("access_token")) parsed.searchParams.set("access_token", token);
+  // resolve_media often returns ?authSig=…; adding access_token on top can break HA (401).
+  const hasMediaQueryAuth =
+    parsed.searchParams.has("access_token") ||
+    parsed.searchParams.has("authSig") ||
+    parsed.searchParams.has("auth_sig");
+  if (!hasMediaQueryAuth) parsed.searchParams.set("access_token", token);
   return parsed.toString();
 }
 

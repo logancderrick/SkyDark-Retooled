@@ -26,26 +26,37 @@ export async function loadHaImageAsBlobUrl(
   const path = parsed.pathname;
   const search = parsed.search;
   const origin = window.location.origin;
-  const attempts: string[] = [
-    parsed.toString(),
-    `${origin}${path}${search}`,
-    `${origin}${path}?access_token=${encodeURIComponent(token)}`,
+  const sameOriginPath = `${origin}${path}${search}`;
+  const attempts: string[] = [sameOriginPath, parsed.toString()];
+  const hasQueryAuth =
+    search.includes("access_token=") || search.includes("authSig") || search.includes("auth_sig");
+  if (!hasQueryAuth) {
+    attempts.push(`${origin}${path}?access_token=${encodeURIComponent(token)}`);
+  }
+  const uniqueAttempts = [...new Set(attempts)];
+
+  const authModes: (HeadersInit | null)[] = [
+    null,
+    { Authorization: `Bearer ${token}` },
   ];
 
-  const headers: HeadersInit = { Authorization: `Bearer ${token}` };
-
-  for (const abs of attempts) {
-    try {
-      const res = await fetch(abs, { credentials: "same-origin", headers });
-      if (!res.ok) continue;
-      const blob = await res.blob();
-      if (blob.size === 0) continue;
-      const ct = res.headers.get("content-type") ?? "";
-      if (ct.startsWith("image/") || ct === "application/octet-stream" || ct === "") {
-        return URL.createObjectURL(blob);
+  for (const abs of uniqueAttempts) {
+    for (const headers of authModes) {
+      try {
+        const res = await fetch(abs, {
+          credentials: "same-origin",
+          ...(headers ? { headers } : {}),
+        });
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        if (blob.size === 0) continue;
+        const ct = res.headers.get("content-type") ?? "";
+        if (ct.startsWith("image/") || ct === "application/octet-stream" || ct === "") {
+          return URL.createObjectURL(blob);
+        }
+      } catch {
+        /* try next */
       }
-    } catch {
-      /* try next */
     }
   }
 
