@@ -9,6 +9,7 @@ import {
   type SkydarkPhoto,
 } from "../lib/skyDarkApi";
 import { loadHaImageAsBlobUrl } from "../lib/loadHaImageBlob";
+import { haMediaImgSrc } from "../lib/haMediaImgUrl";
 import { getWeatherIcon, useWeatherData } from "../hooks/useWeeklyWeather";
 
 type PhotoItem = {
@@ -205,7 +206,8 @@ export default function PhotosView() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {photos.map((photo) => {
             const blobSrc = fallbackBlobUrls[photo.id];
-            const imgSrc = blobSrc ?? photo.displayUrl;
+            const rawSrc = blobSrc ?? photo.displayUrl;
+            const imgSrc = rawSrc ? (blobSrc ? rawSrc : haMediaImgSrc(rawSrc)) : "";
             const showImg = Boolean(imgSrc) && (!imageLoadErrors[photo.id] || Boolean(blobSrc));
             return (
             <div key={photo.id} className="group relative aspect-[3/2] overflow-hidden rounded-card bg-skydark-surface-muted">
@@ -275,7 +277,13 @@ export default function PhotosView() {
         <div className="fixed inset-0 z-[200] bg-black" onClick={() => setSleepPhotoId(null)} role="button" tabIndex={0}>
           {(sleepBlobUrl || sleepPhoto.displayUrl) && !sleepImageError ? (
             <img
-              src={sleepBlobUrl ?? sleepPhoto.displayUrl}
+              src={
+                sleepBlobUrl
+                  ? sleepBlobUrl
+                  : sleepPhoto.displayUrl
+                    ? haMediaImgSrc(sleepPhoto.displayUrl)
+                    : ""
+              }
               alt={sleepPhoto.caption || "Sleep mode photo"}
               className="absolute inset-0 h-full w-full object-cover"
               onError={() => {
