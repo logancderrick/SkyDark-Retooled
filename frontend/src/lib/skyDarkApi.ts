@@ -162,6 +162,20 @@ export function isDisplayableMediaResolveUrl(resolved: string, mediaContentId: s
   );
 }
 
+/**
+ * Skydark stores calendar photos under HA local media as
+ * `media-source://media_source/local/<encoded path>`, which is served at the same path under
+ * `/media/local/<encoded path>`. When `media_source/resolve_media` fails or returns a shape we
+ * cannot use, this is a safe same-origin fallback for `<img src>`.
+ */
+export function localMediaSourceToMediaPath(mediaContentId: string): string | null {
+  const prefix = "media-source://media_source/local/";
+  if (!mediaContentId.startsWith(prefix)) return null;
+  const tail = mediaContentId.slice(prefix.length).trim();
+  if (!tail) return null;
+  return `/media/local/${tail}`;
+}
+
 function absolutizeResolvedMediaUrl(url: string): string {
   const u = url.trim();
   if (u.startsWith("//")) return `${window.location.protocol}${u}`;
@@ -200,18 +214,33 @@ export async function resolveMediaUrl(
   conn: Connection,
   mediaContentId: string
 ): Promise<string> {
-  if (!mediaContentId.startsWith("media-source://")) {
-    return mediaContentId;
+  const id = mediaContentId.trim();
+  if (!id.startsWith("media-source://")) {
+    return makeDisplayableMediaUrl(id, conn);
   }
-  const res = await send<{ url: string }>(conn, {
-    type: "media_source/resolve_media",
-    media_content_id: mediaContentId,
-  });
-  const raw = res?.url;
-  if (typeof raw !== "string") return "";
-  const url = raw.trim();
-  if (!isDisplayableMediaResolveUrl(url, mediaContentId)) return "";
-  return makeDisplayableMediaUrl(url, conn);
+
+  const localFallback = localMediaSourceToMediaPath(id);
+
+  try {
+    const res = await send<{ url?: unknown }>(conn, {
+      type: "media_source/resolve_media",
+      media_content_id: id,
+    });
+    const raw = res?.url;
+    if (typeof raw === "string") {
+      const url = raw.trim();
+      if (url && isDisplayableMediaResolveUrl(url, id)) {
+        return makeDisplayableMediaUrl(url, conn);
+      }
+    }
+  } catch {
+    // Fall through to local /media/local/ path when resolve is unavailable or rejected.
+  }
+
+  if (localFallback) {
+    return makeDisplayableMediaUrl(localFallback, conn);
+  }
+  return "";
 }
 
 export async function fetchConfig(conn: Connection): Promise<{
