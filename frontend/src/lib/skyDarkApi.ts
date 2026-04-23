@@ -7,6 +7,7 @@ import { callService } from "home-assistant-js-websocket";
 import type { Connection } from "home-assistant-js-websocket";
 import type { CalendarEvent } from "../types/calendar";
 import type { FamilyMember } from "../types/calendar";
+import { getHassAccessToken } from "./haAuth";
 
 export interface SkydarkEvent {
   id: string;
@@ -173,6 +174,32 @@ function absolutizeResolvedMediaUrl(url: string): string {
   return u;
 }
 
+function withHassAccessToken(url: string, conn: Connection | null): string {
+  const token = getHassAccessToken(conn);
+  if (!token) return url;
+  const trimmed = url.trim();
+  if (!trimmed || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) return trimmed;
+  if (trimmed.startsWith("media-source://")) return trimmed;
+  let absolute = trimmed;
+  if (trimmed.startsWith("//")) absolute = `${window.location.protocol}${trimmed}`;
+  else if (trimmed.startsWith("/")) absolute = `${window.location.origin}${trimmed}`;
+  let parsed: URL;
+  try {
+    parsed = new URL(absolute, window.location.origin);
+  } catch {
+    return trimmed;
+  }
+  if (parsed.origin !== window.location.origin) return trimmed;
+  if (!(parsed.pathname.startsWith("/media/") || parsed.pathname.startsWith("/api/"))) return absolute;
+  if (!parsed.searchParams.has("access_token")) parsed.searchParams.set("access_token", token);
+  return parsed.toString();
+}
+
+export function makeDisplayableMediaUrl(url: string, conn: Connection | null): string {
+  const absolute = absolutizeResolvedMediaUrl(url);
+  return withHassAccessToken(absolute, conn);
+}
+
 /** Resolve media-source URL to a displayable URL (for img src). */
 export async function resolveMediaUrl(
   conn: Connection,
@@ -189,7 +216,7 @@ export async function resolveMediaUrl(
   if (typeof raw !== "string") return "";
   const url = raw.trim();
   if (!isDisplayableMediaResolveUrl(url, mediaContentId)) return "";
-  return absolutizeResolvedMediaUrl(url);
+  return makeDisplayableMediaUrl(url, conn);
 }
 
 export async function fetchConfig(conn: Connection): Promise<{
