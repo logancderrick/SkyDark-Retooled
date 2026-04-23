@@ -243,6 +243,18 @@ export async function resolveMediaUrl(
     if (typeof raw === "string") {
       const url = raw.trim();
       if (url && isDisplayableMediaResolveUrl(url, id)) {
+        const abs = absolutizeResolvedMediaUrl(url);
+        if (abs.includes("authSig") || abs.includes("auth_sig")) {
+          return abs;
+        }
+        try {
+          const p = new URL(abs, window.location.origin);
+          if ([...p.searchParams.keys()].length > 0) {
+            return abs;
+          }
+        } catch {
+          /* fall through to tokenized URL */
+        }
         return makeDisplayableMediaUrl(url, conn);
       }
     }

@@ -46,6 +46,16 @@ describe("resolveMediaUrl", () => {
     expect(url).toContain("access_token=testtoken");
   });
 
+  it("does not append access_token when resolve_media returns authSig", async () => {
+    const conn = mockConn(async () => ({
+      url: "/media/local/Calendar%20Images/signed.jpg?authSig=ha-secret",
+    }));
+    const id = "media-source://media_source/local/Calendar%20Images/signed.jpg";
+    const url = await resolveMediaUrl(conn, id);
+    expect(url).toContain("authSig=ha-secret");
+    expect(url).not.toContain("access_token=");
+  });
+
   it("passes plain paths through makeDisplayableMediaUrl", async () => {
     const conn = mockConn(async () => {
       throw new Error("should not be called");

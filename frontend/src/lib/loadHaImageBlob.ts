@@ -1,5 +1,6 @@
 import type { Connection } from "home-assistant-js-websocket";
 import { getHassAccessToken } from "./haAuth";
+import { haMediaImgSrc } from "./haMediaImgUrl";
 
 /**
  * Load a same-origin HA image using Bearer auth (img tags cannot send headers).
@@ -26,10 +27,10 @@ export async function loadHaImageAsBlobUrl(
   const path = parsed.pathname;
   const search = parsed.search;
   const origin = window.location.origin;
-  /** Cookie session (no query token) — matches how HA serves media to logged-in browsers. */
-  const cookieOnly = `${origin}${path}`;
+  /** Same as `<img src>`: strip WS `access_token`, keep `authSig` / other HA query params. */
+  const cookiePreferAbs = new URL(haMediaImgSrc(displayUrl, origin), origin).toString();
   const sameOriginPath = `${origin}${path}${search}`;
-  const attempts: string[] = [cookieOnly, sameOriginPath, parsed.toString()];
+  const attempts: string[] = [cookiePreferAbs, sameOriginPath, parsed.toString()];
   const hasQueryAuth =
     search.includes("access_token=") || search.includes("authSig") || search.includes("auth_sig");
   if (!hasQueryAuth) {
