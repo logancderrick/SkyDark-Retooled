@@ -23,9 +23,8 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
       },
       output: {
-        // Stable entry name so HA panel never 404s on a stale index.html → hashed main mismatch
-        // after partial copies; lazy chunks stay content-hashed.
-        entryFileNames: "assets/main.js",
+        // Content-hash all files so browsers always fetch fresh assets after a HACS update.
+        entryFileNames: "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",
       },
