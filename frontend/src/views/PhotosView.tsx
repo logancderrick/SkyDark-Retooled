@@ -37,6 +37,7 @@ export default function PhotosView() {
   /** When query-token img fails, same-origin fetch with Bearer often still works — use blob: URLs. */
   const [fallbackBlobUrls, setFallbackBlobUrls] = useState<Record<string, string>>({});
   const blobRecoveringRef = useRef(new Set<string>());
+  const resolveRecoveringRef = useRef(new Set<string>());
   const [sleepImageError, setSleepImageError] = useState(false);
   const [sleepBlobUrl, setSleepBlobUrl] = useState<string | null>(null);
   const sleepRecoveringRef = useRef(false);
@@ -65,6 +66,7 @@ export default function PhotosView() {
         return {};
       });
       blobRecoveringRef.current.clear();
+      resolveRecoveringRef.current.clear();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load photos";
       setError(message);
@@ -216,9 +218,29 @@ export default function PhotosView() {
                       setImageLoadErrors((prev) => ({ ...prev, [id]: true }));
                       return;
                     }
-                    blobRecoveringRef.current.add(id);
                     void (async () => {
                       try {
+                        if (!resolveRecoveringRef.current.has(id)) {
+                          resolveRecoveringRef.current.add(id);
+                          try {
+                            // Signed URLs can expire; ask HA for a fresh resolved URL once before blob fallback.
+                            const refreshed = await resolveMediaUrl(conn, photo.rawUrl);
+                            if (refreshed && refreshed !== photo.displayUrl) {
+                              setPhotos((prev) =>
+                                prev.map((p) => (p.id === id ? { ...p, displayUrl: refreshed } : p))
+                              );
+                              setImageLoadErrors((prev) => {
+                                const next = { ...prev };
+                                delete next[id];
+                                return next;
+                              });
+                              return;
+                            }
+                          } finally {
+                            resolveRecoveringRef.current.delete(id);
+                          }
+                        }
+                        blobRecoveringRef.current.add(id);
                         const blobUrl = await loadHaImageAsBlobUrl(photo.displayUrl, conn);
                         if (blobUrl) {
                           setFallbackBlobUrls((prev) => {
@@ -288,6 +310,14 @@ export default function PhotosView() {
                 sleepRecoveringRef.current = true;
                 void (async () => {
                   try {
+                    const refreshed = await resolveMediaUrl(conn, sleepPhoto.rawUrl);
+                    if (refreshed && refreshed !== sleepPhoto.displayUrl) {
+                      setPhotos((prev) =>
+                        prev.map((p) => (p.id === sleepPhoto.id ? { ...p, displayUrl: refreshed } : p))
+                      );
+                      setSleepImageError(false);
+                      return;
+                    }
                     const blobUrl = await loadHaImageAsBlobUrl(sleepPhoto.displayUrl, conn);
                     if (blobUrl) {
                       setSleepBlobUrl((prev) => {
