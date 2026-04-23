@@ -35,13 +35,13 @@ function NotFoundPage() {
   );
 }
 
-const CalendarView = lazy(() => import("./views/CalendarView"));
-const TasksView = lazy(() => import("./views/TasksView"));
-const ListsView = lazy(() => import("./views/ListsView"));
-const PhotosView = lazy(() => import("./views/PhotosView"));
-const CamerasView = lazy(() => import("./views/CamerasView"));
-const RewardsView = lazy(() => import("./views/RewardsView"));
-const SettingsView = lazy(() => import("./views/SettingsView"));
+const CalendarView = lazy(() => import("./views/CalendarView.tsx"));
+const TasksView = lazy(() => import("./views/TasksView.tsx"));
+const ListsView = lazy(() => import("./views/ListsView.tsx"));
+const PhotosView = lazy(() => import("./views/PhotosView.tsx"));
+const CamerasView = lazy(() => import("./views/CamerasView.tsx"));
+const RewardsView = lazy(() => import("./views/RewardsView.tsx"));
+const SettingsView = lazy(() => import("./views/SettingsView.tsx"));
 
 function PageLoader() {
   return (

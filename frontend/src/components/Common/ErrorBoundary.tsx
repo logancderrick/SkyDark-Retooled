@@ -40,7 +40,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             height: "100vh",
             background: "#F8FAFB",
             color: "#2B3A4A",
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            fontFamily: "'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             padding: "2rem",
             textAlign: "center",
             gap: "1rem",

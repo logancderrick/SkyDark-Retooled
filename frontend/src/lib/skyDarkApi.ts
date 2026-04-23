@@ -222,13 +222,25 @@ export function makeDisplayableMediaUrl(url: string, conn: Connection | null): s
   return withHassAccessToken(absolute, conn);
 }
 
-/** Resolve media-source URL to a displayable URL (for img src). */
+/**
+ * Resolve `media-source://…` to a browser URL, following the same WebSocket contract as Home
+ * Assistant’s frontend (`media_source/resolve_media` → `{ url, mime_type }`).
+ *
+ * References (HA expects you to use `result.url` as-is, not append WS OAuth tokens):
+ * - https://github.com/home-assistant/frontend/blob/dev/src/data/media_source.ts (`resolveMediaSource`)
+ * - https://github.com/home-assistant/frontend/blob/dev/src/panels/lovelace/cards/hui-picture-card.ts (assigns `result.url` to `<img src>`)
+ * - https://www.home-assistant.io/integrations/media_source/ (media is HA-authenticated; signed URLs come from resolve)
+ */
 export async function resolveMediaUrl(
   conn: Connection,
   mediaContentId: string
 ): Promise<string> {
   const id = mediaContentId.trim();
   if (!id.startsWith("media-source://")) {
+    // Same-origin HA paths: use absolute URL without adding WS `access_token` (see HA picture card).
+    if (id.startsWith("/media/") || id.startsWith("/local/") || id.startsWith("/api/")) {
+      return absolutizeResolvedMediaUrl(id);
+    }
     return makeDisplayableMediaUrl(id, conn);
   }
 
@@ -243,19 +255,7 @@ export async function resolveMediaUrl(
     if (typeof raw === "string") {
       const url = raw.trim();
       if (url && isDisplayableMediaResolveUrl(url, id)) {
-        const abs = absolutizeResolvedMediaUrl(url);
-        if (abs.includes("authSig") || abs.includes("auth_sig")) {
-          return abs;
-        }
-        try {
-          const p = new URL(abs, window.location.origin);
-          if ([...p.searchParams.keys()].length > 0) {
-            return abs;
-          }
-        } catch {
-          /* fall through to tokenized URL */
-        }
-        return makeDisplayableMediaUrl(url, conn);
+        return absolutizeResolvedMediaUrl(url);
       }
     }
   } catch {
@@ -263,7 +263,7 @@ export async function resolveMediaUrl(
   }
 
   if (localFallback) {
-    return makeDisplayableMediaUrl(localFallback, conn);
+    return absolutizeResolvedMediaUrl(localFallback);
   }
   return "";
 }

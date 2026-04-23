@@ -49,12 +49,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: [
-          '"Bitcount Grid Single"',
-          "ui-monospace",
-          "Cambria Math",
-          "monospace",
-        ],
+        sans: ["Nunito", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
         skydark: "0 2px 8px rgba(0, 0, 0, 0.08)",

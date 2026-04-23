@@ -12,7 +12,6 @@ import PhotosView from "./PhotosView";
 const apiMocks = vi.hoisted(() => ({
   fetchPhotos: vi.fn(),
   resolveMediaUrl: vi.fn(),
-  makeDisplayableMediaUrl: vi.fn((url: string) => `tokenized:${url}`),
 }));
 
 vi.mock("../lib/skyDarkApi", async () => {
@@ -21,7 +20,6 @@ vi.mock("../lib/skyDarkApi", async () => {
     ...actual,
     fetchPhotos: apiMocks.fetchPhotos,
     resolveMediaUrl: apiMocks.resolveMediaUrl,
-    makeDisplayableMediaUrl: apiMocks.makeDisplayableMediaUrl,
   };
 });
 
@@ -115,7 +113,7 @@ describe("PhotosView", () => {
     );
   });
 
-  it("uses makeDisplayableMediaUrl for non–media-source file_path values", async () => {
+  it("calls resolveMediaUrl for /media/local/… file_path values", async () => {
     apiMocks.fetchPhotos.mockResolvedValue({
       photos: [
         {
@@ -125,15 +123,20 @@ describe("PhotosView", () => {
         },
       ],
     });
+    apiMocks.resolveMediaUrl.mockResolvedValue(
+      "http://127.0.0.1:8123/media/local/Calendar%20Images/direct.jpg"
+    );
 
     renderPhotosWithConn();
 
     await waitFor(() => {
       const img = screen.getByRole("img", { name: /lake/i });
-      expect(img.getAttribute("src")).toContain("tokenized:");
+      expect(img.getAttribute("src")).toContain("direct.jpg");
     });
 
-    expect(apiMocks.resolveMediaUrl).not.toHaveBeenCalled();
-    expect(apiMocks.makeDisplayableMediaUrl).toHaveBeenCalled();
+    expect(apiMocks.resolveMediaUrl).toHaveBeenCalledWith(
+      expect.anything(),
+      "/media/local/Calendar%20Images/direct.jpg"
+    );
   });
 });

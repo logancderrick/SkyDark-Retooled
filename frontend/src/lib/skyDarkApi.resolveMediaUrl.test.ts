@@ -26,7 +26,7 @@ describe("resolveMediaUrl", () => {
     const id = "media-source://media_source/local/Calendar%20Images/abc.jpg";
     const url = await resolveMediaUrl(conn, id);
     expect(url).toContain("/media/local/Calendar%20Images/abc.jpg");
-    expect(url).toContain("access_token=testtoken");
+    expect(url).not.toContain("access_token=");
   });
 
   it("falls back when resolve returns a non-displayable URL", async () => {
@@ -36,14 +36,14 @@ describe("resolveMediaUrl", () => {
     expect(url).toContain("/media/local/Calendar%20Images/x.jpg");
   });
 
-  it("uses resolve result when it returns a usable path", async () => {
+  it("uses resolve result when it returns a usable path (HA: use result.url as-is)", async () => {
     const conn = mockConn(async () => ({
       url: "/media/local/Calendar%20Images/from-resolve.jpg",
     }));
     const id = "media-source://media_source/local/Calendar%20Images/from-resolve.jpg";
     const url = await resolveMediaUrl(conn, id);
     expect(url).toContain("from-resolve.jpg");
-    expect(url).toContain("access_token=testtoken");
+    expect(url).not.toContain("access_token=");
   });
 
   it("does not append access_token when resolve_media returns authSig", async () => {
@@ -56,13 +56,13 @@ describe("resolveMediaUrl", () => {
     expect(url).not.toContain("access_token=");
   });
 
-  it("passes plain paths through makeDisplayableMediaUrl", async () => {
+  it("absolutizes plain /media/ paths without appending WS access_token", async () => {
     const conn = mockConn(async () => {
       throw new Error("should not be called");
     });
     const url = await resolveMediaUrl(conn, "/media/local/Calendar%20Images/direct.jpg");
     expect(url).toContain("/media/local/Calendar%20Images/direct.jpg");
-    expect(url).toContain("access_token=testtoken");
+    expect(url).not.toContain("access_token=");
     expect(conn.sendMessagePromise).not.toHaveBeenCalled();
   });
 });

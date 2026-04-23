@@ -15,7 +15,6 @@
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
-    "@fontsource/bitcount-grid-single": "^5.2.2",
     "@radix-ui/react-switch": "^1.2.6",
     "date-fns": "^3.6.0",
     "framer-motion": "^11.0.0",

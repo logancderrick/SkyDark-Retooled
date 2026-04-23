@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
-import {
-  addPhotoWS,
-  deletePhotoWS,
-  fetchPhotos,
-  makeDisplayableMediaUrl,
-  resolveMediaUrl,
-  type SkydarkPhoto,
-} from "../lib/skyDarkApi";
+import { addPhotoWS, deletePhotoWS, fetchPhotos, resolveMediaUrl, type SkydarkPhoto } from "../lib/skyDarkApi";
 import { loadHaImageAsBlobUrl } from "../lib/loadHaImageBlob";
 import { haMediaImgSrc } from "../lib/haMediaImgUrl";
 import { getWeatherIcon, useWeatherData } from "../hooks/useWeeklyWeather";
@@ -58,11 +51,8 @@ export default function PhotosView() {
       const resolved = await Promise.all(
         normalized.map(async (photo) => {
           try {
-            if (photo.rawUrl.startsWith("media-source://")) {
-              const displayUrl = await resolveMediaUrl(conn, photo.rawUrl);
-              return { ...photo, displayUrl };
-            }
-            return { ...photo, displayUrl: makeDisplayableMediaUrl(photo.rawUrl, conn) };
+            const displayUrl = await resolveMediaUrl(conn, photo.rawUrl);
+            return { ...photo, displayUrl };
           } catch {
             return { ...photo, displayUrl: "" };
           }
