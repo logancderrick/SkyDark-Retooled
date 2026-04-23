@@ -159,7 +159,6 @@ export function buildDemoSkydarkState(): SkydarkDataState {
     lists: DEMO_LISTS,
     listItems: DEMO_LIST_ITEMS,
     familyMembers: DEMO_MEMBERS,
-    photos: [],
     config: { family_name: "Demo family (local preview)" },
     appSettings: DEMO_APP_SETTINGS,
     pointsByMember: { "1": 120, "2": 45, "3": 30 },

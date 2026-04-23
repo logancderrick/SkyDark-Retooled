@@ -55,7 +55,6 @@ export interface LockedFeatures {
   claimRewards: boolean;
   meals: boolean;
   mealprep: boolean;
-  importPhotos: boolean;
   changeSettings: boolean;
 }
 
@@ -73,7 +72,6 @@ const DEFAULT_LOCKED_FEATURES: LockedFeatures = {
   claimRewards: false,
   meals: false,
   mealprep: false,
-  importPhotos: false,
   changeSettings: false,
 };
 
@@ -86,22 +84,6 @@ export interface AppSettings {
   autoRelockEnabled: boolean;
   autoRelockMinutes: number;
   lockedFeatures: LockedFeatures;
-  screensaverEnabled: boolean;
-  screensaverIdleMinutes: number;
-  /** Sleep mode slideshow: "none" | "fade" | "slide" */
-  screensaverTransitionType: "none" | "fade" | "slide";
-  /** Time between photo changes; unit determines which value is used */
-  screensaverSlideshowIntervalUnit: "seconds" | "minutes";
-  /** Used when unit is seconds (3-60) */
-  screensaverSlideshowIntervalSeconds: number;
-  /** Used when unit is minutes (1-10) */
-  screensaverSlideshowIntervalMinutes: number;
-  /** Transition duration in milliseconds */
-  screensaverTransitionDurationMs: number;
-  /** Sleep mode time size: 0-100, 50 = current */
-  screensaverTimeDisplayScale: number;
-  /** Sleep mode weather size: 0-100, 50 = current */
-  screensaverWeatherDisplayScale: number;
   /** Optional US ZIP code for weather API lookups. */
   weatherZipCode: string;
   /** Show a compact 7-day forecast row in the top header. */
@@ -138,15 +120,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoRelockEnabled: false,
   autoRelockMinutes: 5,
   lockedFeatures: DEFAULT_LOCKED_FEATURES,
-  screensaverEnabled: false,
-  screensaverIdleMinutes: 5,
-  screensaverTransitionType: "fade",
-  screensaverSlideshowIntervalUnit: "seconds",
-  screensaverSlideshowIntervalSeconds: 5,
-  screensaverSlideshowIntervalMinutes: 1,
-  screensaverTransitionDurationMs: 1200,
-  screensaverTimeDisplayScale: 50,
-  screensaverWeatherDisplayScale: 50,
   weatherZipCode: "",
   showTopWeeklyForecast: false,
   shoppingChecked: {},
@@ -170,8 +143,6 @@ interface AppContextValue extends AppState {
   setSettings: (settings: Partial<AppSettings>) => void;
   setAuthenticated: (value: boolean) => void;
   verifyPin: (pin: string) => boolean;
-  screensaverTriggered: boolean;
-  setScreensaverTriggered: (value: boolean) => void;
   setIsLocked: (locked: boolean) => void;
   isFeatureLocked: (feature: LockedFeatureKey) => boolean;
   unlockApp: (pin: string) => boolean;
@@ -277,7 +248,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   );
   const [isAuthenticated, setAuthenticatedState] = useState(false);
-  const [screensaverTriggered, setScreensaverTriggered] = useState(false);
   const [isLocked, setIsLockedState] = useState(false);
   const didMigrateLegacyLocalRef = useRef(false);
 
@@ -493,8 +463,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSettings,
       setAuthenticated,
       verifyPin,
-      screensaverTriggered,
-      setScreensaverTriggered,
       setIsLocked,
       isFeatureLocked,
       unlockApp,
@@ -511,8 +479,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSettings,
       setAuthenticated,
       verifyPin,
-      screensaverTriggered,
-      setScreensaverTriggered,
       setIsLocked,
       isFeatureLocked,
       unlockApp,

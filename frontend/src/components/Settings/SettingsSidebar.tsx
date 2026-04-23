@@ -1,5 +1,5 @@
 /**
- * Left sidebar for Settings sub-navigation (General, Calendar, Photos, Reminders).
+ * Left sidebar for Settings sub-navigation (General, Calendar, Display, Lock, Developer).
  * Matches Skydark two-column settings layout.
  */
 

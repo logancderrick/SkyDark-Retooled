@@ -4,7 +4,6 @@ import {
   ListsIcon,
   CheckIcon,
   StarIcon,
-  PhotosIcon,
   CameraIcon,
   SettingsIcon,
 } from "./SidebarIcons";
@@ -15,7 +14,6 @@ export const navItems = [
   { path: "/lists", label: "Lists", Icon: ListsIcon },
   { path: "/tasks", label: "Chores", Icon: CheckIcon },
   { path: "/rewards", label: "Rewards", Icon: StarIcon },
-  { path: "/photos", label: "Photos", Icon: PhotosIcon },
   { path: "/cameras", label: "Cameras", Icon: CameraIcon },
   { path: "/settings", label: "Settings", Icon: SettingsIcon },
 ];

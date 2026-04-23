@@ -1,4 +1,4 @@
-/** Icons for Settings sub-navigation (General, Calendar, Photos, Reminders). */
+/** Icons for Settings sub-navigation (General, Calendar, Display, Lock, Developer). */
 
 interface IconProps {
   className?: string;
@@ -24,16 +24,6 @@ export function CalendarSettingsIcon({ className }: IconProps) {
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
       <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
-export function PhotosSettingsIcon({ className }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} className={className}>
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      <circle cx="8.5" cy="8.5" r="1.5" />
-      <path d="M21 15l-5-5L5 21" />
     </svg>
   );
 }
