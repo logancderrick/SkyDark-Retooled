@@ -199,7 +199,15 @@ function withHassAccessToken(url: string, conn: Connection | null): string {
     return trimmed;
   }
   if (parsed.origin !== window.location.origin) return trimmed;
-  if (!(parsed.pathname.startsWith("/media/") || parsed.pathname.startsWith("/api/"))) return absolute;
+  if (
+    !(
+      parsed.pathname.startsWith("/media/") ||
+      parsed.pathname.startsWith("/api/") ||
+      parsed.pathname.startsWith("/local/")
+    )
+  ) {
+    return absolute;
+  }
   if (!parsed.searchParams.has("access_token")) parsed.searchParams.set("access_token", token);
   return parsed.toString();
 }

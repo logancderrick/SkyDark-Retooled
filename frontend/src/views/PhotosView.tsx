@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import {
   addPhotoWS,
@@ -8,6 +8,7 @@ import {
   resolveMediaUrl,
   type SkydarkPhoto,
 } from "../lib/skyDarkApi";
+import { loadHaImageAsBlobUrl } from "../lib/loadHaImageBlob";
 import { getWeatherIcon, useWeatherData } from "../hooks/useWeeklyWeather";
 
 type PhotoItem = {
@@ -37,6 +38,14 @@ export default function PhotosView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sleepPhotoId, setSleepPhotoId] = useState<string | null>(null);
+  /** Set when <img> fires onError (bad URL, 401, missing file). */
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
+  /** When query-token img fails, same-origin fetch with Bearer often still works — use blob: URLs. */
+  const [fallbackBlobUrls, setFallbackBlobUrls] = useState<Record<string, string>>({});
+  const blobRecoveringRef = useRef(new Set<string>());
+  const [sleepImageError, setSleepImageError] = useState(false);
+  const [sleepBlobUrl, setSleepBlobUrl] = useState<string | null>(null);
+  const sleepRecoveringRef = useRef(false);
 
   const loadPhotos = useCallback(async () => {
     if (!conn) return;
@@ -59,6 +68,12 @@ export default function PhotosView() {
         })
       );
       setPhotos(resolved);
+      setImageLoadErrors({});
+      setFallbackBlobUrls((prev) => {
+        Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+        return {};
+      });
+      blobRecoveringRef.current.clear();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load photos";
       setError(message);
@@ -70,6 +85,29 @@ export default function PhotosView() {
   useEffect(() => {
     void loadPhotos();
   }, [loadPhotos]);
+
+  useEffect(() => {
+    setSleepImageError(false);
+    setSleepBlobUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    sleepRecoveringRef.current = false;
+  }, [sleepPhotoId]);
+
+  useEffect(
+    () => () => {
+      setFallbackBlobUrls((prev) => {
+        Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+        return {};
+      });
+      setSleepBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (!sleepPhotoId) return;
@@ -165,12 +203,60 @@ export default function PhotosView() {
         <p className="text-sm text-skydark-text-secondary">No photos yet. Upload some to get started.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {photos.map((photo) => (
+          {photos.map((photo) => {
+            const blobSrc = fallbackBlobUrls[photo.id];
+            const imgSrc = blobSrc ?? photo.displayUrl;
+            const showImg = Boolean(imgSrc) && (!imageLoadErrors[photo.id] || Boolean(blobSrc));
+            return (
             <div key={photo.id} className="group relative aspect-[3/2] overflow-hidden rounded-card bg-skydark-surface-muted">
-              {photo.displayUrl ? (
-                <img src={photo.displayUrl} alt={photo.caption || "Photo"} className="h-full w-full object-cover" />
+              {showImg ? (
+                <img
+                  src={imgSrc}
+                  alt={photo.caption || "Photo"}
+                  className="h-full w-full object-cover"
+                  onError={() => {
+                    if (blobSrc) {
+                      setImageLoadErrors((prev) => ({ ...prev, [photo.id]: true }));
+                      return;
+                    }
+                    const id = photo.id;
+                    if (!conn || !photo.displayUrl || blobRecoveringRef.current.has(id)) {
+                      setImageLoadErrors((prev) => ({ ...prev, [id]: true }));
+                      return;
+                    }
+                    blobRecoveringRef.current.add(id);
+                    void (async () => {
+                      try {
+                        const blobUrl = await loadHaImageAsBlobUrl(photo.displayUrl, conn);
+                        if (blobUrl) {
+                          setFallbackBlobUrls((prev) => {
+                            const old = prev[id];
+                            if (old) URL.revokeObjectURL(old);
+                            return { ...prev, [id]: blobUrl };
+                          });
+                          setImageLoadErrors((prev) => {
+                            const next = { ...prev };
+                            delete next[id];
+                            return next;
+                          });
+                        } else {
+                          setImageLoadErrors((prev) => ({ ...prev, [id]: true }));
+                        }
+                      } finally {
+                        blobRecoveringRef.current.delete(id);
+                      }
+                    })();
+                  }}
+                />
               ) : (
-                <div className="h-full w-full animate-pulse bg-skydark-surface-muted" />
+                <div className="flex h-full w-full flex-col items-center justify-center gap-1 border border-dashed border-skydark-border bg-skydark-bg/50 px-2 text-center">
+                  <span className="text-[11px] font-medium leading-snug text-skydark-text-secondary">
+                    {imageLoadErrors[photo.id] ? "Image could not load" : "Preview unavailable"}
+                  </span>
+                  {!photo.displayUrl && (
+                    <span className="text-[10px] text-skydark-text-secondary/80">Check HA media access</span>
+                  )}
+                </div>
               )}
               <button
                 type="button"
@@ -180,17 +266,44 @@ export default function PhotosView() {
                 Delete
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {sleepPhoto && (
         <div className="fixed inset-0 z-[200] bg-black" onClick={() => setSleepPhotoId(null)} role="button" tabIndex={0}>
-          {sleepPhoto.displayUrl ? (
+          {(sleepBlobUrl || sleepPhoto.displayUrl) && !sleepImageError ? (
             <img
-              src={sleepPhoto.displayUrl}
+              src={sleepBlobUrl ?? sleepPhoto.displayUrl}
               alt={sleepPhoto.caption || "Sleep mode photo"}
               className="absolute inset-0 h-full w-full object-cover"
+              onError={() => {
+                if (sleepBlobUrl) {
+                  setSleepImageError(true);
+                  return;
+                }
+                if (!conn || !sleepPhoto.displayUrl || sleepRecoveringRef.current) {
+                  setSleepImageError(true);
+                  return;
+                }
+                sleepRecoveringRef.current = true;
+                void (async () => {
+                  try {
+                    const blobUrl = await loadHaImageAsBlobUrl(sleepPhoto.displayUrl, conn);
+                    if (blobUrl) {
+                      setSleepBlobUrl((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return blobUrl;
+                      });
+                    } else {
+                      setSleepImageError(true);
+                    }
+                  } finally {
+                    sleepRecoveringRef.current = false;
+                  }
+                })();
+              }}
             />
           ) : (
             <div className="absolute inset-0 bg-black" />
