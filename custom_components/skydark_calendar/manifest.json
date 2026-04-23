@@ -1,12 +1,12 @@
 {
   "domain": "skydark_calendar",
   "name": "Skydark Family Calendar",
-  "codeowners": ["@HunterJacobs"],
+  "codeowners": ["@logancderrick"],
   "config_flow": true,
   "dependencies": ["frontend", "http"],
-  "documentation": "https://github.com/HunterJacobs/SkyDark",
+  "documentation": "https://github.com/logancderrick/SkyDark-Retooled",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/HunterJacobs/SkyDark/issues",
+  "issue_tracker": "https://github.com/logancderrick/SkyDark-Retooled/issues",
   "requirements": [],
-  "version": "2.0.2"
+  "version": "1.0.0"
 }
