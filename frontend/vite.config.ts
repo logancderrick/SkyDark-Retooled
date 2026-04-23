@@ -1,23 +1,9 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
-/** Bust browser cache for stable `assets/main.js` filename on each production build. */
-function skydarkMainCacheBust(): Plugin {
-  return {
-    name: "skydark-main-cache-bust",
-    apply: "build",
-    transformIndexHtml(html) {
-      return html.replace(
-        /(src="[^"]*\/assets\/main\.js)"/,
-        `$1?v=${Date.now()}"`,
-      );
-    },
-  };
-}
-
 export default defineConfig({
-  plugins: [react(), skydarkMainCacheBust()],
+  plugins: [react()],
   server: {
     /** Show Network URL in terminal; wall displays often hit the machine by LAN IP. */
     host: true,
