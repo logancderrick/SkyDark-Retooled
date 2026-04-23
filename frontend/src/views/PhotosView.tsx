@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
+import { useAppContext } from "../contexts/AppContext";
 import { addPhotoWS, deletePhotoWS, fetchPhotos, resolveMediaUrl, type SkydarkPhoto } from "../lib/skyDarkApi";
 import { loadHaImageAsBlobUrl } from "../lib/loadHaImageBlob";
 import { haMediaImgSrc } from "../lib/haMediaImgUrl";
 import { getWeatherIcon, useWeatherData } from "../hooks/useWeeklyWeather";
+import CalendarCameraPreview from "../components/Calendar/CalendarCameraPreview";
 
 type PhotoItem = {
   id: string;
@@ -27,6 +29,9 @@ export default function PhotosView() {
   const skydark = useSkydarkDataContext();
   const conn = skydark?.data?.connection ?? null;
   const weather = useWeatherData();
+  const { settings } = useAppContext();
+  const sleepCameraIds = settings.calendarPreviewCameras ?? [];
+  const sleepCameraRotateSec = settings.calendarPreviewRotateSeconds ?? 20;
 
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -182,7 +187,7 @@ export default function PhotosView() {
             type="button"
             onClick={startSleep}
             disabled={photos.length === 0}
-            className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Sleep
           </button>
@@ -286,7 +291,13 @@ export default function PhotosView() {
       )}
 
       {sleepPhoto && (
-        <div className="fixed inset-0 z-[200] bg-black" onClick={() => setSleepPhotoId(null)} role="button" tabIndex={0}>
+        <div
+          className="fixed inset-0 z-[200] bg-black"
+          onClick={() => setSleepPhotoId(null)}
+          role="button"
+          tabIndex={0}
+        >
+          {/* Background photo */}
           {(sleepBlobUrl || sleepPhoto.displayUrl) && !sleepImageError ? (
             <img
               src={
@@ -299,56 +310,101 @@ export default function PhotosView() {
               alt={sleepPhoto.caption || "Sleep mode photo"}
               className="absolute inset-0 h-full w-full object-cover"
               onError={() => {
-                if (sleepBlobUrl) {
-                  setSleepImageError(true);
-                  return;
-                }
-                if (!conn || !sleepPhoto.displayUrl || sleepRecoveringRef.current) {
-                  setSleepImageError(true);
-                  return;
-                }
+                if (sleepBlobUrl) { setSleepImageError(true); return; }
+                if (!conn || !sleepPhoto.displayUrl || sleepRecoveringRef.current) { setSleepImageError(true); return; }
                 sleepRecoveringRef.current = true;
                 void (async () => {
                   try {
                     const refreshed = await resolveMediaUrl(conn, sleepPhoto.rawUrl);
                     if (refreshed && refreshed !== sleepPhoto.displayUrl) {
-                      setPhotos((prev) =>
-                        prev.map((p) => (p.id === sleepPhoto.id ? { ...p, displayUrl: refreshed } : p))
-                      );
+                      setPhotos((prev) => prev.map((p) => (p.id === sleepPhoto.id ? { ...p, displayUrl: refreshed } : p)));
                       setSleepImageError(false);
                       return;
                     }
                     const blobUrl = await loadHaImageAsBlobUrl(sleepPhoto.displayUrl, conn);
                     if (blobUrl) {
-                      setSleepBlobUrl((prev) => {
-                        if (prev) URL.revokeObjectURL(prev);
-                        return blobUrl;
-                      });
-                    } else {
-                      setSleepImageError(true);
-                    }
-                  } finally {
-                    sleepRecoveringRef.current = false;
-                  }
+                      setSleepBlobUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return blobUrl; });
+                    } else { setSleepImageError(true); }
+                  } finally { sleepRecoveringRef.current = false; }
                 })();
               }}
             />
           ) : (
             <div className="absolute inset-0 bg-black" />
           )}
-          <div className="absolute inset-0 bg-black/30" />
-          <div className="absolute left-1/2 top-1/2 z-10 w-[min(88vw,560px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-black/50 p-5 text-center text-white backdrop-blur-md">
-            <p className="text-xs uppercase tracking-wide text-white/80">Weather</p>
-            <p className="mt-2 text-4xl font-semibold">
-              {weather.current ? `${getWeatherIcon(weather.current.condition)} ${weather.current.temperature}°` : "--"}
+
+          {/* Gradient dim — stronger at edges, lighter in center */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/50" />
+
+          {/* Weather card — bottom left */}
+          <div
+            className="absolute bottom-8 left-8 z-10 w-[min(76vw,300px)] rounded-3xl border border-white/10 bg-black/55 p-5 text-white shadow-[0_8px_40px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
+              {weather.locationLabel ? weather.locationLabel : "Current Conditions"}
             </p>
-            {weather.weekly[0] && (
-              <p className="mt-2 text-sm text-white/85">
-                {weather.weekly[0].tempMin}° / {weather.weekly[0].tempMax}° - {weather.weekly[0].precipitation}% precipitation
-              </p>
+
+            <div className="mt-3 flex items-start gap-4">
+              <span className="text-6xl leading-none" aria-hidden>
+                {weather.current ? getWeatherIcon(weather.current.condition) : "—"}
+              </span>
+              <div>
+                <p className="text-5xl font-extralight tabular-nums leading-none">
+                  {weather.current ? `${weather.current.temperature}°` : "—"}
+                </p>
+                {weather.current?.condition && (
+                  <p className="mt-1 text-sm capitalize text-white/60">
+                    {weather.current.condition.replace(/_/g, " ")}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {(weather.weekly[0] || weather.current?.humidity != null || weather.current?.windMph != null) && (
+              <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-white/10 pt-4 text-sm">
+                {weather.weekly[0] && (
+                  <>
+                    <dt className="text-white/45">Today</dt>
+                    <dd className="tabular-nums">{weather.weekly[0].tempMin}° / {weather.weekly[0].tempMax}°</dd>
+                    <dt className="text-white/45">Precip</dt>
+                    <dd className="tabular-nums">{weather.weekly[0].precipitation}%</dd>
+                  </>
+                )}
+                {weather.current?.humidity != null && (
+                  <>
+                    <dt className="text-white/45">Humidity</dt>
+                    <dd className="tabular-nums">{weather.current.humidity}%</dd>
+                  </>
+                )}
+                {weather.current?.windMph != null && (
+                  <>
+                    <dt className="text-white/45">Wind</dt>
+                    <dd className="tabular-nums">{weather.current.windMph} mph</dd>
+                  </>
+                )}
+              </dl>
             )}
-            <p className="mt-4 text-xs text-white/75">Tap anywhere to exit sleep mode</p>
           </div>
+
+          {/* Camera preview — bottom right; only when cameras configured and connected */}
+          {conn && sleepCameraIds.length > 0 && (
+            <div
+              className="absolute bottom-8 right-8 z-10 w-[min(72vw,320px)] overflow-hidden rounded-2xl border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.55)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CalendarCameraPreview
+                connection={conn}
+                cameraEntityIds={sleepCameraIds}
+                rotateIntervalSec={sleepCameraRotateSec}
+              />
+            </div>
+          )}
+
+          {/* Tap-to-exit hint */}
+          <p className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 select-none text-xs text-white/35">
+            Tap anywhere to exit sleep mode
+          </p>
         </div>
       )}
     </div>
