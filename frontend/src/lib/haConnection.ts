@@ -72,6 +72,19 @@ async function loadStoredTokens(): Promise<AuthDataLike | null | undefined> {
     const url = localStorage.getItem(HASS_URL_KEY);
     const tokens = localStorage.getItem(HASS_TOKENS_KEY);
     if (url && tokens) {
+      // If the HA URL has changed, stale tokens will cause a 400 on /auth/token
+      // because the client_id embedded in them no longer matches. Discard them
+      // so a fresh OAuth flow starts against the new URL.
+      const currentUrl = getHassUrl();
+      if (url.replace(/\/+$/, "") !== currentUrl.replace(/\/+$/, "")) {
+        console.debug(
+          `[SkyDark] Stored HA URL (${url}) differs from current (${currentUrl}); clearing stale tokens.`,
+        );
+        localStorage.removeItem(HASS_URL_KEY);
+        localStorage.removeItem(HASS_TOKENS_KEY);
+        return undefined;
+      }
+
       const parsed = JSON.parse(tokens) as Record<string, unknown>;
       if (parsed && typeof parsed.access_token === "string") {
         return {
