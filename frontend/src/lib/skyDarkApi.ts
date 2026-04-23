@@ -72,6 +72,14 @@ export interface SkydarkMeal {
   meal_recipe_id?: string | null;
 }
 
+export interface SkydarkPhoto {
+  id: string;
+  file_path: string;
+  caption?: string | null;
+  uploaded_by?: string | null;
+  created_at?: string | null;
+}
+
 export interface SkydarkConfig {
   panel_url?: string;
   config?: { family_name?: string; weather_entity?: string };
@@ -119,6 +127,26 @@ export async function fetchFamilyMembers(conn: Connection): Promise<{
   family_members: FamilyMember[];
 }> {
   return send(conn, { type: "skydark_calendar/get_family_members" });
+}
+
+export async function fetchPhotos(conn: Connection): Promise<{
+  photos: SkydarkPhoto[];
+}> {
+  return send(conn, { type: "skydark_calendar/get_photos" });
+}
+
+export async function addPhotoWS(
+  conn: Connection,
+  data: { url: string; caption?: string; uploaded_by?: string; filename?: string }
+): Promise<{ photo_id: string }> {
+  return send(conn, { type: "skydark_calendar/add_photo", ...data });
+}
+
+export async function deletePhotoWS(
+  conn: Connection,
+  photoId: string
+): Promise<{ success: boolean }> {
+  return send(conn, { type: "skydark_calendar/delete_photo", photo_id: photoId });
 }
 
 export function isDisplayableMediaResolveUrl(resolved: string, mediaContentId: string): boolean {

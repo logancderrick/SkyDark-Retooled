@@ -38,6 +38,7 @@ function NotFoundPage() {
 const CalendarView = lazy(() => import("./views/CalendarView"));
 const TasksView = lazy(() => import("./views/TasksView"));
 const ListsView = lazy(() => import("./views/ListsView"));
+const PhotosView = lazy(() => import("./views/PhotosView"));
 const CamerasView = lazy(() => import("./views/CamerasView"));
 const RewardsView = lazy(() => import("./views/RewardsView"));
 const SettingsView = lazy(() => import("./views/SettingsView"));
@@ -62,6 +63,7 @@ function App() {
             <Route path="/calendar" element={<CalendarView />} />
             <Route path="/tasks" element={<TasksView />} />
             <Route path="/lists" element={<ListsView />} />
+            <Route path="/photos" element={<PhotosView />} />
             <Route path="/cameras" element={<CamerasView />} />
             <Route path="/rewards" element={<RewardsView />} />
             <Route path="/settings" element={<SettingsView />} />
