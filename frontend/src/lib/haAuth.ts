@@ -3,6 +3,23 @@ import type { Connection } from "home-assistant-js-websocket";
 /** Same key `home-assistant-js-websocket` uses when persisting tokens (often shared with HA UI). */
 const HASS_TOKENS_STORAGE_KEY = "hassTokens";
 
+function isExpiredJwt(token: string): boolean {
+  const parts = token.split(".");
+  if (parts.length < 2) return false;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      exp?: unknown;
+    };
+    const exp = typeof payload.exp === "number" ? payload.exp : undefined;
+    if (!exp) return false;
+    const now = Math.floor(Date.now() / 1000);
+    // Small skew guard so we do not race expiry during fetch retries.
+    return exp <= now + 30;
+  } catch {
+    return false;
+  }
+}
+
 function tokenFromParentHass(): string | undefined {
   try {
     // When SkyDark runs inside HA's iframe, the parent exposes the logged-in session.
@@ -45,11 +62,19 @@ function tokenFromConnection(conn: Connection): string | undefined {
 
 /** Access token for REST / media: WS auth, parent HA session, then persisted hassTokens. */
 export function getHassAccessToken(conn: Connection | null): string | undefined {
+  const fromParent = tokenFromParentHass();
+  if (fromParent && !isExpiredJwt(fromParent)) return fromParent;
+
+  const fromLocal = tokenFromHassLocalStorage();
+  if (fromLocal && !isExpiredJwt(fromLocal)) return fromLocal;
+
   if (conn) {
     const fromConn = tokenFromConnection(conn);
+    if (fromConn && !isExpiredJwt(fromConn)) return fromConn;
+    // Last-resort fallback when token format is non-JWT / cannot be validated.
     if (fromConn) return fromConn;
   }
-  const fromParent = tokenFromParentHass();
-  if (fromParent) return fromParent;
-  return tokenFromHassLocalStorage();
+
+  // If parent/local exist but looked expired, still return parent as last fallback.
+  return fromParent ?? fromLocal;
 }
