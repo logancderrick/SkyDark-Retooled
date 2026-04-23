@@ -1,10 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter } from "react-router-dom";
+import { routerFutureFlags } from "./lib/routerFutureFlags";
 import { AppProvider } from "./contexts/AppContext";
 import { SkydarkDataProvider } from "./contexts/SkydarkDataContext";
 import { ViewportSimulatorProvider } from "./contexts/ViewportSimulatorContext";
 import ErrorBoundary from "./components/Common/ErrorBoundary";
+import AppBootstrapGate from "./components/AppBootstrapGate";
 import App from "./App";
 import "@fontsource/bitcount-grid-single";
 import "./index.css";
@@ -17,12 +19,14 @@ if (!rootEl) {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
       <ErrorBoundary>
-        <HashRouter>
+        <HashRouter future={routerFutureFlags}>
           <SkydarkDataProvider>
             <AppProvider>
-              <ViewportSimulatorProvider>
-                <App />
-              </ViewportSimulatorProvider>
+              <AppBootstrapGate>
+                <ViewportSimulatorProvider>
+                  <App />
+                </ViewportSimulatorProvider>
+              </AppBootstrapGate>
             </AppProvider>
           </SkydarkDataProvider>
         </HashRouter>

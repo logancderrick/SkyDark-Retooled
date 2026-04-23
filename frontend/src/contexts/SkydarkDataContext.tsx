@@ -14,7 +14,8 @@ interface SkydarkDataContextValue {
   refetchLists: () => Promise<void>;
 }
 
-const SkydarkDataContext = createContext<SkydarkDataContextValue | null>(null);
+/** Exported for tests that need a controlled provider without a live HA connection. */
+export const SkydarkDataContext = createContext<SkydarkDataContextValue | null>(null);
 
 export function SkydarkDataProvider({ children }: { children: ReactNode }) {
   const { data, refetch, refetchEvents, refetchLists } = useSkydarkData();

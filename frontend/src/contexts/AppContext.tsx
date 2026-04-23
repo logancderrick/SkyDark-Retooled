@@ -9,6 +9,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   type ReactNode,
@@ -252,7 +253,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const didMigrateLegacyLocalRef = useRef(false);
 
   // Seed shared state from HA-backed WebSocket data (or demo sample data when VITE_SKYDARK_DEMO is set).
-  useEffect(() => {
+  // useLayoutEffect so the first painted shell after AppBootstrapGate opens already reflects HA settings/members.
+  useLayoutEffect(() => {
     if (!skydark?.data) return;
     const conn = skydark.data.connection;
     if (!conn && !isSkydarkDemo) return;

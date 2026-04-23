@@ -44,7 +44,21 @@ export default function PhotosView() {
     setError(null);
     try {
       const res = await fetchPhotos(conn);
-      setPhotos(normalizePhotos(res.photos ?? []));
+      const normalized = normalizePhotos(res.photos ?? []);
+      const resolved = await Promise.all(
+        normalized.map(async (photo) => {
+          try {
+            if (photo.rawUrl.startsWith("media-source://")) {
+              const displayUrl = await resolveMediaUrl(conn, photo.rawUrl);
+              return { ...photo, displayUrl };
+            }
+            return { ...photo, displayUrl: makeDisplayableMediaUrl(photo.rawUrl, conn) };
+          } catch {
+            return { ...photo, displayUrl: "" };
+          }
+        })
+      );
+      setPhotos(resolved);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load photos";
       setError(message);
@@ -56,31 +70,6 @@ export default function PhotosView() {
   useEffect(() => {
     void loadPhotos();
   }, [loadPhotos]);
-
-  useEffect(() => {
-    if (!conn || photos.length === 0) return;
-    let cancelled = false;
-    const resolveAll = async () => {
-      const next = await Promise.all(
-        photos.map(async (photo) => {
-          try {
-            if (photo.rawUrl.startsWith("media-source://")) {
-              const resolved = await resolveMediaUrl(conn, photo.rawUrl);
-              return { ...photo, displayUrl: resolved };
-            }
-            return { ...photo, displayUrl: makeDisplayableMediaUrl(photo.rawUrl, conn) };
-          } catch {
-            return { ...photo, displayUrl: "" };
-          }
-        })
-      );
-      if (!cancelled) setPhotos(next);
-    };
-    void resolveAll();
-    return () => {
-      cancelled = true;
-    };
-  }, [conn, photos.length]);
 
   useEffect(() => {
     if (!sleepPhotoId) return;

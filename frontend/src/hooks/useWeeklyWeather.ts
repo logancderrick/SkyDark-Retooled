@@ -51,6 +51,8 @@ interface WeatherDataWithMeta extends WeatherData {
   locationLabel: string | null;
   refreshing: boolean;
   refresh: () => void;
+  /** True after the first Open-Meteo request finishes (success or failure). Used to avoid flashing mock header data on cold load. */
+  initialFetchComplete: boolean;
 }
 
 /** Map condition to a short display icon (emoji for no extra deps). */
@@ -351,6 +353,7 @@ export function useWeatherData(): WeatherDataWithMeta {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialFetchComplete, setInitialFetchComplete] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const weatherZipCode = settings.weatherZipCode;
   const refresh = useCallback(() => {
@@ -418,7 +421,10 @@ export function useWeatherData(): WeatherDataWithMeta {
           setLocationLabel(null);
         }
       } finally {
-        if (mounted) setRefreshing(false);
+        if (mounted) {
+          setRefreshing(false);
+          setInitialFetchComplete(true);
+        }
       }
     };
 
@@ -441,6 +447,7 @@ export function useWeatherData(): WeatherDataWithMeta {
         locationLabel,
         refreshing,
         refresh,
+        initialFetchComplete,
       };
     }
     const weekly = buildMockWeeklyForecast();
@@ -461,8 +468,9 @@ export function useWeatherData(): WeatherDataWithMeta {
       locationLabel,
       refreshing,
       refresh,
+      initialFetchComplete,
     };
-  }, [weatherData, locationLabel, refreshing, refresh, location.search]);
+  }, [weatherData, locationLabel, refreshing, refresh, location.search, initialFetchComplete]);
 }
 
 export function useCurrentWeather(): CurrentWeather | null {
