@@ -2,9 +2,27 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { usePhotosContext } from "../contexts/PhotosContext";
 import { useAppContext } from "../contexts/AppContext";
+import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import PinPrompt from "../components/Common/PinPrompt";
 import CloseIcon from "../components/Common/CloseIcon";
-import MediaImage from "../components/Common/MediaImage";
+import { usePhotoDisplayUrl } from "../hooks/usePhotoDisplayUrl";
+
+function PhotoImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const conn = useSkydarkDataContext()?.data?.connection ?? null;
+  const resolvedSrc = usePhotoDisplayUrl(src, conn);
+  if (!resolvedSrc) {
+    return <div className={`h-full w-full bg-skydark-surface-muted ${className ?? ""}`} />;
+  }
+  return <img src={resolvedSrc} alt={alt} className={className} />;
+}
 
 export default function PhotosView() {
   const { photos, addPhoto, deletePhoto } = usePhotosContext();
@@ -137,7 +155,7 @@ export default function PhotosView() {
               onClick={() => setSelectedId(photo.id)}
               className="absolute inset-0 w-full h-full focus:ring-2 focus:ring-skydark-accent focus:ring-inset"
             >
-              <MediaImage
+              <PhotoImage
                 src={photo.url}
                 alt={photo.caption || "Photo"}
                 className="w-full h-full object-cover hover:shadow-skydark-hover transition-shadow"
@@ -189,11 +207,10 @@ export default function PhotosView() {
                 aria-label="Close photo viewer"
               />
               <div className="relative z-10 flex h-full min-h-0 items-center justify-center p-4">
-                <MediaImage
+                <PhotoImage
                   src={selectedPhoto.url}
                   alt={selectedPhoto.caption || "Photo"}
                   className="max-h-[min(90dvh,100%)] max-w-[min(95vw,100%)] w-auto h-auto object-contain shadow-2xl"
-                  draggable={false}
                 />
               </div>
             </div>

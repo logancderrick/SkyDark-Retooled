@@ -8,7 +8,7 @@ import { usePhotosContext } from "../../contexts/PhotosContext";
 import { useSkydarkDataContext } from "../../contexts/SkydarkDataContext";
 import { isSkydarkDemo } from "../../lib/demoMode";
 import { useIdleDetection } from "../../hooks/useIdleDetection";
-import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl";
+import { usePhotoDisplayUrl } from "../../hooks/usePhotoDisplayUrl";
 import { useWeeklyWeather, getWeatherIcon } from "../../hooks/useWeeklyWeather";
 
 function SleepModeTime() {
@@ -150,8 +150,8 @@ function ScreenSaverOverlay() {
   const currentPhoto = photos[index];
   const nextIndex = (index + 1) % photos.length;
   const nextPhoto = photos[nextIndex];
-  const currentUrl = useResolvedMediaUrl(currentPhoto?.url ?? "", conn);
-  const nextUrl = useResolvedMediaUrl(nextPhoto?.url ?? "", conn);
+  const currentUrl = usePhotoDisplayUrl(currentPhoto?.url ?? "", conn);
+  const nextUrl = usePhotoDisplayUrl(nextPhoto?.url ?? "", conn);
   const transitionStyle = { transition: `opacity ${durationMs}ms ease-out` };
   const slideStyle = { transition: `transform ${durationMs}ms ease-out` };
 
