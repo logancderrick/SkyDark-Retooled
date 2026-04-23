@@ -237,10 +237,14 @@ export async function resolveMediaUrl(
 ): Promise<string> {
   const id = mediaContentId.trim();
   if (!id.startsWith("media-source://")) {
-    // Same-origin HA paths: use absolute URL without adding WS `access_token` (see HA picture card).
-    if (id.startsWith("/media/") || id.startsWith("/local/") || id.startsWith("/api/")) {
+    // HA `/media/` and `/local/` static paths authenticate via session cookies in the HA UI
+    // pattern (see `hui-picture-card`). Stripping the token keeps our <img> requests aligned
+    // with that, and `haMediaImgSrc` makes sure cookies are used.
+    if (id.startsWith("/media/") || id.startsWith("/local/")) {
       return absolutizeResolvedMediaUrl(id);
     }
+    // `/api/...` views (including our Skydark photo view) need an explicit bearer-style token
+    // on the query string because <img> requests cannot carry an Authorization header.
     return makeDisplayableMediaUrl(id, conn);
   }
 

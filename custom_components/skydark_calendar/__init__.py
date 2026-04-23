@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DB_NAME, DOMAIN, PANEL_ICON, PANEL_TITLE, PANEL_URL
 from .database import SkydarkDatabase
+from .http_views import SkydarkPhotoView
 from .photo_media import ensure_calendar_media_dir
 from .websocket_api import async_register_websocket_handlers
 
@@ -154,6 +155,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("Registered static path %s -> %s", PANEL_URL, www_path)
             cache_bust = await hass.async_add_executor_job(_index_html_mtime_ns, www_path)
             panel_index_url = f"{PANEL_URL}/index.html?cb={cache_bust}"
+
+        hass.http.register_view(SkydarkPhotoView())
 
         async_remove_panel(hass, "skydark")
         async_register_built_in_panel(

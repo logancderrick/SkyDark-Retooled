@@ -195,8 +195,13 @@ async def websocket_get_photos(
     try:
         photos = await hass.async_add_executor_job(db.get_photos)
         for photo in photos:
-            file_path = str(photo.get("file_path") or "")
-            photo["file_path"] = to_media_source_url(file_path)
+            photo_id = str(photo.get("id") or "")
+            if photo_id:
+                photo["file_path"] = f"/api/skydark_calendar/photo/{photo_id}"
+            else:
+                photo["file_path"] = to_media_source_url(
+                    str(photo.get("file_path") or "")
+                )
         connection.send_result(msg["id"], {"photos": photos})
     except Exception as e:
         _LOGGER.exception("websocket get_photos failed: %s", e)

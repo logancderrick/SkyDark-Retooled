@@ -65,4 +65,14 @@ describe("resolveMediaUrl", () => {
     expect(url).not.toContain("access_token=");
     expect(conn.sendMessagePromise).not.toHaveBeenCalled();
   });
+
+  it("appends access_token for /api/ view paths so <img> can authenticate", async () => {
+    const conn = mockConn(async () => {
+      throw new Error("should not be called");
+    });
+    const url = await resolveMediaUrl(conn, "/api/skydark_calendar/photo/abc");
+    expect(url).toContain("/api/skydark_calendar/photo/abc");
+    expect(url).toContain("access_token=testtoken");
+    expect(conn.sendMessagePromise).not.toHaveBeenCalled();
+  });
 });
