@@ -371,48 +371,46 @@ export default function PhotosView() {
             className="absolute top-6 left-6 z-10 flex flex-wrap gap-3"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Camera card — fixed height, embedded so outer wrapper controls all styling */}
+            {/* Camera card — matches camera tab card style; non-embedded so CalendarCameraPreview
+                 renders its own header + stream at the correct aspect ratio */}
             {sleepCameraIds.length > 0 && (
-              <div className="h-[260px] w-[340px] overflow-hidden rounded-[18px] border border-white/15 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+              <div className="w-[480px] overflow-hidden rounded-[18px] border border-white/15 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
                 <CalendarCameraPreview
                   connection={conn}
                   cameraEntityIds={sleepCameraIds}
                   rotateIntervalSec={30}
-                  embedded
                 />
               </div>
             )}
 
-            {/* Weather card — same fixed height/width as camera card */}
-            <div className="flex h-[260px] w-[340px] flex-col overflow-hidden rounded-[18px] border border-white/15 bg-gray-950 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
-              {/* Main area — fills remaining space above label bar */}
-              <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-slate-700/70 via-slate-900 to-gray-950 px-3">
-                <span className="text-7xl leading-none drop-shadow-xl" aria-hidden>
-                  {weather.current ? getWeatherIcon(weather.current.condition) : "—"}
-                </span>
-                <p className="mt-1 text-4xl font-light tabular-nums text-white drop-shadow">
-                  {weather.current ? `${weather.current.temperature}°` : "—"}
-                </p>
-                {weather.current?.condition && (
-                  <p className="mt-1 text-sm capitalize text-white/65">
-                    {weather.current.condition.replace(/_/g, " ")}
-                  </p>
-                )}
-              </div>
-
-              {/* Label bar — mirrors camera name+entity_id bar */}
-              <div className="shrink-0 border-t border-white/10 bg-gray-900/95 px-3 py-2">
-                <p className="truncate text-sm font-medium text-gray-100">
+            {/* Weather card — header on top + aspect-video content to match camera card height */}
+            <div className="flex w-[480px] flex-col overflow-hidden rounded-[18px] border border-white/15 bg-gray-950 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+              {/* Header bar — matches CalendarCameraPreview's header style */}
+              <div className="shrink-0 border-b border-gray-800 bg-gray-900/95 px-3 py-2">
+                <p className="truncate text-xs font-medium text-gray-100">
                   {weather.locationLabel ?? "Current Weather"}
                 </p>
-                <p className="mt-0.5 truncate text-xs text-gray-400">
+                <p className="truncate text-[10px] text-gray-400">
                   {[
                     weather.weekly[0] ? `${weather.weekly[0].tempMin}° / ${weather.weekly[0].tempMax}°` : null,
-                    weather.weekly[0] ? `${weather.weekly[0].precipitation}% precip` : null,
                     weather.current?.humidity != null ? `${weather.current.humidity}% hum` : null,
                     weather.current?.windMph != null ? `${weather.current.windMph} mph` : null,
                   ].filter(Boolean).join(" · ")}
                 </p>
+              </div>
+              {/* Stream-area — same 16:9 aspect ratio so total height matches camera card */}
+              <div className="relative flex aspect-video flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-slate-700/70 via-slate-900 to-gray-950 px-3">
+                <span className="text-8xl leading-none drop-shadow-xl" aria-hidden>
+                  {weather.current ? getWeatherIcon(weather.current.condition) : "—"}
+                </span>
+                <p className="mt-2 text-5xl font-light tabular-nums text-white drop-shadow">
+                  {weather.current ? `${weather.current.temperature}°` : "—"}
+                </p>
+                {weather.current?.condition && (
+                  <p className="mt-1 text-base capitalize text-white/65">
+                    {weather.current.condition.replace(/_/g, " ")}
+                  </p>
+                )}
               </div>
             </div>
           </div>
