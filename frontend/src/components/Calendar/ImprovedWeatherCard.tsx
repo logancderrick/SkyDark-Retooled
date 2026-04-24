@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import type { CurrentWeather, WeeklyDay } from "../../hooks/useWeeklyWeather";
-import WeatherCardAmbient from "./WeatherCardAmbient";
 
 type Condition = WeeklyDay["condition"];
 
@@ -303,67 +302,22 @@ export default function ImprovedWeatherCard({
   const days = useMemo(() => weekly.slice(0, 9), [weekly]);
   const today = days[0];
   const cur = current;
-  const ambientSigRef = useRef<string | null>(null);
 
-  /** Re-evaluate sunrise/sunset vs clock every minute (not only when weather payload changes). */
-  const [dayPhaseTick, setDayPhaseTick] = useState(0);
-  useEffect(() => {
-    const id = window.setInterval(() => setDayPhaseTick((t) => t + 1), 60_000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const isNight = useMemo(() => {
-    if (!today?.sunriseIso || !today?.sunsetIso) return false;
-    const now = Date.now();
-    const sr = new Date(today.sunriseIso).getTime();
-    const ss = new Date(today.sunsetIso).getTime();
-    if (Number.isNaN(sr) || Number.isNaN(ss)) return false;
-    return now < sr || now > ss;
-    // dayPhaseTick: depend on wall clock so isNight updates at dawn/dusk without waiting for API refresh
-  }, [today, dayPhaseTick]);
 
   const condition = cur?.condition ?? "sunny";
 
-  /**
-   * Browsers often pause or "stick" long-running CSS animations (background tab, power saving).
-   * Remounting the ambient layer on tab focus and periodically restarts keyframes without user action.
-   */
-  const [ambientMountKey, setAmbientMountKey] = useState(0);
-  useEffect(() => {
-    const bump = () => setAmbientMountKey((k) => k + 1);
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") bump();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    const interval = window.setInterval(bump, 4 * 60 * 1000);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.clearInterval(interval);
-    };
-  }, []);
-
-  useEffect(() => {
-    const sig = `${condition}:${isNight}`;
-    if (ambientSigRef.current === sig) return;
-    ambientSigRef.current = sig;
-    setAmbientMountKey((k) => k + 1);
-  }, [condition, isNight]);
 
   return (
     <section
       aria-label="Weather forecast"
       className={`relative isolate overflow-hidden rounded-2xl border border-white/10 text-white shadow-skydark ${className}`}
       style={{
-        backgroundImage: `url('/skydark/Weather%20Card%20Background%203.png'), linear-gradient(160deg, #0E2A4A 0%, #0B1A33 55%, #0A1426 100%)`,
-        backgroundSize: "cover, cover",
-        backgroundPosition: "center 55%, center",
+        backgroundImage: `url('/skydark/Weather%20Card%20Background%203.png')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center 55%",
+        backgroundColor: "#0B1A33",
       }}
     >
-      {/* Animated condition effects layer */}
-      <div key={ambientMountKey} className="pointer-events-none absolute inset-0">
-        <WeatherCardAmbient condition={condition} isNight={isNight} />
-      </div>
-
       <div className="relative z-10 flex flex-col gap-2.5 p-4 sm:p-4">
         {/* header */}
         <div className="flex items-start justify-between gap-3">

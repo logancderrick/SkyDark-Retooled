@@ -31,7 +31,6 @@ export default function PhotosView() {
   const weather = useWeatherData();
   const { settings } = useAppContext();
   const sleepCameraIds = settings.calendarPreviewCameras ?? [];
-  const sleepCameraRotateSec = settings.calendarPreviewRotateSeconds ?? 20;
 
   const [isSleeping, setIsSleeping] = useState(false);
   const photosRef = useRef<PhotoItem[]>([]);
@@ -372,21 +371,22 @@ export default function PhotosView() {
             className="absolute top-6 left-6 z-10 flex flex-wrap gap-3"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Camera card — same rounded/border style as Cameras tab */}
-            {conn && sleepCameraIds.length > 0 && (
-              <div className="w-[280px] overflow-hidden rounded-[18px] border border-white/15 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+            {/* Camera card — fixed height, embedded so outer wrapper controls all styling */}
+            {sleepCameraIds.length > 0 && (
+              <div className="h-[260px] w-[340px] overflow-hidden rounded-[18px] border border-white/15 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
                 <CalendarCameraPreview
                   connection={conn}
                   cameraEntityIds={sleepCameraIds}
-                  rotateIntervalSec={sleepCameraRotateSec}
+                  rotateIntervalSec={30}
+                  embedded
                 />
               </div>
             )}
 
-            {/* Weather card — matches camera card width and structure */}
-            <div className="flex w-[280px] flex-col overflow-hidden rounded-[18px] border border-white/15 bg-gray-950 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
-              {/* "Stream" area — weather display, same 16:9 aspect as camera tiles */}
-              <div className="relative flex aspect-video flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-slate-700/70 via-slate-900 to-gray-950 px-3">
+            {/* Weather card — same fixed height/width as camera card */}
+            <div className="flex h-[260px] w-[340px] flex-col overflow-hidden rounded-[18px] border border-white/15 bg-gray-950 shadow-[0_4px_24px_rgba(0,0,0,0.7)]">
+              {/* Main area — fills remaining space above label bar */}
+              <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-slate-700/70 via-slate-900 to-gray-950 px-3">
                 <span className="text-7xl leading-none drop-shadow-xl" aria-hidden>
                   {weather.current ? getWeatherIcon(weather.current.condition) : "—"}
                 </span>
@@ -401,7 +401,7 @@ export default function PhotosView() {
               </div>
 
               {/* Label bar — mirrors camera name+entity_id bar */}
-              <div className="border-t border-white/10 bg-gray-900/95 px-3 py-2">
+              <div className="shrink-0 border-t border-white/10 bg-gray-900/95 px-3 py-2">
                 <p className="truncate text-sm font-medium text-gray-100">
                   {weather.locationLabel ?? "Current Weather"}
                 </p>

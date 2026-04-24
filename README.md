@@ -10,40 +10,6 @@ A full-screen family command center for Home Assistant — calendar, tasks, list
 
 ---
 
-## Screenshots
-
-### Calendar — Weather Dashboard
-> Custom background image, animated ambient weather effects, 9-day scrollable forecast, hi/lo temperature, humidity, sunrise/sunset times, and live camera preview.
-
-<!-- Replace with your screenshot URL -->
-![Calendar weather dashboard](docs/screenshots/calendar-weather.png)
-
-### Calendar — Month View
-> Scrollable calendar grid with per-person event colors, merged HA calendar sources, and navigation controls.
-
-<!-- Replace with your screenshot URL -->
-![Calendar month view](docs/screenshots/calendar-month.png)
-
-### Photos — Sleep / Screensaver Mode
-> Tap the sleep button to enter a full-screen photo slideshow. Photos shuffle every 60 seconds. A rotating camera card (top-left) cycles between your configured cameras, and a glassmorphism weather card shows current conditions alongside it.
-
-<!-- Replace with your screenshot URL -->
-![Sleep mode](docs/screenshots/sleep-mode.png)
-
-### Cameras
-> Live camera tiles via HA `camera/stream` (HLS) with MJPEG fallback. Tap any tile to go fullscreen.
-
-<!-- Replace with your screenshot URL -->
-![Cameras view](docs/screenshots/cameras.png)
-
-### Tasks / Chores
-> Per-person task lists with completion tracking, points, and routine frequencies.
-
-<!-- Replace with your screenshot URL -->
-![Tasks view](docs/screenshots/tasks.png)
-
----
-
 ## Features
 
 | Area | What it does |
