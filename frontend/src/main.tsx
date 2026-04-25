@@ -9,6 +9,11 @@ import ErrorBoundary from "./components/Common/ErrorBoundary";
 import AppBootstrapGate from "./components/AppBootstrapGate";
 import App from "./App";
 import "./index.css";
+import { hideHaChromeWhenReady } from "./lib/hideHaChrome";
+
+// Hide HA sidebar + panel header from within the iframe so voice satellite
+// and other HA-level dialogs continue working normally.
+hideHaChromeWhenReady();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
