@@ -312,7 +312,7 @@ export default function ImprovedWeatherCard({
       aria-label="Weather forecast"
       className={`relative isolate overflow-hidden rounded-2xl border border-white/10 text-white shadow-skydark ${className}`}
       style={{
-        backgroundImage: `url('/skydark/Weather%20Card%20Background%203.png')`,
+        backgroundImage: `url('/skydark/Weather%20Card%20Background%205.png')`,
         backgroundSize: "cover",
         backgroundPosition: "center 55%",
         backgroundColor: "#0B1A33",
