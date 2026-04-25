@@ -98,46 +98,44 @@ export default function Header({
           </span>
         </div>
         <div className="flex items-center gap-3 shrink-0 min-w-0">
-          {/* HA sidebar/header toggle — only shown when inside HA iframe */}
-          {window.parent !== window && (
-            <button
-              type="button"
-              onClick={toggleHaChrome}
-              title={haChromeHidden ? "Show HA sidebar" : "Hide HA sidebar"}
-              aria-label={haChromeHidden ? "Show HA sidebar" : "Hide HA sidebar"}
-              className="p-2 rounded-lg opacity-30 hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-skydark-accent"
+          {/* HA sidebar/header toggle */}
+          <button
+            type="button"
+            onClick={toggleHaChrome}
+            title={haChromeHidden ? "Show HA sidebar" : "Hide HA sidebar"}
+            aria-label={haChromeHidden ? "Show HA sidebar" : "Hide HA sidebar"}
+            className="p-2 rounded-lg opacity-30 hover:opacity-100 focus:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-skydark-accent"
+          >
+            {/* Panel / sidebar icon */}
+            <svg
+              width={20}
+              height={20}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-skydark-text"
+              aria-hidden
             >
-              {/* Panel / sidebar icon */}
-              <svg
-                width={20}
-                height={20}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-skydark-text"
-                aria-hidden
-              >
-                {haChromeHidden ? (
-                  /* Sidebar-hidden state: show "expand" arrows */
-                  <>
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                    <polyline points="13 8 17 12 13 16" />
-                  </>
-                ) : (
-                  /* Sidebar-visible state: show "collapse" arrows */
-                  <>
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <line x1="9" y1="3" x2="9" y2="21" />
-                    <polyline points="15 8 11 12 15 16" />
-                  </>
-                )}
-              </svg>
-            </button>
-          )}
+              {haChromeHidden ? (
+                /* Sidebar-hidden state: show "expand" arrows */
+                <>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                  <polyline points="13 8 17 12 13 16" />
+                </>
+              ) : (
+                /* Sidebar-visible state: show "collapse" arrows */
+                <>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                  <polyline points="15 8 11 12 15 16" />
+                </>
+              )}
+            </svg>
+          </button>
           <ThemeToggleButton />
           {settings.showTopWeeklyForecast &&
             !hideHeaderForecastOnCalendar &&
