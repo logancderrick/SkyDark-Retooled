@@ -79,7 +79,9 @@ export default function MonthView({
         return (
           <div
             key={d.toISOString()}
-            className="bg-skydark-surface min-h-[100px] p-1 flex flex-col"
+            className={`bg-skydark-surface min-h-[100px] p-1 flex flex-col transition-colors ${
+              isExpanded ? "ring-1 ring-skydark-accent/40 bg-skydark-surface-muted/40" : ""
+            }`}
             onClick={() => onDateClick?.(d)}
           >
             <button
@@ -91,10 +93,11 @@ export default function MonthView({
               className={`text-left text-sm w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
                 !isCurrentMonth ? "text-skydark-text-secondary opacity-60" : "text-skydark-text"
               } ${isToday(d) ? "bg-red-100 text-red-700 font-semibold dark:bg-red-950/70 dark:text-red-200" : ""}`}
+              data-compact
             >
               {format(d, "d")}
             </button>
-            <div className={`flex-1 space-y-1 ${isExpanded ? "overflow-y-auto max-h-[220px]" : "overflow-hidden"}`}>
+            <div className="flex-1 space-y-1 overflow-hidden">
               {visibleEvents.map((ev) => {
                 const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
                   ev,
@@ -115,17 +118,17 @@ export default function MonthView({
                       borderLeft: `4px solid ${borderColor}`,
                     }}
                     title={ev.title}
+                    data-compact
                   >
                     <span className="block truncate text-skydark-text">{ev.title}</span>
                   </button>
                 );
               })}
             </div>
-            {/* Kept outside overflow-hidden so it is never clipped */}
             {moreCount > 0 && (
               <button
                 type="button"
-                className="text-xs text-skydark-text-secondary hover:underline w-full text-left shrink-0"
+                className="mt-1 inline-flex w-fit items-center gap-1 rounded-md bg-skydark-surface-muted px-2 py-1 text-[11px] font-semibold text-skydark-text-secondary hover:text-skydark-text hover:bg-skydark-surface-hover focus:outline-none focus:ring-2 focus:ring-skydark-accent shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpandedDayKeys((prev) => {
@@ -134,14 +137,16 @@ export default function MonthView({
                     return next;
                   });
                 }}
+                aria-label={`Show ${moreCount} more event${moreCount === 1 ? "" : "s"} on ${format(d, "MMMM d")}`}
+                data-compact
               >
-                +{moreCount} more
+                +{moreCount} {moreCount === 1 ? "event" : "events"}
               </button>
             )}
             {isExpanded && dayEvents.length > MAX_VISIBLE_EVENTS && (
               <button
                 type="button"
-                className="text-xs text-skydark-text-secondary hover:underline w-full text-left shrink-0"
+                className="mt-1 inline-flex w-fit items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-skydark-text-secondary hover:text-skydark-text hover:underline focus:outline-none focus:ring-2 focus:ring-skydark-accent shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpandedDayKeys((prev) => {
@@ -150,6 +155,7 @@ export default function MonthView({
                     return next;
                   });
                 }}
+                data-compact
               >
                 Show less
               </button>

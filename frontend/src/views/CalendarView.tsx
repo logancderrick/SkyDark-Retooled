@@ -356,7 +356,7 @@ export default function CalendarView() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row xl:items-stretch xl:gap-6">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-skydark-bg">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-skydark-bg">
           {viewMode === "month" && (
             <MonthView
               currentDate={currentDate}

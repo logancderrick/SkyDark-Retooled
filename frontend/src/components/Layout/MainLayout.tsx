@@ -38,21 +38,25 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }, []);
 
   const isCalendar = pathname.includes("calendar");
-  // Keep desktop calendar locked to viewport; allow mobile pages to scroll naturally.
-  const shouldLockToViewport = isCalendar && !isPortrait;
-  /** Desktop: fixed viewport height so only the main column scrolls; sidebar stays put. */
-  const desktopShellLock = !isPortrait;
+  /**
+   * Calendar manages its own internal scroll (top weather card stays put,
+   * the 4-week grid scrolls inside its container). Lock the viewport in
+   * every orientation so the wall dashboard never spills the whole page.
+   */
+  const shouldLockToViewport = isCalendar;
+  /** When viewport is locked we want the chrome column to be height-constrained too. */
+  const lockShell = shouldLockToViewport || !isPortrait;
 
   return (
     <div
       className={`flex bg-skydark-bg font-sans text-skydark-text max-w-full ${
-        isPortrait ? "min-h-screen flex-col" : "h-screen max-h-screen overflow-hidden"
+        lockShell ? "h-screen max-h-screen overflow-hidden" : "min-h-screen flex-col"
       }`}
     >
       {!isPortrait && <Sidebar />}
       <div
         className={`flex flex-1 flex-col min-w-0 ${
-          desktopShellLock ? "min-h-0 overflow-hidden" : "min-h-screen"
+          lockShell ? "min-h-0 overflow-hidden" : "min-h-screen"
         }`}
       >
         {!isPortrait && <MobileNav />}
@@ -69,10 +73,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
         )}
         <main
           className={`flex-1 bg-skydark-bg p-5 sm:p-6 ${
-            desktopShellLock ? "min-h-0" : ""
+            lockShell ? "min-h-0" : ""
           } ${
             shouldLockToViewport ? "overflow-hidden" : "overflow-y-auto"
-          } ${isPortrait ? "pb-24" : ""}`}
+          } ${isPortrait && !shouldLockToViewport ? "pb-24" : ""}`}
         >
           {children}
         </main>

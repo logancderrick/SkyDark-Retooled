@@ -9,7 +9,10 @@
 
 // ── Module state ──────────────────────────────────────────────────────────────
 let _hidden = false;
-let _observer: MutationObserver | null = null;
+let _userExplicit = false;
+let _mainObserver: MutationObserver | null = null;
+let _panelObserver: MutationObserver | null = null;
+let _panelRetryTimer: number | null = null;
 const _listeners = new Set<(hidden: boolean) => void>();
 
 const MAIN_STYLE_ID = "skydark-hide-main-chrome";
@@ -100,43 +103,96 @@ function removeHideStyles() {
   removeStyle(getPanelShadow(), PANEL_STYLE_ID);
 }
 
-// ── MutationObserver — re-injects styles if HA removes them ──────────────────
+// ── MutationObservers — re-inject styles if HA removes them ─────────────────
 
-function startObserver() {
-  if (_observer || window.parent === window) return;
+function startObservers() {
+  if (window.parent === window) return;
+
   const mainShadow = getHaMainShadow();
-  if (!mainShadow) return;
+  if (mainShadow && !_mainObserver) {
+    _mainObserver = new MutationObserver(() => {
+      if (_hidden && !mainShadow.querySelector(`#${MAIN_STYLE_ID}`)) {
+        applyHideStyles();
+      }
+    });
+    _mainObserver.observe(mainShadow, { childList: true, subtree: true });
+  }
 
-  _observer = new MutationObserver(() => {
-    if (_hidden && !mainShadow.querySelector(`#${MAIN_STYLE_ID}`)) {
-      applyHideStyles();
-    }
-  });
-  _observer.observe(mainShadow, { childList: true });
+  // Panel shadow only exists once HA has resolved the iframe panel. It can also
+  // get re-rendered when navigating between HA pages, so observe + retry until
+  // we have a panel root and the style tag is present.
+  attachPanelObserver();
+  schedulePanelRetry();
 }
 
-function stopObserver() {
-  _observer?.disconnect();
-  _observer = null;
+function attachPanelObserver() {
+  if (_panelObserver) return;
+  const panelShadow = getPanelShadow();
+  if (!panelShadow) return;
+
+  _panelObserver = new MutationObserver(() => {
+    if (_hidden && !panelShadow.querySelector(`#${PANEL_STYLE_ID}`)) {
+      upsertStyle(panelShadow, PANEL_STYLE_ID, HIDE_PANEL_CSS);
+    }
+  });
+  _panelObserver.observe(panelShadow, { childList: true, subtree: true });
+}
+
+function schedulePanelRetry() {
+  if (_panelRetryTimer != null) return;
+  let attempts = 0;
+  _panelRetryTimer = window.setInterval(() => {
+    attempts++;
+    if (!_hidden || attempts > 30) {
+      clearPanelRetry();
+      return;
+    }
+    if (!_panelObserver) {
+      attachPanelObserver();
+    }
+    const panelShadow = getPanelShadow();
+    if (panelShadow && !panelShadow.querySelector(`#${PANEL_STYLE_ID}`)) {
+      upsertStyle(panelShadow, PANEL_STYLE_ID, HIDE_PANEL_CSS);
+    }
+    if (panelShadow && _panelObserver) {
+      clearPanelRetry();
+    }
+  }, 500);
+}
+
+function clearPanelRetry() {
+  if (_panelRetryTimer != null) {
+    window.clearInterval(_panelRetryTimer);
+    _panelRetryTimer = null;
+  }
+}
+
+function stopObservers() {
+  _mainObserver?.disconnect();
+  _mainObserver = null;
+  _panelObserver?.disconnect();
+  _panelObserver = null;
+  clearPanelRetry();
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function hideHaChrome() {
-  applyHideStyles();
-  startObserver();
   _hidden = true;
+  applyHideStyles();
+  startObservers();
   for (const fn of _listeners) fn(_hidden);
 }
 
 export function showHaChrome() {
-  removeHideStyles();
-  stopObserver();
   _hidden = false;
+  removeHideStyles();
+  stopObservers();
   for (const fn of _listeners) fn(_hidden);
 }
 
 export function toggleHaChrome() {
+  _userExplicit = true;
   if (_hidden) {
     showHaChrome();
   } else {
@@ -146,6 +202,10 @@ export function toggleHaChrome() {
 
 /**
  * Retries hideHaChrome() until the HA shadow DOM is ready.
+ * Bails out if the user has already explicitly toggled visibility, so
+ * the auto-hide retry never overrides a deliberate "show" click that
+ * happened during HA's initial render.
+ *
  * Returns a cleanup function.
  */
 export function hideHaChromeWhenReady(
@@ -158,10 +218,14 @@ export function hideHaChromeWhenReady(
 
   const id = window.setInterval(() => {
     attempts++;
+    if (_userExplicit) {
+      window.clearInterval(id);
+      return;
+    }
     const mainShadow = getHaMainShadow();
     if (mainShadow) {
       window.clearInterval(id);
-      hideHaChrome();
+      if (!_userExplicit) hideHaChrome();
       return;
     }
     if (attempts >= maxAttempts) window.clearInterval(id);
