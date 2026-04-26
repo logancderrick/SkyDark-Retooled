@@ -2,23 +2,41 @@
  * Hides the Home Assistant sidebar and panel header from within the Skydark
  * iframe panel — without breaking voice satellite or other HA-level dialogs.
  *
- * browser_mod achieves the same visual result but can interfere with voice
- * satellite because it may prevent HA from rendering its top-level dialogs.
- * This module uses targeted CSS manipulation on shadow-DOM elements so HA
- * keeps rendering normally; we're only collapsing width/height, not removing
- * nodes or disconnecting event listeners.
+ * Uses injected <style> tags inside shadow roots rather than fragile inline
+ * style snapshots, so toggling survives HA component re-renders.  A
+ * MutationObserver re-injects the styles if HA's renderer removes them.
  */
 
-type Restore = () => void;
-
-// ── Module-level singleton state ──────────────────────────────────────────────
-let _restore: Restore = () => {};
+// ── Module state ──────────────────────────────────────────────────────────────
 let _hidden = false;
+let _observer: MutationObserver | null = null;
 const _listeners = new Set<(hidden: boolean) => void>();
 
-function notify() {
-  for (const fn of _listeners) fn(_hidden);
-}
+const MAIN_STYLE_ID = "skydark-hide-main-chrome";
+const PANEL_STYLE_ID = "skydark-hide-panel-chrome";
+
+const HIDE_MAIN_CSS = `
+  ha-sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+  ha-drawer {
+    --mdc-drawer-width: 0px !important;
+  }
+`;
+
+const HIDE_PANEL_CSS = `
+  app-header {
+    display: none !important;
+  }
+  #contentContainer, .content {
+    padding-top: 0 !important;
+  }
+`;
+
+// ── Subscription ──────────────────────────────────────────────────────────────
 
 /** Subscribe to hidden-state changes. Returns an unsubscribe function. */
 export function onHaChromeStateChange(fn: (hidden: boolean) => void): () => void {
@@ -30,129 +48,92 @@ export function isHaChromeHidden(): boolean {
   return _hidden;
 }
 
-// ── DOM helpers ───────────────────────────────────────────────────────────────
+// ── Shadow root helpers ───────────────────────────────────────────────────────
 
-/** Walk a chain of selectors through nested shadow roots. */
-function shadowQuery(
-  root: Document | Element | ShadowRoot,
-  ...selectors: string[]
-): Element | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let node: any = root;
-  for (const sel of selectors) {
-    node = (node.shadowRoot ?? node).querySelector(sel);
-    if (!node) return null;
-  }
-  return node as Element;
-}
-
-function applyStyles(
-  el: HTMLElement | null,
-  styles: Record<string, string>,
-): Record<string, string> {
-  if (!el) return {};
-  const prev: Record<string, string> = {};
-  for (const [prop, val] of Object.entries(styles)) {
-    prev[prop] = el.style.getPropertyValue(prop);
-    el.style.setProperty(prop, val, "important");
-  }
-  return prev;
-}
-
-function restoreStyles(el: HTMLElement | null, prev: Record<string, string>) {
-  if (!el) return;
-  for (const [prop, val] of Object.entries(prev)) {
-    if (val) {
-      el.style.setProperty(prop, val);
-    } else {
-      el.style.removeProperty(prop);
-    }
-  }
-}
-
-// ── Core apply / restore ──────────────────────────────────────────────────────
-
-function applyHide(): Restore {
-  if (window.parent === window) return () => {};
-
+function getHaMainShadow(): ShadowRoot | null {
   try {
-    const parentDoc = window.parent.document;
-
-    /* 1. Sidebar — collapse width so listeners stay attached */
-    const sidebar = shadowQuery(
-      parentDoc,
-      "home-assistant",
-      "home-assistant-main",
-      "ha-drawer",
-      "ha-sidebar",
-    ) as HTMLElement | null;
-
-    const sidebarPrev = applyStyles(sidebar, {
-      width: "0",
-      "min-width": "0",
-      overflow: "hidden",
-      visibility: "hidden",
-    });
-
-    /* 2. Drawer margin — zero out so content fills full width */
-    const drawer = shadowQuery(
-      parentDoc,
-      "home-assistant",
-      "home-assistant-main",
-      "ha-drawer",
-    ) as HTMLElement | null;
-
-    const drawerPrev = applyStyles(drawer, { "--mdc-drawer-width": "0px" });
-
-    /* 3. Panel toolbar (the HA-level app-header above our iframe) */
-    const panelIframe = shadowQuery(
-      parentDoc,
-      "home-assistant",
-      "home-assistant-main",
-      "ha-drawer",
-      "partial-panel-resolver",
-      "ha-panel-iframe",
-    ) as HTMLElement | null;
-
-    const toolbar = (
-      panelIframe?.shadowRoot?.querySelector("app-header") ??
-      panelIframe?.shadowRoot?.querySelector("ha-app-layout app-header")
-    ) as HTMLElement | null;
-
-    const toolbarPrev = applyStyles(toolbar, { display: "none" });
-
-    const iframeContainer = (
-      panelIframe?.shadowRoot?.querySelector("#contentContainer") ??
-      panelIframe?.shadowRoot?.querySelector(".content")
-    ) as HTMLElement | null;
-
-    const containerPrev = applyStyles(iframeContainer, { "padding-top": "0" });
-
-    return () => {
-      restoreStyles(sidebar, sidebarPrev);
-      restoreStyles(drawer, drawerPrev);
-      restoreStyles(toolbar, toolbarPrev);
-      restoreStyles(iframeContainer, containerPrev);
-    };
+    const ha = window.parent.document.querySelector("home-assistant");
+    const haMain = ha?.shadowRoot?.querySelector("home-assistant-main");
+    return (haMain as Element | undefined)?.shadowRoot ?? null;
   } catch {
-    return () => {};
+    return null;
   }
+}
+
+function getPanelShadow(): ShadowRoot | null {
+  try {
+    const mainShadow = getHaMainShadow();
+    if (!mainShadow) return null;
+    const drawer = mainShadow.querySelector("ha-drawer");
+    const resolver = drawer?.querySelector("partial-panel-resolver");
+    const panel = resolver?.querySelector("ha-panel-iframe");
+    return (panel as Element | undefined)?.shadowRoot ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function upsertStyle(shadowRoot: ShadowRoot | null, id: string, css: string) {
+  if (!shadowRoot) return;
+  let el = shadowRoot.querySelector(`#${id}`) as HTMLStyleElement | null;
+  if (!el) {
+    el = document.createElement("style") as HTMLStyleElement;
+    el.id = id;
+    shadowRoot.appendChild(el);
+  }
+  el.textContent = css;
+}
+
+function removeStyle(shadowRoot: ShadowRoot | null, id: string) {
+  shadowRoot?.querySelector(`#${id}`)?.remove();
+}
+
+// ── Apply / remove ────────────────────────────────────────────────────────────
+
+function applyHideStyles() {
+  upsertStyle(getHaMainShadow(), MAIN_STYLE_ID, HIDE_MAIN_CSS);
+  upsertStyle(getPanelShadow(), PANEL_STYLE_ID, HIDE_PANEL_CSS);
+}
+
+function removeHideStyles() {
+  removeStyle(getHaMainShadow(), MAIN_STYLE_ID);
+  removeStyle(getPanelShadow(), PANEL_STYLE_ID);
+}
+
+// ── MutationObserver — re-injects styles if HA removes them ──────────────────
+
+function startObserver() {
+  if (_observer || window.parent === window) return;
+  const mainShadow = getHaMainShadow();
+  if (!mainShadow) return;
+
+  _observer = new MutationObserver(() => {
+    if (_hidden && !mainShadow.querySelector(`#${MAIN_STYLE_ID}`)) {
+      applyHideStyles();
+    }
+  });
+  _observer.observe(mainShadow, { childList: true });
+}
+
+function stopObserver() {
+  _observer?.disconnect();
+  _observer = null;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export function hideHaChrome() {
-  _restore();
-  _restore = applyHide();
+  applyHideStyles();
+  startObserver();
   _hidden = true;
-  notify();
+  for (const fn of _listeners) fn(_hidden);
 }
 
 export function showHaChrome() {
-  _restore();
-  _restore = () => {};
+  removeHideStyles();
+  stopObserver();
   _hidden = false;
-  notify();
+  for (const fn of _listeners) fn(_hidden);
 }
 
 export function toggleHaChrome() {
@@ -164,36 +145,26 @@ export function toggleHaChrome() {
 }
 
 /**
- * Attempts hideHaChrome() with retries until the HA shadow DOM is ready.
- * Returns a cleanup that stops the interval and restores chrome.
+ * Retries hideHaChrome() until the HA shadow DOM is ready.
+ * Returns a cleanup function.
  */
 export function hideHaChromeWhenReady(
   maxAttempts = 20,
   intervalMs = 300,
 ): () => void {
-  if (window.parent === window) return () => {}; // not in an iframe
+  if (window.parent === window) return () => {};
 
   let attempts = 0;
 
   const id = window.setInterval(() => {
     attempts++;
-    try {
-      const parentDoc = window.parent.document;
-      const ha = parentDoc.querySelector("home-assistant") as Element | null;
-      const haMain = ha?.shadowRoot?.querySelector(
-        "home-assistant-main",
-      ) as Element | null;
-
-      if (!haMain?.shadowRoot) {
-        if (attempts >= maxAttempts) window.clearInterval(id);
-        return;
-      }
-
+    const mainShadow = getHaMainShadow();
+    if (mainShadow) {
       window.clearInterval(id);
       hideHaChrome();
-    } catch {
-      if (attempts >= maxAttempts) window.clearInterval(id);
+      return;
     }
+    if (attempts >= maxAttempts) window.clearInterval(id);
   }, intervalMs);
 
   return () => {

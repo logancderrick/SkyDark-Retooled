@@ -120,39 +120,40 @@ export default function MonthView({
                   </button>
                 );
               })}
-              {moreCount > 0 && (
-                <button
-                  type="button"
-                  className="text-xs text-skydark-text-secondary hover:underline w-full text-left"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedDayKeys((prev) => {
-                      const next = new Set(prev);
-                      next.add(dayKey);
-                      return next;
-                    });
-                  }}
-                >
-                  +{moreCount} more
-                </button>
-              )}
-              {isExpanded && dayEvents.length > MAX_VISIBLE_EVENTS && (
-                <button
-                  type="button"
-                  className="text-xs text-skydark-text-secondary hover:underline w-full text-left"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedDayKeys((prev) => {
-                      const next = new Set(prev);
-                      next.delete(dayKey);
-                      return next;
-                    });
-                  }}
-                >
-                  Show less
-                </button>
-              )}
             </div>
+            {/* Kept outside overflow-hidden so it is never clipped */}
+            {moreCount > 0 && (
+              <button
+                type="button"
+                className="text-xs text-skydark-text-secondary hover:underline w-full text-left shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedDayKeys((prev) => {
+                    const next = new Set(prev);
+                    next.add(dayKey);
+                    return next;
+                  });
+                }}
+              >
+                +{moreCount} more
+              </button>
+            )}
+            {isExpanded && dayEvents.length > MAX_VISIBLE_EVENTS && (
+              <button
+                type="button"
+                className="text-xs text-skydark-text-secondary hover:underline w-full text-left shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedDayKeys((prev) => {
+                    const next = new Set(prev);
+                    next.delete(dayKey);
+                    return next;
+                  });
+                }}
+              >
+                Show less
+              </button>
+            )}
           </div>
         );
       })}
