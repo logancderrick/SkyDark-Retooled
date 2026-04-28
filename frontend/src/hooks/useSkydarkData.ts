@@ -147,7 +147,9 @@ export function useSkydarkData(
       setData(buildDemoSkydarkState());
       return;
     }
-    setData((prev) => ({ ...prev, loading: true, error: null }));
+    // Do NOT set loading:true here — that triggers the full-screen bootstrap
+    // splash on every mutation (complete task, add chore, etc.). The app
+    // already has data; refetches should be silent background updates.
     try {
       const conn = await getHAConnection();
       await load(conn);
@@ -155,7 +157,6 @@ export function useSkydarkData(
       const message = e instanceof Error ? e.message : "Failed to load data";
       setData((prev) => ({
         ...prev,
-        loading: false,
         error: message,
       }));
     }
