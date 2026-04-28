@@ -97,7 +97,7 @@ export default function MonthView({
             >
               {format(d, "d")}
             </button>
-            <div className={`space-y-1 ${isExpanded ? "overflow-visible" : "flex-1 overflow-hidden"}`}>
+            <div className={`space-y-1 ${isExpanded ? "overflow-y-auto max-h-48" : "flex-1 overflow-hidden"}`}>
               {visibleEvents.map((ev) => {
                 const { style: colorStyle, borderColor } = getEventColorStyleForDisplay(
                   ev,
