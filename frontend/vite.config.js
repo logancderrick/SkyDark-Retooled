@@ -22,8 +22,9 @@ export default defineConfig({
                 main: resolve(__dirname, "index.html"),
             },
             output: {
-                // Stable entry name so HA panel never 404s on a stale index.html → hashed main mismatch
-                // after partial copies; lazy chunks stay content-hashed.
+                // Stable entry name — index.html is served no-cache by the Python backend
+                // so a stable main.js never causes stale-reference 404s after HACS updates.
+                // Lazy chunks remain content-hashed for efficient browser caching.
                 entryFileNames: "assets/main.js",
                 chunkFileNames: "assets/[name]-[hash].js",
                 assetFileNames: "assets/[name]-[hash][extname]",
