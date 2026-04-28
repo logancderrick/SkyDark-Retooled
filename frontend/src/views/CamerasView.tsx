@@ -5,29 +5,10 @@ import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { getStatesOrDemo } from "../lib/demoHassStates";
 import { isSkydarkDemo } from "../lib/demoMode";
 import HaCameraLive from "../components/Cameras/HaCameraLive";
+import { cleanCameraName } from "../lib/cameraUtils";
 
 /** Hidden from the grid (e.g. vacuum map render entities, not real security feeds). */
 const EXCLUDED_CAMERA_ENTITIES = new Set(["camera.l40_ultra_map", "camera.l40_ultra_map_1"]);
-
-/** Friendly-name overrides applied after generic cleanup (keyed by lowercase cleaned name). */
-const CAMERA_NAME_OVERRIDES: Record<string, string> = {};
-
-/** Strips noisy suffixes added by some integrations (e.g. Reolink). */
-const STRIP_SUFFIXES = [
-  /[\s-–—]+high[\s-]resolution[\s-]channel\.?$/i,
-  /[\s-–—]+low[\s-]resolution[\s-]channel\.?$/i,
-  /[\s-–—]+sub[\s-]stream\.?$/i,
-  /[\s-–—]+main[\s-]stream\.?$/i,
-];
-
-function cleanCameraName(raw: string): string {
-  let name = raw.trim();
-  for (const re of STRIP_SUFFIXES) {
-    name = name.replace(re, "").trim();
-  }
-  const lower = name.toLowerCase();
-  return CAMERA_NAME_OVERRIDES[lower] ?? name;
-}
 
 function cameraAspectRatio(entity: HassEntity): number | null {
   const w = Number(entity.attributes?.width);

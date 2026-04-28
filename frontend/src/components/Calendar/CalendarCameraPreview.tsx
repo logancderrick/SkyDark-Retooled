@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Connection, HassEntity } from "home-assistant-js-websocket";
 import { getStatesOrDemo } from "../../lib/demoHassStates";
 import HaCameraLive from "../Cameras/HaCameraLive";
+import { cleanCameraName } from "../../lib/cameraUtils";
 
 interface CalendarCameraPreviewProps {
   /** Null in demo mode: entity names still load; live stream shows a placeholder. */
@@ -65,7 +66,7 @@ export default function CalendarCameraPreview({
 
   const activeId = ids[activeIndex % ids.length]!;
   const entity = metaById[activeId];
-  const title = String(entity?.attributes?.friendly_name ?? activeId);
+  const title = cleanCameraName(String(entity?.attributes?.friendly_name ?? activeId));
   const entityPicture =
     typeof entity?.attributes?.entity_picture === "string" ? entity.attributes.entity_picture : undefined;
 
