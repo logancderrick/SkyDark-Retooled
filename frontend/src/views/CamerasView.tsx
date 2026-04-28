@@ -9,11 +9,8 @@ import HaCameraLive from "../components/Cameras/HaCameraLive";
 /** Hidden from the grid (e.g. vacuum map render entities, not real security feeds). */
 const EXCLUDED_CAMERA_ENTITIES = new Set(["camera.l40_ultra_map", "camera.l40_ultra_map_1"]);
 
-/** Friendly-name overrides applied after generic cleanup. */
-const CAMERA_NAME_OVERRIDES: Record<string, string> = {
-  "addy's room": "Driveway",
-  "addys room": "Driveway",
-};
+/** Friendly-name overrides applied after generic cleanup (keyed by lowercase cleaned name). */
+const CAMERA_NAME_OVERRIDES: Record<string, string> = {};
 
 /** Strips noisy suffixes added by some integrations (e.g. Reolink). */
 const STRIP_SUFFIXES = [
