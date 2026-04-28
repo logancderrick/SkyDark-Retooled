@@ -9,6 +9,29 @@ import HaCameraLive from "../components/Cameras/HaCameraLive";
 /** Hidden from the grid (e.g. vacuum map render entities, not real security feeds). */
 const EXCLUDED_CAMERA_ENTITIES = new Set(["camera.l40_ultra_map", "camera.l40_ultra_map_1"]);
 
+/** Friendly-name overrides applied after generic cleanup. */
+const CAMERA_NAME_OVERRIDES: Record<string, string> = {
+  "addy's room": "Driveway",
+  "addys room": "Driveway",
+};
+
+/** Strips noisy suffixes added by some integrations (e.g. Reolink). */
+const STRIP_SUFFIXES = [
+  /[\s-–—]+high[\s-]resolution[\s-]channel\.?$/i,
+  /[\s-–—]+low[\s-]resolution[\s-]channel\.?$/i,
+  /[\s-–—]+sub[\s-]stream\.?$/i,
+  /[\s-–—]+main[\s-]stream\.?$/i,
+];
+
+function cleanCameraName(raw: string): string {
+  let name = raw.trim();
+  for (const re of STRIP_SUFFIXES) {
+    name = name.replace(re, "").trim();
+  }
+  const lower = name.toLowerCase();
+  return CAMERA_NAME_OVERRIDES[lower] ?? name;
+}
+
 function cameraAspectRatio(entity: HassEntity): number | null {
   const w = Number(entity.attributes?.width);
   const h = Number(entity.attributes?.height);
@@ -65,8 +88,8 @@ export default function CamerasView() {
   const sorted = useMemo(
     () =>
       [...cameras].sort((a, b) => {
-        const na = String(a.attributes?.friendly_name ?? a.entity_id);
-        const nb = String(b.attributes?.friendly_name ?? b.entity_id);
+        const na = cleanCameraName(String(a.attributes?.friendly_name ?? a.entity_id));
+        const nb = cleanCameraName(String(b.attributes?.friendly_name ?? b.entity_id));
         return na.localeCompare(nb);
       }),
     [cameras],
@@ -124,9 +147,8 @@ export default function CamerasView() {
         >
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
-              {String(fullscreenCam.attributes?.friendly_name ?? fullscreenCam.entity_id)}
+              {cleanCameraName(String(fullscreenCam.attributes?.friendly_name ?? fullscreenCam.entity_id))}
             </p>
-            <p className="truncate font-mono text-xs text-white/60">{fullscreenCam.entity_id}</p>
           </div>
           <button
             type="button"
@@ -169,7 +191,7 @@ export default function CamerasView() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="grid grid-cols-1 items-start sm:grid-cols-2 xl:grid-cols-3 gap-4 pb-4">
           {sorted.map((cam) => {
-            const name = String(cam.attributes?.friendly_name ?? cam.entity_id);
+            const name = cleanCameraName(String(cam.attributes?.friendly_name ?? cam.entity_id));
             const isFs = fullscreenCam?.entity_id === cam.entity_id;
             return (
               <button
@@ -213,7 +235,6 @@ export default function CamerasView() {
                   <p className="text-sm font-medium text-skydark-text truncate" title={name}>
                     {name}
                   </p>
-                  <p className="text-xs text-skydark-text-secondary font-mono truncate">{cam.entity_id}</p>
                 </div>
               </button>
             );

@@ -119,13 +119,18 @@ export default function HaCameraLive({
         const bearer = getHassAccessToken(connection);
         const hls = new Hls({
           enableWorker: true,
-          // HA camera feeds are usually regular live HLS, not LL-HLS; LL mode can stutter.
+          // Regular live HLS (not LL-HLS) — LL mode causes stuttering on HA cameras.
           lowLatencyMode: false,
-          maxBufferLength: 14,
-          maxMaxBufferLength: 28,
-          liveSyncDuration: 3,
-          liveMaxLatencyDuration: 10,
-          maxLiveSyncPlaybackRate: 1.15,
+          // Larger buffer = smoother playback; latency matters less on a wall display.
+          maxBufferLength: 30,
+          maxMaxBufferLength: 90,
+          // Stay 5 s behind live edge; only seek forward if we fall >20 s behind.
+          liveSyncDuration: 5,
+          liveMaxLatencyDuration: 20,
+          // Disable playback-rate chase: speeding up to 1.15x causes micro-stutters.
+          maxLiveSyncPlaybackRate: 1,
+          // Assume reasonable bandwidth upfront to avoid unnecessary quality drops.
+          abrEwmaDefaultEstimate: 2_000_000,
           xhrSetup(xhr) {
             if (bearer) xhr.setRequestHeader("Authorization", `Bearer ${bearer}`);
           },
