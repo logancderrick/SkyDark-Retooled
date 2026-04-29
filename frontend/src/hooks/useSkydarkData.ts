@@ -147,16 +147,16 @@ export function useSkydarkData(
       setData(buildDemoSkydarkState());
       return;
     }
-    // Do NOT set loading:true here — that triggers the full-screen bootstrap
-    // splash on every mutation (complete task, add chore, etc.). The app
-    // already has data; refetches should be silent background updates.
+    let conn: Connection | null = null;
     try {
-      const conn = await getHAConnection();
+      conn = await getHAConnection();
+      setData((prev) => ({ ...prev, connection: conn }));
       await load(conn);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to load data";
       setData((prev) => ({
         ...prev,
+        ...(conn ? { connection: conn } : {}),
         error: message,
       }));
     }
@@ -209,10 +209,14 @@ export function useSkydarkData(
     }
     let cancelled = false;
     (async () => {
+      let conn: Connection | null = null;
       setData((prev) => ({ ...prev, loading: true, error: null }));
       try {
-        const conn = await getHAConnection();
+        conn = await getHAConnection();
         if (cancelled) return;
+        // Core HA WebSocket is ready — expose it immediately so views using
+        // `get_states` (cameras, etc.) work even if SkyDark-specific fetch fails.
+        setData((prev) => ({ ...prev, connection: conn }));
         await load(conn);
       } catch (e) {
         if (cancelled) return;
@@ -220,6 +224,7 @@ export function useSkydarkData(
         setData((prev) => ({
           ...prev,
           loading: false,
+          ...(conn ? { connection: conn } : {}),
           error: message,
         }));
       }

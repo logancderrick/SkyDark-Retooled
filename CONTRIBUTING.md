@@ -55,6 +55,8 @@ Without a long-lived token, you can still set only `VITE_HASS_URL` and complete 
 
 You can also open the built panel inside HA (e.g. `/skydark`) — that reuses the parent window WebSocket (no `.env.local` needed).
 
+**Cameras / `get_states` vs SkyDark data:** The HA WebSocket connection is stored as soon as auth succeeds. Core HA APIs (e.g. listing `camera.*` via `get_states`) use that connection. Loading tasks/events/lists still requires the **Skydark integration** on that HA instance—if those requests fail, you may see an error banner but cameras can still populate once this fix is applied.
+
 ### Full stack (frontend + Home Assistant)
 
 1. Install the integration into your Home Assistant (see README).
