@@ -51,6 +51,8 @@ Changes under `frontend/src/` apply instantly via Vite HMR; you only run **`npm 
 
 **Never commit `.env.local`** or put real tokens in tracked files. Long-lived tokens are dev-only (`import.meta.env.DEV`); production builds embedded in HA still use the iframe / OAuth flow.
 
+With `VITE_HASS_URL` set, the Vite dev server **proxies `/api/*`** to Home Assistant so camera streams and `/api/skydark_calendar/photo/…` URLs resolve on `localhost` instead of 404ing (restart `npm run dev` after changing `.env.local`).
+
 Without a long-lived token, you can still set only `VITE_HASS_URL` and complete OAuth once; tokens are stored in `localStorage` for that browser origin.
 
 You can also open the built panel inside HA (e.g. `/skydark`) — that reuses the parent window WebSocket (no `.env.local` needed).
