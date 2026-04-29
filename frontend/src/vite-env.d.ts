@@ -10,6 +10,11 @@ interface ImportMetaEnv {
    * Example: `https://homeassistant.local:8123`
    */
   readonly VITE_HASS_URL?: string;
+  /**
+   * Dev only (`npm run dev`). Long-lived access token from HA Profile.
+   * Never commit real tokens — use `frontend/.env.local` (gitignored).
+   */
+  readonly VITE_HASS_ACCESS_TOKEN?: string;
 }
 
 interface ImportMeta {

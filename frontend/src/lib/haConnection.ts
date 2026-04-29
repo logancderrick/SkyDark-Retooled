@@ -3,12 +3,13 @@
  *
  * Strategy (in order):
  *  1. Reuse the parent HA window's live connection (best for same-origin iframe)
- *  2. Fall back to stored localStorage tokens
- *  3. Last resort: redirect-based OAuth (may cause a brief flash)
+ *  2. Dev only: `VITE_HASS_URL` + `VITE_HASS_ACCESS_TOKEN` → long-lived token (no OAuth)
+ *  3. Stored localStorage tokens / OAuth redirect
  */
 
 import {
   createConnection,
+  createLongLivedTokenAuth,
   getAuth,
   type Connection,
   ERR_HASS_HOST_REQUIRED,
@@ -40,6 +41,19 @@ function isBlockedLocalViteOAuth(): boolean {
   const fromEnv = import.meta.env.VITE_HASS_URL;
   if (typeof fromEnv === "string" && fromEnv.trim()) return false;
   return true;
+}
+
+/** Dev-only: connect with a long-lived token (no OAuth redirect). Requires VITE_HASS_URL + VITE_HASS_ACCESS_TOKEN. */
+function useDevLongLivedTokenAuth(): boolean {
+  if (!import.meta.env.DEV) return false;
+  const url = import.meta.env.VITE_HASS_URL;
+  const tok = import.meta.env.VITE_HASS_ACCESS_TOKEN;
+  return (
+    typeof url === "string" &&
+    url.trim() !== "" &&
+    typeof tok === "string" &&
+    tok.trim() !== ""
+  );
 }
 
 interface AuthDataLike {
@@ -130,12 +144,28 @@ export async function getHAConnection(): Promise<Connection> {
       return parentConn;
     }
 
-    // 2. Establish own connection via stored tokens / OAuth
+    // 2. Dev: long-lived token (no OAuth — instant reconnect on every refresh)
+    if (useDevLongLivedTokenAuth()) {
+      const hassUrl = getHassUrl();
+      const token = String(import.meta.env.VITE_HASS_ACCESS_TOKEN).trim();
+      const auth = createLongLivedTokenAuth(hassUrl, token);
+      const conn = await createConnection({ auth });
+      conn.addEventListener("ready", () => {
+        console.debug("[SkyDark] HA WebSocket connected (dev long-lived token)");
+      });
+      conn.addEventListener("disconnected", () => {
+        console.debug("[SkyDark] HA WebSocket disconnected");
+      });
+      return conn;
+    }
+
+    // 3. Establish own connection via stored tokens / OAuth
     if (isBlockedLocalViteOAuth()) {
       throw new Error(
         "SkyDark: Vite is not Home Assistant — opening /auth/authorize here will not work. " +
-          "Use `npm run dev:demo` for local sample data, or create `frontend/.env.local` with " +
-          "`VITE_HASS_URL=https://YOUR_HA_HOST:8123` and restart dev, or open the panel inside Home Assistant.",
+          "Use `npm run dev:demo` for local sample data, create `frontend/.env.local` with " +
+          "`VITE_HASS_URL` + `VITE_HASS_ACCESS_TOKEN` (HA Profile → Long-lived access tokens), " +
+          "or only `VITE_HASS_URL` and complete OAuth once, or open the panel inside Home Assistant.",
       );
     }
 

@@ -38,7 +38,22 @@ Then open **`http://localhost:5173/skydark/#/calendar`** (hash router). This loa
 
 A yellow **“Demo mode”** banner appears under the header so you do not confuse this with production.
 
-To talk to a real Home Assistant instance from the dev server, use `npm run dev` (not `dev:demo`) and sign in, or open the built panel through HA (e.g. `/skydark`).
+### Real Home Assistant from `npm run dev` (no HACS restart)
+
+Use this when you want hot reload against your live entities on a Git branch:
+
+1. Copy `frontend/.env.local.example` to `frontend/.env.local`.
+2. Set **`VITE_HASS_URL`** to your HA origin (e.g. `https://ha.example.com` or `http://homeassistant.local:8123`).
+3. *(Recommended)* In HA: **Profile → Security → Long-lived access tokens → Create token.** Paste it as **`VITE_HASS_ACCESS_TOKEN`** in `.env.local`. That skips the OAuth redirect on every refresh.
+4. Run **`npm run dev`** (not `dev:demo`) and open **`http://localhost:5173/skydark/`**.
+
+Changes under `frontend/src/` apply instantly via Vite HMR; you only run **`npm run build`** when you want to ship assets into `custom_components/…/www/` for HA.
+
+**Never commit `.env.local`** or put real tokens in tracked files. Long-lived tokens are dev-only (`import.meta.env.DEV`); production builds embedded in HA still use the iframe / OAuth flow.
+
+Without a long-lived token, you can still set only `VITE_HASS_URL` and complete OAuth once; tokens are stored in `localStorage` for that browser origin.
+
+You can also open the built panel inside HA (e.g. `/skydark`) — that reuses the parent window WebSocket (no `.env.local` needed).
 
 ### Full stack (frontend + Home Assistant)
 
@@ -83,7 +98,7 @@ Changing data or HA behavior: work in `custom_components/skydark_calendar/` (dat
 
 1. **Frontend change**  
    - Edit files under `frontend/src/`.  
-   - Run `npm run dev` to test in the browser, or `npm run build` and restart HA to test in the panel.
+   - Run `npm run dev` with `.env.local` (see above) for instant reload against HA, `npm run dev:demo` for offline UI, or `npm run build` when you need assets inside the HA integration (`custom_components/…/www/`).
 
 2. **Backend change**  
    - Edit Python under `custom_components/skydark_calendar/`.  
