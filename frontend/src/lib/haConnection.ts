@@ -148,15 +148,31 @@ export async function getHAConnection(): Promise<Connection> {
     if (useDevLongLivedTokenAuth()) {
       const hassUrl = getHassUrl();
       const token = String(import.meta.env.VITE_HASS_ACCESS_TOKEN).trim();
+      if (import.meta.env.DEV && /\.local\b/i.test(hassUrl)) {
+        console.warn(
+          "[SkyDark] VITE_HASS_URL uses a *.local host. If WebSocket fails (common on Windows), " +
+            "set VITE_HASS_URL to your HA LAN IP with the same http/https as in the browser — see frontend/.env.local.example.",
+        );
+      }
       const auth = createLongLivedTokenAuth(hassUrl, token);
-      const conn = await createConnection({ auth });
-      conn.addEventListener("ready", () => {
-        console.debug("[SkyDark] HA WebSocket connected (dev long-lived token)");
-      });
-      conn.addEventListener("disconnected", () => {
-        console.debug("[SkyDark] HA WebSocket disconnected");
-      });
-      return conn;
+      try {
+        const conn = await createConnection({ auth });
+        conn.addEventListener("ready", () => {
+          console.debug("[SkyDark] HA WebSocket connected (dev long-lived token)");
+        });
+        conn.addEventListener("disconnected", () => {
+          console.debug("[SkyDark] HA WebSocket disconnected");
+        });
+        return conn;
+      } catch (err) {
+        const extra =
+          /\.local\b/i.test(hassUrl)
+            ? " Try VITE_HASS_URL=http(s)://<LAN-IP>:8123 instead of *.local (see .env.local.example)."
+            : " Use the exact HA URL from your browser; accept HTTPS cert if self-signed.";
+        throw new Error(
+          `${err instanceof Error ? err.message : "WebSocket failed"} — Cannot reach HA at ${hassUrl}.${extra}`,
+        );
+      }
     }
 
     // 3. Establish own connection via stored tokens / OAuth
