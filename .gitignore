@@ -4,6 +4,7 @@ frontend/node_modules/
 frontend/dist/
 frontend/src/assets/fonts/
 frontend/*.tsbuildinfo
+frontend/.tsc-node/
 frontend/*.d.ts
 
 # Python
