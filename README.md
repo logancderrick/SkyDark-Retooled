@@ -23,7 +23,7 @@ A full-screen family command center for Home Assistant — calendar, tasks, list
 | **Rewards** | Points and reward redemption per family member |
 | **Photos** | Family photo upload, full-screen slideshow view |
 | **Sleep mode** | Screensaver with rotating photo backgrounds (shuffles every 60 s), rotating live camera card, and live weather overlay |
-| **Cameras** | Full camera tab — HLS streams with MJPEG fallback, fullscreen tap, auth aligned with HA |
+| **Cameras** | Full camera tab — WebRTC when HA exposes it (e.g. go2rtc), else HLS, then MJPEG fallback; fullscreen tap |
 | **Settings** | Family profiles, PIN lock, feature toggles, remote calendar config, camera entity config |
 
 Data is stored locally in your HA config as SQLite. No cloud dependency.
@@ -63,6 +63,10 @@ Skydark is configured entirely through the Home Assistant UI — **Settings → 
 ### Weather card background
 
 The weather card on the calendar page supports a custom background image. Place a PNG or JPG in `frontend/public/` (named without spaces), then reference it in `ImprovedWeatherCard.tsx`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup.
+
+### Live cameras (UniFi Protect)
+
+SkyDark uses the same camera entities and streams as the Home Assistant frontend. For **UniFi Protect**, HA expects **RTSP(S) live streams** to be enabled on each camera: Protect → **Devices** → camera → **Settings** → **Share Livestream** → enable at least one stream. Details: [Home Assistant — UniFi Protect camera streams](https://www.home-assistant.io/integrations/unifiprotect/#camera-streams).
 
 ---
 

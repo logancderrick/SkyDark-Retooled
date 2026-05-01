@@ -444,7 +444,19 @@ export default function SettingsView() {
               <p className="text-sm text-skydark-text-secondary mb-3">
                 Show a live camera strip at the top of the Calendar page (same streams as Cameras). Enter one or two{" "}
                 <span className="font-mono text-skydark-text">camera.*</span> entity IDs; with two, the preview alternates
-                between them.
+                between them.{" "}
+                <strong className="font-medium text-skydark-text">UniFi Protect:</strong> enable{" "}
+                <span className="font-medium">Share Livestream</span> (RTSP/S) on each camera in Protect so Home Assistant can
+                serve live video —{" "}
+                <a
+                  href="https://www.home-assistant.io/integrations/unifiprotect/#camera-streams"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-skydark-accent underline"
+                >
+                  camera streams setup
+                </a>
+                .
               </p>
               <label className="block text-sm font-medium text-skydark-text mb-1.5">Camera entity 1</label>
               <input

@@ -53,6 +53,8 @@ Changes under `frontend/src/` apply instantly via Vite HMR; you only run **`npm 
 
 With `VITE_HASS_URL` set, the Vite dev server **proxies `/api/*`** to Home Assistant so camera streams and `/api/skydark_calendar/photo/…` URLs resolve on `localhost` instead of 404ing (restart `npm run dev` after changing `.env.local`).
 
+**UniFi Protect:** Home Assistant uses **RTSP(S)** from Protect as the live feed source. On each camera in the Protect app open **Settings**, expand **Share Livestream**, and enable **at least one** stream (often the highest-resolution channel is on by default). If live view is missing or flaky in HA or SkyDark, confirm that step first — see [UniFi Protect → Camera streams](https://www.home-assistant.io/integrations/unifiprotect/#camera-streams).
+
 Without a long-lived token, you can still set only `VITE_HASS_URL` and complete OAuth once; tokens are stored in `localStorage` for that browser origin.
 
 You can also open the built panel inside HA (e.g. `/skydark`) — that reuses the parent window WebSocket (no `.env.local` needed).
