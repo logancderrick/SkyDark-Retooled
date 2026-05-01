@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import type { CurrentWeather, WeeklyDay } from "../../hooks/useWeeklyWeather";
+import { weatherCardBackgroundUrl } from "../../lib/branding";
 
 type Condition = WeeklyDay["condition"];
 
@@ -311,13 +312,16 @@ export default function ImprovedWeatherCard({
     <section
       aria-label="Weather forecast"
       className={`relative isolate overflow-hidden rounded-2xl border border-white/10 text-white shadow-skydark ${className}`}
-      style={{
-        backgroundImage: `url('/skydark/Weather%20Card%20Background%206.png')`,
-        backgroundSize: "cover",
-        backgroundPosition: "center 55%",
-        backgroundColor: "#0B1A33",
-      }}
+      style={{ backgroundColor: "#0B1A33" }}
     >
+      {/* Img layer avoids blank CSS background repaints after lazy calendar remount in Chromium/WebKit. */}
+      <img
+        src={weatherCardBackgroundUrl}
+        alt=""
+        aria-hidden
+        decoding="async"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-[center_55%]"
+      />
       <div className="relative z-10 flex flex-col gap-2.5 p-4 sm:p-4">
         {/* header */}
         <div className="flex items-start justify-between gap-3">
