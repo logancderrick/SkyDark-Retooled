@@ -46,6 +46,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const shouldLockToViewport = isCalendar;
   /** When viewport is locked we want the chrome column to be height-constrained too. */
   const lockShell = shouldLockToViewport || !isPortrait;
+  /**
+   * Desktop landscape uses a fixed-height shell (`h-screen overflow-hidden`). Putting
+   * `overflow-y-auto` only on `<main>` breaks flex shrink (`min-h-0`), so non-calendar views
+   * can end up with ~0 usable height while Calendar/Cameras still fill via inner scroll regions.
+   * Route scrolling inside an explicit flex child restores layout for Tasks, Lists, etc.
+   */
+  const scrollMainInFlexChild = lockShell && !shouldLockToViewport;
 
   return (
     <div
@@ -73,12 +80,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
         )}
         <main
           className={`flex-1 bg-skydark-bg p-5 sm:p-6 ${
-            lockShell ? "min-h-0" : ""
-          } ${
-            shouldLockToViewport ? "overflow-hidden" : "overflow-y-auto"
-          } ${isPortrait && !shouldLockToViewport ? "pb-24" : ""}`}
+            lockShell ? "min-h-0 flex flex-col overflow-hidden" : ""
+          } ${shouldLockToViewport ? "overflow-hidden" : scrollMainInFlexChild ? "" : "overflow-y-auto"} ${
+            isPortrait && !shouldLockToViewport ? "pb-24" : ""
+          }`}
         >
-          {children}
+          {scrollMainInFlexChild ? (
+            <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+          ) : (
+            children
+          )}
         </main>
         {isPortrait && <MobileNav position="bottom" forceVisible iconOnly />}
       </div>
