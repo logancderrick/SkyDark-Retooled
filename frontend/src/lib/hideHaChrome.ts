@@ -20,10 +20,9 @@ const PANEL_STYLE_ID = "skydark-hide-panel-chrome";
 
 const HIDE_MAIN_CSS = `
   ha-sidebar {
-    width: 0 !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
-    visibility: hidden !important;
+    position: fixed !important;
+    left: -100vw !important;
+    pointer-events: none !important;
   }
   ha-drawer {
     --mdc-drawer-width: 0px !important;
