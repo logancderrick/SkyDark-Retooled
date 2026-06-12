@@ -7,7 +7,8 @@ This doc is for anyone who wants to run, build, or change the code — new or ex
 ## Before you start
 
 - **Users** (just installing): see the [README](README.md#install-hacs-recommended).
-- **Developers**: this file + the [Repository structure](README.md#repository-structure) in the README.
+- **Forking for your own instance?** Start with [SETUP.md](SETUP.md) — covers URL configuration, dev setup, and customization.
+- **Developers** (contributing to this repo): this file + the [Repository structure](README.md#repository-structure) in the README.
 
 ---
 

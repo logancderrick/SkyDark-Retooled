@@ -35,12 +35,8 @@ const DEFAULT_MEMBERS: FamilyMember[] = [
   { id: "3", name: "Kittrick", color: "#C8F5E8", initial: "Ki" },
 ];
 
-const DEFAULT_REMOTE_CALENDAR_ENTITIES: string[] = [
-  "calendar.logan_work_ahead",
-  "calendar.logan_work_cornelis",
-  "calendar.kaylee_work",
-  "calendar.family",
-];
+// Remote calendar defaults now come from the HA integration config, not hard-coded here
+const DEFAULT_REMOTE_CALENDAR_ENTITIES: string[] = [];
 
 export interface LockedFeatures {
   addEvents: boolean;
@@ -112,11 +108,15 @@ export interface AppSettings {
   calendarPreviewRotateSeconds: number;
   /** Overall UI palette: light (default) or dark. */
   themePreference: "light" | "dark";
+  /** Optional Home Assistant instance URL (e.g., https://ha.example.com or http://homeassistant.local:8123). If not set, uses current window origin. */
+  homeAssistantUrl?: string;
+  /** Optional custom weather card background image URL. If not set, uses default from public/. */
+  weatherBackgroundImageUrl?: string;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  familyName: "The Derricks",
-  remoteCalendarEntities: [...DEFAULT_REMOTE_CALENDAR_ENTITIES],
+  familyName: "Family",
+  remoteCalendarEntities: [],
   lockEnabled: false,
   autoRelockEnabled: false,
   autoRelockMinutes: 5,
@@ -127,6 +127,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   calendarPreviewCameras: [],
   calendarPreviewRotateSeconds: 20,
   themePreference: "light",
+  homeAssistantUrl: undefined,
+  weatherBackgroundImageUrl: undefined,
 };
 
 interface AppState {
@@ -236,6 +238,28 @@ function normalizeSettings(candidate: Partial<AppSettings> | null | undefined): 
   if (merged.themePreference !== "light" && merged.themePreference !== "dark") {
     merged.themePreference = "light";
   }
+  // Validate homeAssistantUrl if present
+  if (merged.homeAssistantUrl !== undefined && typeof merged.homeAssistantUrl !== "string") {
+    merged.homeAssistantUrl = undefined;
+  }
+  if (
+    merged.homeAssistantUrl &&
+    typeof merged.homeAssistantUrl === "string" &&
+    merged.homeAssistantUrl.trim().length === 0
+  ) {
+    merged.homeAssistantUrl = undefined;
+  }
+  // Validate weatherBackgroundImageUrl if present
+  if (merged.weatherBackgroundImageUrl !== undefined && typeof merged.weatherBackgroundImageUrl !== "string") {
+    merged.weatherBackgroundImageUrl = undefined;
+  }
+  if (
+    merged.weatherBackgroundImageUrl &&
+    typeof merged.weatherBackgroundImageUrl === "string" &&
+    merged.weatherBackgroundImageUrl.trim().length === 0
+  ) {
+    merged.weatherBackgroundImageUrl = undefined;
+  }
   return merged;
 }
 
@@ -246,7 +270,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     normalizeSettings({
       ...DEFAULT_SETTINGS,
       themePreference: readStoredThemePreference() ?? DEFAULT_SETTINGS.themePreference,
-    })
+    }),
   );
   const [isAuthenticated, setAuthenticatedState] = useState(false);
   const [isLocked, setIsLockedState] = useState(false);
@@ -263,16 +287,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (valid.length > 0) setFamilyMembersState(valid);
     }
     if (skydark.data.appSettings && typeof skydark.data.appSettings === "object") {
+      // Build initial values: start with HA config, then override with stored app settings
+      const configDefaults: Partial<AppSettings> = {};
+      if (skydark.data.config?.family_name) {
+        configDefaults.familyName = skydark.data.config.family_name;
+      }
+      if (skydark.data.config?.remote_calendar_entities) {
+        configDefaults.remoteCalendarEntities = skydark.data.config.remote_calendar_entities;
+      }
+      if (skydark.data.config?.calendar_preview_cameras) {
+        configDefaults.calendarPreviewCameras = skydark.data.config.calendar_preview_cameras;
+      }
+
       const fromServer = skydark.data.appSettings as Partial<AppSettings>;
       const storedTheme = readStoredThemePreference();
       setSettingsState(
         normalizeSettings({
+          ...configDefaults,
           ...fromServer,
           themePreference: storedTheme ?? fromServer.themePreference ?? DEFAULT_SETTINGS.themePreference,
         })
       );
     }
-  }, [skydark?.data?.connection, skydark?.data?.familyMembers, skydark?.data?.appSettings]);
+  }, [skydark?.data?.connection, skydark?.data?.familyMembers, skydark?.data?.appSettings, skydark?.data?.config]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;

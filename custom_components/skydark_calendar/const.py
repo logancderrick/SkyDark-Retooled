@@ -11,16 +11,11 @@ PANEL_ICON = "mdi:calendar-month"
 # Config keys
 CONF_FAMILY_NAME = "family_name"
 CONF_WEATHER_ENTITY = "weather_entity"
+CONF_REMOTE_CALENDAR_ENTITIES = "remote_calendar_entities"
+CONF_CALENDAR_PREVIEW_CAMERAS = "calendar_preview_cameras"
 
-# Defaults
-DEFAULT_FAMILY_NAME = "The Derricks"
-
-DEFAULT_REMOTE_CALENDAR_ENTITIES: tuple[str, ...] = (
-    "calendar.logan_work_ahead",
-    "calendar.logan_work_cornelis",
-    "calendar.kaylee_work",
-    "calendar.family",
-)
+# All configuration is now done through the Home Assistant UI (Settings → Devices & Services).
+# There are no hard-coded defaults — users configure everything during setup or later via the Settings tab.
 
 # Database
 DB_NAME = "skydark_calendar.db"

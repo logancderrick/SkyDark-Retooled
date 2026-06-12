@@ -30,6 +30,21 @@ Data is stored locally in your HA config as SQLite. No cloud dependency.
 
 ---
 
+## Forking This Repo?
+
+**[→ See SETUP.md](SETUP.md)** for instructions on:
+- Configuring your Home Assistant URL (local IP, localhost, or public domain)
+- Setting up the frontend development environment
+- Building and deploying to your own HA instance
+- Customizing defaults for your family
+
+**[→ See HA_URL_CONFIGURATION.md](HA_URL_CONFIGURATION.md)** for:
+- How to set a custom HA instance URL in the app
+- Switching between different HA instances
+- Configuring for reverse proxies or custom domains
+
+---
+
 ## Install via HACS (recommended)
 
 1. Open **HACS** → **Integrations** → **⋮ Custom repositories**
@@ -60,9 +75,27 @@ Skydark is configured entirely through the Home Assistant UI — **Settings → 
 
 > **Do not** add a `skydark_calendar:` block to `configuration.yaml`. Any keys there are ignored and HA may show a repair warning. If you see that warning, remove the block and restart HA.
 
+### Configuration
+
+All configuration is done through Home Assistant:
+
+1. **Settings → Devices & Services → Skydark Family Calendar**
+   - Set family name, weather entity, remote calendars, and camera previews
+   - Editble anytime via **Options**
+
+2. **Settings tab inside SkyDark panel**
+   - Per-user settings (profiles, display, locks, feature toggles)
+   - Configure all calendar sources, colors, and display names
+
+See [SETUP.md](SETUP.md) for detailed configuration instructions.
+
 ### Weather card background
 
-The weather card on the calendar page supports a custom background image. Place a PNG or JPG in `frontend/public/` (named without spaces), then reference it in `ImprovedWeatherCard.tsx`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full dev setup.
+Customize the weather card background directly in the app! 
+
+**Settings → Display → Weather Card** — upload a PNG or JPG image (max 5MB) to personalize your dashboard.
+
+See [WEATHER_CARD_BACKGROUND.md](WEATHER_CARD_BACKGROUND.md) for tips on choosing images, recommended sizes, and best practices.
 
 ### Live cameras (UniFi Protect)
 

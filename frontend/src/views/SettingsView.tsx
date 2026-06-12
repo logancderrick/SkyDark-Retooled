@@ -22,6 +22,7 @@ import { useWeatherData } from "../hooks/useWeeklyWeather";
 import { useSkydarkDataContext } from "../contexts/SkydarkDataContext";
 import { REMOTE_CALENDAR_DEFAULT_COLORS } from "../components/Calendar/EventColorPattern";
 import { CameraIcon } from "../components/Layout/SidebarIcons";
+import { getCustomHassUrl, setCustomHassUrl } from "../lib/haConnection";
 
 export default function SettingsView() {
   const {
@@ -56,6 +57,12 @@ export default function SettingsView() {
   const [addProfileOpen, setAddProfileOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<{ id: string; name: string } | null>(null);
   const [editColorMember, setEditColorMember] = useState<{ id: string; name: string; color: string } | null>(null);
+  const [customHassUrl, setCustomHassUrlLocal] = useState<string>(() => getCustomHassUrl() ?? "");
+  const [hassUrlChangeMessage, setHassUrlChangeMessage] = useState<string>("");
+  const [weatherImagePreview, setWeatherImagePreview] = useState<string | null>(
+    settings.weatherBackgroundImageUrl || null
+  );
+  const [weatherImageLoading, setWeatherImageLoading] = useState(false);
 
   const handleAddProfile = (result: { name: string; color: string }) => {
     addFamilyMember({
@@ -138,6 +145,73 @@ export default function SettingsView() {
       return true;
     }
     return false;
+  };
+
+  const handleHassUrlChange = (newUrl: string) => {
+    const trimmed = newUrl.trim();
+    setCustomHassUrlLocal(trimmed);
+    setHassUrlChangeMessage("");
+
+    if (!trimmed) {
+      // Clearing the custom URL
+      setCustomHassUrl(undefined);
+      setHassUrlChangeMessage("Custom HA URL cleared. Using current origin on next reload.");
+      return;
+    }
+
+    // Validate URL format
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+      setHassUrlChangeMessage('URL must start with http:// or https://');
+      return;
+    }
+
+    try {
+      new URL(trimmed); // Validate URL syntax
+      setCustomHassUrl(trimmed);
+      setSettings({ homeAssistantUrl: trimmed });
+      setHassUrlChangeMessage("URL saved. Reload the page to reconnect.");
+    } catch {
+      setHassUrlChangeMessage("Invalid URL format");
+    }
+  };
+
+  const handleWeatherImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be smaller than 5MB");
+      return;
+    }
+
+    setWeatherImageLoading(true);
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setWeatherImagePreview(dataUrl);
+      setSettings({ weatherBackgroundImageUrl: dataUrl });
+      setWeatherImageLoading(false);
+    };
+
+    reader.onerror = () => {
+      alert("Error reading file");
+      setWeatherImageLoading(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearWeatherImage = () => {
+    setWeatherImagePreview(null);
+    setSettings({ weatherBackgroundImageUrl: undefined });
   };
 
   const requireUnlockToChangeSettings =
@@ -623,6 +697,77 @@ export default function SettingsView() {
                   />
                 }
               />
+            </SettingsSection>
+
+            <SettingsSection title="Home Assistant" icon={<DisplayIcon className="w-5 h-5 text-skydark-text-secondary" />}>
+              <div className="py-3">
+                <label className="block text-sm font-medium text-skydark-text mb-1.5">
+                  Home Assistant instance URL (optional)
+                </label>
+                <input
+                  type="text"
+                  value={customHassUrl}
+                  onChange={(e) => handleHassUrlChange(e.target.value)}
+                  className="input-skydark max-w-md font-mono text-sm"
+                  placeholder="https://ha.example.com or http://homeassistant.local:8123"
+                  spellCheck={false}
+                />
+                {hassUrlChangeMessage && (
+                  <p className={`mt-1.5 text-xs ${
+                    hassUrlChangeMessage.includes("Invalid") || hassUrlChangeMessage.includes("must start")
+                      ? "text-red-500"
+                      : "text-green-600"
+                  }`}>
+                    {hassUrlChangeMessage}
+                  </p>
+                )}
+                <p className="text-xs text-skydark-text-secondary mt-2 max-w-md">
+                  Leave blank to use the current origin. Change this only if you're accessing HA through a proxy or custom URL. A page reload is required for changes to take effect.
+                </p>
+              </div>
+            </SettingsSection>
+
+            <SettingsSection title="Weather Card" icon={<DisplayIcon className="w-5 h-5 text-skydark-text-secondary" />}>
+              <div className="py-3">
+                <label className="block text-sm font-medium text-skydark-text mb-1.5">
+                  Weather card background image (optional)
+                </label>
+                {weatherImagePreview && (
+                  <div className="mb-4 rounded-lg overflow-hidden border border-skydark-border bg-skydark-surface">
+                    <img
+                      src={weatherImagePreview}
+                      alt="Weather card background preview"
+                      className="w-full h-32 object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <label className="relative inline-block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleWeatherImageChange}
+                      disabled={weatherImageLoading}
+                      className="hidden"
+                    />
+                    <span className="btn-secondary inline-block disabled:opacity-60 cursor-pointer">
+                      {weatherImageLoading ? "Loading..." : "Choose Image"}
+                    </span>
+                  </label>
+                  {weatherImagePreview && (
+                    <button
+                      type="button"
+                      onClick={handleClearWeatherImage}
+                      className="text-sm font-medium text-red-500 hover:text-red-600"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-skydark-text-secondary mt-2 max-w-md">
+                  Upload a PNG or JPG image (max 5MB) to use as the weather card background. Leave empty to use the default background. Changes apply immediately.
+                </p>
+              </div>
             </SettingsSection>
           </>
         )}

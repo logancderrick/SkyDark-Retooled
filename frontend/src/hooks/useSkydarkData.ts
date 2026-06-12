@@ -47,6 +47,8 @@ export interface SkydarkDataState {
     family_name?: string;
     weather_entity?: string;
     panel_url?: string;
+    remote_calendar_entities?: string[];
+    calendar_preview_cameras?: string[];
   } | null;
   appSettings: Record<string, unknown> | null;
   pointsByMember: Record<string, number>;
@@ -116,6 +118,8 @@ export function useSkydarkData(
         panel_url: configRes.panel_url,
         family_name: (cfg as { family_name?: string }).family_name,
         weather_entity: (cfg as { weather_entity?: string }).weather_entity,
+        remote_calendar_entities: (cfg as { remote_calendar_entities?: string[] }).remote_calendar_entities,
+        calendar_preview_cameras: (cfg as { calendar_preview_cameras?: string[] }).calendar_preview_cameras,
       };
 
       setData((prev) => ({

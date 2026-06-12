@@ -18,14 +18,33 @@ import {
 
 const HASS_URL_KEY = "hassUrl";
 const HASS_TOKENS_KEY = "hassTokens";
+const CUSTOM_HASS_URL_KEY = "skyDarkCustomHassUrl";
 
-/** HA origin for API + OAuth. Prefer `VITE_HASS_URL` in dev so we do not treat Vite as HA. */
+/** HA origin for API + OAuth. Checks custom URL (Settings), env var (dev), then current window origin. */
 function getHassUrl(): string {
-  const fromEnv = import.meta.env.VITE_HASS_URL;
-  if (typeof fromEnv === "string") {
-    const trimmed = fromEnv.trim().replace(/\/+$/, "");
-    if (trimmed) return trimmed;
+  // 1. Check if user set a custom HA URL in app Settings
+  try {
+    const customUrl = localStorage.getItem(CUSTOM_HASS_URL_KEY);
+    if (typeof customUrl === "string") {
+      const trimmed = customUrl.trim().replace(/\/+$/, "");
+      if (trimmed && (trimmed.startsWith("http://") || trimmed.startsWith("https://"))) {
+        return trimmed;
+      }
+    }
+  } catch {
+    // localStorage not available, continue to next fallback
   }
+
+  // 2. Dev only: allow overriding HA URL for testing against a different instance
+  if (import.meta.env.DEV) {
+    const fromEnv = import.meta.env.VITE_HASS_URL;
+    if (typeof fromEnv === "string") {
+      const trimmed = fromEnv.trim().replace(/\/+$/, "");
+      if (trimmed) return trimmed;
+    }
+  }
+
+  // 3. Production (inside HA): always use current window origin
   return window.location.origin;
 }
 
@@ -215,4 +234,32 @@ export async function getHAConnection(): Promise<Connection> {
 
 export function clearHAConnection(): void {
   connectionPromise = null;
+}
+
+/** Update the custom HA URL in localStorage and trigger reconnection. */
+export function setCustomHassUrl(url: string | undefined): void {
+  try {
+    if (url && typeof url === "string") {
+      const trimmed = url.trim().replace(/\/+$/, "");
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        localStorage.setItem(CUSTOM_HASS_URL_KEY, trimmed);
+      } else {
+        console.warn("[SkyDark] Invalid HA URL — must start with http:// or https://");
+        localStorage.removeItem(CUSTOM_HASS_URL_KEY);
+      }
+    } else {
+      localStorage.removeItem(CUSTOM_HASS_URL_KEY);
+    }
+  } catch {
+    console.warn("[SkyDark] Could not save custom HA URL to localStorage");
+  }
+}
+
+/** Get the currently configured custom HA URL, if any. */
+export function getCustomHassUrl(): string | null {
+  try {
+    return localStorage.getItem(CUSTOM_HASS_URL_KEY);
+  } catch {
+    return null;
+  }
 }
